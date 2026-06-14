@@ -722,7 +722,7 @@ export default function LiveDashboard() {
         </div>
       ) : (
         /* HIỂN THỊ CHI TIẾT 1 NỘI DUNG THI ĐẤU (Single Specific Event View) */
-        <div className="space-y-6" id="tv-single-event-view" style={{ width: '3840px', height: '2160px' }}>
+        <div className="space-y-6" id="tv-single-event-view">
           {(() => {
             const currentEvt = events[selectedEventFilter];
             if (!currentEvt) return <div className="py-20 text-center text-zinc-550">Lỗi: Nội dung trống.</div>;
