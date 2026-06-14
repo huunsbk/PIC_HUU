@@ -5,6 +5,7 @@
 
 import React, { useEffect } from 'react';
 import { useTournamentStore } from './store';
+import { supabase } from './supabaseClient';
 
 // Importing Tab Components
 import Dashboard from './components/Dashboard';
@@ -139,6 +140,23 @@ export default function App() {
 
     processUrlTenant();
   }, [initSupabase, activeTenantId, setTenantId]);
+
+  useEffect(() => {
+    // Lắng nghe sự kiện Auth từ Supabase (Ví dụ: bị đăng xuất từ thiết bị khác)
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        const store = useTournamentStore.getState();
+        if (store.isAdmin) {
+          console.log('Phát hiện đăng xuất từ hệ thống/thiết bị khác. Đang làm sạch phiên làm việc...');
+          store.logout();
+        }
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   // Âm thầm tự động kéo dữ liệu (Polling) từ Supabase mỗi 10 giây đối với khách xem (không phải Admin)
   // để cập nhật điểm số, lịch đấu và bảng xếp hạng trực tuyến tức thì bất cứ lúc nào Admin chỉnh sửa.
