@@ -43,6 +43,7 @@ interface AppState {
 
   // Actions
   checkConnection: () => Promise<boolean>;
+  checkAdminSession: () => Promise<void>;
   updateTournament: (t: Partial<Tournament>) => void;
   updateSettings: (s: Partial<TournamentSettings>) => void;
   
@@ -656,6 +657,14 @@ export const useTournamentStore = create<AppState>()(
               .then(({ error }) => {
                 if (error) console.warn('Không thể cập nhật session_id:', error);
               });
+              
+            // Đảm bảo URL trên trình duyệt đồng bộ với tenant được cấp quyền, tránh nhầm lẫn
+            requestAnimationFrame(() => {
+              const expectedHash = '/' + tenantId.replace(/_/g, '-');
+              if (window.location.hash.replace(/^#\/?/, '').trim() !== tenantId.replace(/_/g, '-')) {
+                window.location.hash = expectedHash;
+              }
+            });
           }
           
           get().initSupabase();
@@ -672,6 +681,22 @@ export const useTournamentStore = create<AppState>()(
           window.location.reload();
         },
         setTenantId: async (tenantId) => {
+          const currentState = get();
+          
+          if (currentState.userRole === 'admin2' || currentState.userRole === 'admin3') {
+            const allowedTenant = currentState.userRole === 'admin3' ? 
+              currentState.accounts.find(a => a.username === currentState.currentUser)?.parentTenantId || 'default' : 
+              currentState.currentUser;
+              
+            // Normalize replacing - with _ to match mapping strategy in App.tsx
+            const normalizedAllowed = allowedTenant.replace(/-/g, '_').toLowerCase();
+            if (tenantId.toLowerCase() !== normalizedAllowed && tenantId !== 'default') { // Allow "default" switch? Actually, just log out if it doesn't match
+              console.warn(`Chuyển đổi CSDL không hợp lệ cho tài khoản này. Yêu cầu đăng xuất. Expected ${normalizedAllowed}, got ${tenantId.toLowerCase()}`);
+              currentState.logout();
+              return;
+            }
+          }
+          
           originalSet({ activeTenantId: tenantId, isLoadingSupabase: true });
           await get().initSupabase();
         },
@@ -777,6 +802,22 @@ export const useTournamentStore = create<AppState>()(
           const connected = await checkSupabaseConnection();
           set({ supabaseConnected: connected });
           return connected;
+        },
+        checkAdminSession: async () => {
+          const state = get();
+          if ((state.userRole === 'admin2' || state.userRole === 'admin3') && state.currentUser && state.currentSessionId) {
+            try {
+              const { data, error } = await supabase.from('accounts').select('session_id').eq('username', state.currentUser).single();
+              if (!error && data) {
+                if (data.session_id && data.session_id !== state.currentSessionId) {
+                  console.warn('Phát hiện đăng nhập song song qua polling. Đăng xuất...');
+                  get().logout();
+                }
+              }
+            } catch(e) {
+              // Ignore network errors
+            }
+          }
         },
 
         updateTournament: (t) => {
@@ -1867,8 +1908,8 @@ export const useTournamentStore = create<AppState>()(
                   }
                 });
                 
-                // Kiểm tra bảo mật phiên đăng nhập (chỉ áp dụng cho admin2)
-                if (localState.userRole === 'admin2' && localState.currentUser) {
+                // Kiểm tra bảo mật phiên đăng nhập (chỉ áp dụng cho admin2 và admin3)
+                if ((localState.userRole === 'admin2' || localState.userRole === 'admin3') && localState.currentUser) {
                   const myLatestDbAccount = loadedAccounts.find(a => a.username === localState.currentUser);
                   if (myLatestDbAccount && myLatestDbAccount.session_id && myLatestDbAccount.session_id !== localState.currentSessionId) {
                     forceLogout = true;
@@ -1876,6 +1917,13 @@ export const useTournamentStore = create<AppState>()(
                 }
               } else {
                 loadedAccounts = jsonAccounts;
+                // Vẫn kiểm tra bảo mật nếu dùng JSON
+                if ((localState.userRole === 'admin2' || localState.userRole === 'admin3') && localState.currentUser) {
+                  const myLatestDbAccount = loadedAccounts.find(a => a.username === localState.currentUser);
+                  if (myLatestDbAccount && myLatestDbAccount.session_id && myLatestDbAccount.session_id !== localState.currentSessionId) {
+                    forceLogout = true;
+                  }
+                }
               }
             } catch (e) {
               const accountsConfigRow = (tData || []).find((row: any) => row.id === 'accounts_config');

@@ -143,10 +143,12 @@ export default function App() {
   // Âm thầm tự động kéo dữ liệu (Polling) từ Supabase mỗi 10 giây đối với khách xem (không phải Admin)
   // để cập nhật điểm số, lịch đấu và bảng xếp hạng trực tuyến tức thì bất cứ lúc nào Admin chỉnh sửa.
   useEffect(() => {
-    if (isAdmin) return; // Nếu là Admin thì việc đẩy dữ liệu đã là trực tiếp từ store, không cần kéo đè liên tục
-    
     const interval = setInterval(() => {
-      initSupabase();
+      if (isAdmin) {
+        useTournamentStore.getState().checkAdminSession();
+      } else {
+        initSupabase();
+      }
     }, 10000); // Kéo dữ liệu sau mỗi 10 giây
     return () => clearInterval(interval);
   }, [isAdmin, initSupabase]);

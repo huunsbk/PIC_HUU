@@ -81,7 +81,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         setTimeout(() => {
           // Gắn tài khoản này với cơ sở dữ liệu (tenantId của admin2)
           const role = targetAccount.role === 'admin3' ? 'admin3' : 'admin2';
-          const tenantId = targetAccount.role === 'admin3' ? (targetAccount.parentTenantId || 'default') : targetAccount.username;
+          const rawTenantId = targetAccount.role === 'admin3' ? (targetAccount.parentTenantId || 'default') : targetAccount.username;
+          const tenantId = rawTenantId.replace(/-/g, '_');
           setAuthStatus(role, targetAccount.username, tenantId);
           onClose();
         }, 800);
