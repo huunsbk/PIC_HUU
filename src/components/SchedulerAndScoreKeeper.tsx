@@ -473,7 +473,7 @@ export default function SchedulerAndScoreKeeper() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-6" id="scoring-board-rounds-list">
+              <div className="space-y-4" id="scoring-board-rounds-list">
                 {roundNumbers.map((roundNum) => {
                   const roundMatches = roundsMap[roundNum];
 
@@ -483,7 +483,7 @@ export default function SchedulerAndScoreKeeper() {
                         Vòng {roundNum}
                       </h4>
 
-                      <div className="space-y-3">
+                      <div className="space-y-1.5">
                         {roundMatches.map((match) => {
                           const teamA = teams[match.teamAId];
                           const teamB = teams[match.teamBId];
@@ -496,19 +496,15 @@ export default function SchedulerAndScoreKeeper() {
                           return (
                             <div
                               key={match.id}
-                              className={`bg-white dark:bg-zinc-900 p-4.5 rounded-2xl border transition-all ${
+                              className={`bg-white dark:bg-zinc-900 px-3 py-2 rounded-2xl border transition-all ${
                                 isFinished
                                   ? 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300'
                                   : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300'
                               }`}
                               style={{
                                 borderRadius: '16px',
-                                height: '49px',
-                                width: '607.25px',
-                                paddingLeft: '3px',
-                                paddingTop: '3px',
-                                paddingRight: '3px',
-                                paddingBottom: '3px',
+                                width: '100%',
+                                maxWidth: '607.25px',
                               }}
                               id={`score-card-match-${match.id}`}
                             >
@@ -530,7 +526,7 @@ export default function SchedulerAndScoreKeeper() {
                                 </div>
 
                                 {/* CENTER CONTROL: INPUT A - HYPHEN - INPUT B */}
-                                <div className="flex items-center gap-2 h-10 shrink-0">
+                                <div className="flex items-center gap-2 h-8 shrink-0">
                                   <input
                                     type="text"
                                     inputMode="numeric"
@@ -539,11 +535,11 @@ export default function SchedulerAndScoreKeeper() {
                                     value={scoreAVal}
                                     onChange={(e) => handleScoreInputChange(match.id, 'A', e.target.value)}
                                     disabled={!isAdmin}
-                                    className="w-13 h-10 border border-zinc-250 dark:border-zinc-800 rounded-xl text-center font-bold text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                                    className="w-13 h-8 border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                                     id={`input-match-${match.id}-scoreA`}
                                   />
                                   
-                                  <span className="text-zinc-300 dark:text-zinc-700 select-none font-bold text-sm">
+                                  <span className="text-zinc-300 dark:text-zinc-700 select-none font-bold text-xs">
                                     -
                                   </span>
                                   
@@ -555,7 +551,7 @@ export default function SchedulerAndScoreKeeper() {
                                     value={scoreBVal}
                                     onChange={(e) => handleScoreInputChange(match.id, 'B', e.target.value)}
                                     disabled={!isAdmin}
-                                    className="w-13 h-10 border border-zinc-250 dark:border-zinc-800 rounded-xl text-center font-bold text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                                    className="w-13 h-8 border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                                     id={`input-match-${match.id}-scoreB`}
                                   />
                                 </div>
