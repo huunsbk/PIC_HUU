@@ -381,7 +381,7 @@ export default function KnockoutBracket() {
             >
               {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => (
                 <React.Fragment>
-                  <div className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
+                  <div className="hidden md:flex absolute top-4 right-4 z-50 items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
                     <button onClick={() => zoomOut()} className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-300 transition-colors pointer-events-auto" title="Thu nhỏ">
                       <ZoomOut size={18} />
                     </button>

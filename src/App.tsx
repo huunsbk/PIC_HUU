@@ -183,16 +183,9 @@ export default function App() {
     events.forEach(evt => document.addEventListener(evt, resetTimer));
     resetTimer(); // Bắt đầu đếm giờ ngay lập tức
 
-    // Xóa cache (phiên đăng nhập) khi người dùng đóng trình duyệt hoặc tab
-    const handleBeforeUnload = () => {
-      localStorage.removeItem('pickleball-tournament-cache');
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
     return () => {
       window.clearTimeout(inactivityTimer);
       events.forEach(evt => document.removeEventListener(evt, resetTimer));
-      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [isAdmin]);
 

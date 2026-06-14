@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { Tournament, Team, Group, Match, AuditLog, TournamentSettings, SeedType, GroupStanding, ThirdPlaceStanding, EventData, Account } from './types';
 import { generateRoundRobinMatches, calculateGroupStandings, calculateBestThirdPlaces, generateKnockoutMatchesSchema, balanceMatchesRestTime } from './utils/tournamentEngine';
 import { supabase, checkSupabaseConnection } from './supabaseClient';
@@ -655,8 +655,33 @@ export const useTournamentStore = create<AppState>()(
               .update({ session_id: sessionId })
               .eq('username', username)
               .then(({ error }) => {
-                if (error) console.warn('Không thể cập nhật session_id:', error);
+                if (error) console.warn('Không thể cập nhật session_id in accounts:', error);
               });
+              
+            // Cập nhật session_id lên bảng tournament JSON
+            supabase.from('tournament')
+              .select('settings')
+              .eq('id', 'accounts_config')
+              .single()
+              .then(({ data }) => {
+                if (data && data.settings && Array.isArray(data.settings)) {
+                  const updatedAccounts = data.settings.map((a: any) => 
+                    a.username === username ? { ...a, session_id: sessionId } : a
+                  );
+                  supabase.from('tournament')
+                    .upsert({
+                      id: 'accounts_config',
+                      name: 'Cấu hình tài khoản cấp 2',
+                      organization: 'Hệ thống',
+                      location: '',
+                      date: '',
+                      settings: updatedAccounts
+                    })
+                    .then(() => {})
+                    .catch(e => console.warn('Lỗi ghi json session:', e));
+                }
+              })
+              .catch(e => console.warn('Lỗi đọc json session:', e));
               
             // Đảm bảo URL trên trình duyệt đồng bộ với tenant được cấp quyền, tránh nhầm lẫn
             requestAnimationFrame(() => {
@@ -677,7 +702,7 @@ export const useTournamentStore = create<AppState>()(
             activeTenantId: 'default',
             isAdmin: false,
           });
-          localStorage.removeItem('pickleball-tournament-cache');
+          sessionStorage.removeItem('pickleball-tournament-cache');
           window.location.reload();
         },
         setTenantId: async (tenantId) => {
@@ -817,13 +842,28 @@ export const useTournamentStore = create<AppState>()(
           const state = get();
           if ((state.userRole === 'admin2' || state.userRole === 'admin3') && state.currentUser && state.currentSessionId) {
             try {
-              const { data, error } = await supabase.from('accounts').select('session_id').eq('username', state.currentUser).single();
-              if (!error && data) {
-                if (data.session_id && data.session_id !== state.currentSessionId) {
-                  console.warn('Phát hiện đăng nhập song song qua polling. Đăng xuất...');
-                  alert(`CẢNH BÁO: KẾT NỐI BỊ NGẮT\n\nTài khoản "${state.currentUser}" vừa được đăng nhập thành công ở thiết bị hoặc trình duyệt khác.\n\nNhằm bảo vệ tính toàn vẹn dữ liệu lúc nhập điểm, hệ thống chỉ cho phép 1 tài khoản hoạt động trên 1 thiết bị/1 tab trình duyệt ở cùng một thời điểm.\n\nPhiên làm việc này sẽ được đăng xuất tự động.`);
-                  get().logout();
+              let latestDbSessionId = null;
+              
+              // Cách 1: Thử đọc từ bảng accounts (ưu tiên)
+              const { data: dbData } = await supabase.from('accounts').select('session_id').eq('username', state.currentUser).single();
+              if (dbData && dbData.session_id) {
+                latestDbSessionId = dbData.session_id;
+              } else {
+                // Cách 2: Thử đọc từ cấu hình JSON (fallback chuẩn)
+                const { data: tData } = await supabase.from('tournament').select('settings').eq('id', 'accounts_config').single();
+                if (tData && tData.settings && Array.isArray(tData.settings)) {
+                  const arr = tData.settings;
+                  const acc = arr.find((a: any) => a.username === state.currentUser);
+                  if (acc && acc.session_id) {
+                    latestDbSessionId = acc.session_id;
+                  }
                 }
+              }
+
+              if (latestDbSessionId && latestDbSessionId !== state.currentSessionId) {
+                console.warn('Phát hiện đăng nhập song song qua polling. Đăng xuất...');
+                alert(`CẢNH BÁO: KẾT NỐI BỊ NGẮT\n\nTài khoản "${state.currentUser}" vừa được đăng nhập thành công ở thiết bị hoặc trình duyệt khác.\n\nNhằm bảo vệ tính toàn vẹn dữ liệu lúc nhập điểm, hệ thống chỉ cho phép 1 tài khoản hoạt động trên 1 thiết bị/1 tab trình duyệt ở cùng một thời điểm.\n\nPhiên làm việc này sẽ được đăng xuất tự động.`);
+                get().logout();
               }
             } catch(e) {
               // Ignore network errors
@@ -2287,7 +2327,8 @@ export const useTournamentStore = create<AppState>()(
       };
     },
     {
-      name: 'pickleball-tournament-cache', // Khóa lưu trữ LocalStorage
+      name: 'pickleball-tournament-cache', // Khóa lưu trữ SessionStorage
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 );
