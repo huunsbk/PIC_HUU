@@ -690,8 +690,18 @@ export const useTournamentStore = create<AppState>()(
               
             // Normalize replacing - with _ to match mapping strategy in App.tsx
             const normalizedAllowed = allowedTenant.replace(/-/g, '_').toLowerCase();
-            if (tenantId.toLowerCase() !== normalizedAllowed && tenantId !== 'default') { // Allow "default" switch? Actually, just log out if it doesn't match
-              console.warn(`Chuyển đổi CSDL không hợp lệ cho tài khoản này. Yêu cầu đăng xuất. Expected ${normalizedAllowed}, got ${tenantId.toLowerCase()}`);
+            
+            // Dứt khoát bắt buộc kết nối đúng dữ liệu của mình, không có ngoại lệ
+            if (tenantId.toLowerCase() !== normalizedAllowed) { 
+              console.warn(`Chuyển đổi CSDL không hợp lệ cho tài khoản này. Đã khóa để bảo vệ. Expected ${normalizedAllowed}, got ${tenantId.toLowerCase()}`);
+              // Chuyển hướng người dùng về đúng khu vực của họ thay vì đăng xuất ngay lập tức gây khó chịu, nhưng nếu có hack cố tình thì chặn
+              const expectedHash = '/' + normalizedAllowed.replace(/_/g, '-');
+              if (window.location.hash.replace(/^#\/?/, '').trim() !== normalizedAllowed.replace(/_/g, '-')) {
+                window.location.hash = expectedHash;
+                setTimeout(() => window.location.reload(), 100);
+                return;
+              }
+              // Fallback an toàn
               currentState.logout();
               return;
             }
@@ -811,6 +821,7 @@ export const useTournamentStore = create<AppState>()(
               if (!error && data) {
                 if (data.session_id && data.session_id !== state.currentSessionId) {
                   console.warn('Phát hiện đăng nhập song song qua polling. Đăng xuất...');
+                  alert(`CẢNH BÁO: KẾT NỐI BỊ NGẮT\n\nTài khoản "${state.currentUser}" vừa được đăng nhập thành công ở thiết bị hoặc trình duyệt khác.\n\nNhằm bảo vệ tính toàn vẹn dữ liệu lúc nhập điểm, hệ thống chỉ cho phép 1 tài khoản hoạt động trên 1 thiết bị/1 tab trình duyệt ở cùng một thời điểm.\n\nPhiên làm việc này sẽ được đăng xuất tự động.`);
                   get().logout();
                 }
               }
@@ -1933,6 +1944,7 @@ export const useTournamentStore = create<AppState>()(
             
             if (forceLogout) {
               console.warn('Phát hiện đăng nhập song song. Tự động đăng xuất phiên làm việc cũ.');
+              alert(`CẢNH BÁO: KẾT NỐI BỊ NGẮT\n\nTài khoản "${localState.currentUser}" vừa được đăng nhập thành công ở thiết bị hoặc trình duyệt khác.\n\nNhằm bảo vệ tính toàn vẹn dữ liệu lúc nhập điểm, hệ thống chỉ cho phép 1 tài khoản hoạt động trên 1 thiết bị/1 tab trình duyệt ở cùng một thời điểm.\n\nPhiên làm việc này sẽ được đăng xuất tự động.`);
               get().logout();
               return; // Ngừng quá trình initSupabase
             }

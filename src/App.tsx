@@ -143,14 +143,24 @@ export default function App() {
   // Âm thầm tự động kéo dữ liệu (Polling) từ Supabase mỗi 10 giây đối với khách xem (không phải Admin)
   // để cập nhật điểm số, lịch đấu và bảng xếp hạng trực tuyến tức thì bất cứ lúc nào Admin chỉnh sửa.
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (isAdmin) {
-        useTournamentStore.getState().checkAdminSession();
-      } else {
+    // Kéo dữ liệu sau mỗi 10 giây cho guest
+    const guestInterval = setInterval(() => {
+      if (!isAdmin) {
         initSupabase();
       }
-    }, 10000); // Kéo dữ liệu sau mỗi 10 giây
-    return () => clearInterval(interval);
+    }, 10000); 
+
+    // Kiểm tra đăng nhập song song mỗi 2 giây cực nhanh cho admin
+    const adminInterval = setInterval(() => {
+      if (isAdmin) {
+        useTournamentStore.getState().checkAdminSession();
+      }
+    }, 2000);
+
+    return () => {
+      clearInterval(guestInterval);
+      clearInterval(adminInterval);
+    };
   }, [isAdmin, initSupabase]);
 
   // Bảo mật phiên làm việc: Auto-Logout và xóa cache khi đóng trình duyệt
@@ -164,6 +174,7 @@ export default function App() {
       window.clearTimeout(inactivityTimer);
       inactivityTimer = window.setTimeout(() => {
         console.warn('Phiên làm việc đã hết hạn do không hoạt động.');
+        alert('ĐÃ ĐĂNG XUẤT:\n\nVì sự an toàn của dữ liệu, hệ thống tự động đăng xuất nếu không có thao tác nào trong vòng 2 phút. Vui lòng đăng nhập lại.');
         useTournamentStore.getState().logout();
       }, 120000);
     };
