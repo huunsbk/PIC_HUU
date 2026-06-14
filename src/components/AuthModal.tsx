@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTournamentStore } from '../store';
+import { supabase } from '../supabaseClient';
 import { 
   Lock, 
   User, 
@@ -27,7 +28,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   if (!isOpen) return null;
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -40,60 +41,43 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       return;
     }
 
-    // 1. Kiểm tra tài khoản cấp 1 (Tài khoản gốc "huunsbk")
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: trimmedUser + '@pic.com',
+      password: trimmedPass
+    });
+
+    if (error) {
+      setErrorMsg('Tên đăng nhập hoặc mật khẩu không chính xác.');
+      return;
+    }
+
     if (trimmedUser === 'huunsbk') {
-      if (trimmedPass === 'huunsbk' || trimmedPass === 'admin123') { // Chấp nhận cả huunsbk và mật khẩu dự phòng
-        setSuccessMsg('Đăng nhập thành công với vai trò Quản Trị Viên Cấp 1!');
-        setTimeout(() => {
-          setAuthStatus('admin1', 'huunsbk', 'default');
-          onClose();
-        }, 800);
-        return;
-      } else {
-        setErrorMsg('Sai mật khẩu tài khoản gốc @huunsbk.');
-        return;
-      }
+      setSuccessMsg('Đăng nhập thành công với vai trò Quản Trị Viên Cấp 1!');
+      setTimeout(() => {
+        setAuthStatus('admin1', 'huunsbk', 'default');
+        onClose();
+      }, 800);
+      return;
     }
 
-    // 2. Tương thích ngược với tài khoản admin123
-    if (trimmedUser === 'admin123') {
-      if (trimmedPass === 'admin123') {
-        setSuccessMsg('Đăng nhập thành công với vai trò Quản trị viên mặc định.');
-        setTimeout(() => {
-          setAuthStatus('admin2', 'admin123', 'default');
-          onClose();
-        }, 800);
-        return;
-      } else {
-        setErrorMsg('Mật khẩu "admin123" không hợp lệ.');
-        return;
-      }
-    }
-
-    // 3. Kiểm tra tài khoản cấp 2 & 3
     const targetAccount = accounts.find(
       acc => acc.username.toLowerCase() === trimmedUser
     );
 
     if (targetAccount) {
-      if (targetAccount.password === trimmedPass) {
-        setSuccessMsg(`Đăng nhập thành công! Chào mừng đại diện ${targetAccount.displayName}.`);
-        setTimeout(() => {
-          // Gắn tài khoản này với cơ sở dữ liệu (tenantId của admin2)
-          const role = targetAccount.role === 'admin3' ? 'admin3' : 'admin2';
-          const rawTenantId = targetAccount.role === 'admin3' ? (targetAccount.parentTenantId || 'default') : targetAccount.username;
-          const tenantId = rawTenantId.replace(/-/g, '_');
-          setAuthStatus(role, targetAccount.username, tenantId);
-          onClose();
-        }, 800);
-        return;
-      } else {
-        setErrorMsg('Sai mật khẩu cho tài khoản này.');
-        return;
-      }
+      setSuccessMsg(`Đăng nhập thành công! Chào mừng đại diện ${targetAccount.displayName}.`);
+      setTimeout(() => {
+        // Gắn tài khoản này với cơ sở dữ liệu (tenantId của admin2)
+        const role = targetAccount.role === 'admin3' ? 'admin3' : 'admin2';
+        const rawTenantId = targetAccount.role === 'admin3' ? (targetAccount.parentTenantId || 'default') : targetAccount.username;
+        const tenantId = rawTenantId.replace(/-/g, '_');
+        setAuthStatus(role, targetAccount.username, tenantId);
+        onClose();
+      }, 800);
+      return;
     }
 
-    setErrorMsg('Tên đăng nhập không tồn tại trên hệ thống.');
+    setErrorMsg('Tên đăng nhập không tồn tại trên hệ thống dữ liệu.');
   };
 
   return (

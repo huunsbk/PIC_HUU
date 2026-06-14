@@ -35,7 +35,7 @@ interface AppState {
   userRole: 'guest' | 'admin1' | 'admin2' | 'admin3'; // guest = viewer, admin1 = root, admin2 = level 2, admin3 = level 3
   activeTenantId: string; // 'default' or username of level 2 account
   setAuthStatus: (role: 'guest' | 'admin1' | 'admin2' | 'admin3', username: string | null, tenantId: string, sessionId?: string) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   setTenantId: (tenantId: string) => Promise<void>;
   addAccount2: (acc: Account) => Promise<boolean>;
   updateAccount2: (acc: Account) => Promise<boolean>;
@@ -462,6 +462,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
   }
 };
 
+let isAuthListenerSetup = false;
+
 export const useTournamentStore = create<AppState>()(
   persist(
     (originalSet, get) => {
@@ -694,7 +696,8 @@ export const useTournamentStore = create<AppState>()(
           
           get().initSupabase();
         },
-        logout: () => {
+        logout: async () => {
+          await supabase.auth.signOut();
           set({
             userRole: 'guest',
             currentUser: null,
@@ -742,7 +745,6 @@ export const useTournamentStore = create<AppState>()(
           try {
             const { error: accError } = await supabase.from('accounts').upsert({
               username: acc.username,
-              password: acc.password,
               display_name: acc.displayName,
               tournament_name: acc.tournamentName
             });
@@ -773,7 +775,6 @@ export const useTournamentStore = create<AppState>()(
           try {
             const { error: accError } = await supabase.from('accounts').upsert({
               username: acc.username,
-              password: acc.password,
               display_name: acc.displayName,
               tournament_name: acc.tournamentName
             });
@@ -1906,6 +1907,15 @@ export const useTournamentStore = create<AppState>()(
         },
 
         initSupabase: async () => {
+          if (!isAuthListenerSetup) {
+            isAuthListenerSetup = true;
+            supabase.auth.onAuthStateChange((event) => {
+              if (event === 'SIGNED_OUT') {
+                get().logout();
+              }
+            });
+          }
+          
           originalSet({ isLoadingSupabase: true });
           try {
             // Lấy trạng thái dữ liệu trong store cục bộ trước khi query (khôi phục từ localStorage)

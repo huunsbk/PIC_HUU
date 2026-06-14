@@ -105,7 +105,7 @@ export interface EventData {
 
 export interface Account {
   username: string;
-  password: string;
+  password?: string;
   displayName: string;
   tournamentName: string;
   session_id?: string;

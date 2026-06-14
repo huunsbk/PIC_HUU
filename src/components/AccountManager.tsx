@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTournamentStore } from '../store';
+import { supabase } from '../supabaseClient';
 import { Account } from '../types';
 import { 
   UserPlus, 
@@ -88,9 +89,21 @@ export default function AccountManager() {
     const role = userRole === 'admin2' ? 'admin3' : 'admin2';
     const parentTenantId = userRole === 'admin2' ? (currentUser || '') : undefined;
     
+    // Tích hợp Supabase Auth
+    const { data, error } = await supabase.auth.signUp({
+      email: trimmedUsername + '@pic.com',
+      password: trimmedPassword,
+    });
+
+    if (error) {
+      setErrorMsg(`Lỗi đăng ký Supabase Auth: ${error.message}`);
+      setIsSyncing(false);
+      return;
+    }
+
     const success = await addAccount2({
       username: trimmedUsername,
-      password: trimmedPassword,
+      password: '', // KHÔNG truyền trường password vào CSDL nữa
       displayName: trimmedDisplay,
       tournamentName: trimmedTournament || (role === 'admin3' ? '' : `Giải Pickleball thuộc ${trimmedDisplay}`),
       role,
@@ -118,7 +131,7 @@ export default function AccountManager() {
 
   const handleStartEdit = (acc: Account) => {
     setEditingUsername(acc.username);
-    setEditPassword(acc.password);
+    setEditPassword('');
     setEditDisplayName(acc.displayName);
     setEditTournamentName(acc.tournamentName);
     setEditSelectedEventIds(acc.permittedEventIds || []);
@@ -129,8 +142,13 @@ export default function AccountManager() {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!editPassword.trim() || !editDisplayName.trim()) {
-      setErrorMsg('Tên đơn vị và mật khẩu không được để trống.');
+    if (!editDisplayName.trim()) {
+      setErrorMsg('Tên đơn vị không được để trống.');
+      return;
+    }
+
+    if (editPassword.trim()) {
+      setErrorMsg('Phiên bản hiện tại chưa hỗ trợ Update Mật Khẩu qua giao diện này vì cần Admin Key Supabase.');
       return;
     }
 
@@ -138,7 +156,7 @@ export default function AccountManager() {
     const existingAcc = accounts.find(a => a.username === editingUsername);
     const success = await updateAccount2({
       username: editingUsername,
-      password: editPassword.trim(),
+      password: '', // Giữ rỗng để không lọt vào CSDL
       displayName: editDisplayName.trim(),
       tournamentName: editTournamentName.trim() || (existingAcc?.role === 'admin3' ? '' : `Giải Pickleball thuộc ${editDisplayName.trim()}`),
       role: existingAcc?.role,
@@ -424,10 +442,12 @@ export default function AccountManager() {
                               type="text"
                               value={editPassword}
                               onChange={e => setEditPassword(e.target.value)}
-                              className="bg-zinc-100 dark:bg-zinc-950 text-xs border border-zinc-300 dark:border-zinc-700 font-mono rounded px-2 py-1 w-28 focus:outline-none"
+                              placeholder="Mật khẩu mới (không hỗ trợ thay đổi)"
+                              className="bg-zinc-100 dark:bg-zinc-950 text-xs border border-zinc-300 dark:border-zinc-700 font-mono rounded px-2 py-1 w-28 focus:outline-none opacity-50 cursor-not-allowed"
+                              disabled
                             />
                           ) : (
-                            <span className="font-mono bg-zinc-150/50 dark:bg-zinc-850 px-2 py-0.5 rounded text-zinc-600 dark:text-zinc-400 font-semibold">{acc.password}</span>
+                            <span className="font-mono bg-zinc-150/50 dark:bg-zinc-850 px-2 py-0.5 rounded text-zinc-400 dark:text-zinc-500 italic text-[10px]">Đã mã hóa 1 chiều</span>
                           )}
                         </td>
 
