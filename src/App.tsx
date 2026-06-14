@@ -317,7 +317,7 @@ export default function App() {
           <header className="sticky top-0 z-30 bg-white/95 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80 px-3 sm:px-5 py-2 sm:py-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-start sm:justify-between gap-2 sm:gap-0 shadow-xs print:hidden">
             <div className="space-y-0.5">
               <p className="text-[8px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest leading-none">Cổng Điều Hành Trực Tuyến</p>
-              <h2 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 max-w-2xl truncate">
+              <h2 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 max-w-full sm:max-w-2xl whitespace-normal break-words">
                 {tournament.name || 'HỆ THỐNG QUẢN LÝ GIẢI ĐẤU PICKLEBALL'}
                 <span className="text-[8px] bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400 font-bold px-1.5 py-0.5 rounded-full border border-red-200/60 dark:border-red-900/20">
                   STANDARD V2.6

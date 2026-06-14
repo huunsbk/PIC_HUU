@@ -6,10 +6,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTournamentStore } from '../store';
 import { Trophy, PlayCircle, HelpCircle, AlertTriangle } from 'lucide-react';
-import { getReadableTeamName, getReadableKoMatchName } from '../utils/tournamentEngine';
+import { getReadableTeamName, getReadableKoMatchName, calculateGroupStandings, calculateBestThirdPlaces } from '../utils/tournamentEngine';
 
 export default function KnockoutBracket() {
   const {
+    tournament,
     matches,
     teams,
     groups,
@@ -23,6 +24,8 @@ export default function KnockoutBracket() {
 
   const [sz, setSz] = useState<4 | 8 | 16 | 32>(4);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [numBestThirds, setNumBestThirds] = useState<number>(3);
 
   // Lấy danh sách đội thi đấu để làm dropdown chọn đội đi tiếp
   const teamList = Object.values(teams);
@@ -43,6 +46,77 @@ export default function KnockoutBracket() {
   const roundsKeys = Object.keys(roundsMap)
     .map(Number)
     .sort((a, b) => a - b);
+
+  // Compute standings for qualified teams in edit mode
+  const groupStandingsMap: Record<string, { standings: any[], isFinished: boolean }> = {};
+  const groupNamesMap: Record<string, string> = {};
+
+  Object.values(groups).forEach((g) => {
+    const gMatchs = matches.filter((m) => m.groupId === g.id);
+    const isFinished = gMatchs.length > 0 && gMatchs.every((m) => m.status === 'finished');
+    if (gMatchs.length > 0) {
+      const stds = calculateGroupStandings(g.id, g.teamIds, gMatchs, teams, tournament.settings);
+      groupStandingsMap[g.id] = { standings: stds.ranking || stds, isFinished };
+    } else {
+      groupStandingsMap[g.id] = { standings: [], isFinished: false };
+    }
+    groupNamesMap[g.id] = g.name;
+  });
+
+  const allGroupsFinished = Object.values(groupStandingsMap).length > 0 && Object.values(groupStandingsMap).every(g => g.isFinished);
+  
+  const stdsOnlyMap = Object.fromEntries(Object.entries(groupStandingsMap).map(([k, v]) => [k, v.standings]));
+  const calculatedBestThirds = calculateBestThirdPlaces(stdsOnlyMap as any, matches, tournament.settings, groupNamesMap);
+
+  const sortedGroups = Object.values(groups).sort((a,b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
+  const firstPlaceSlots = sortedGroups.map(g => ({ key: `__1st_${g.id}`, label: `Nhất ${g.name.replace(/^Bảng\s+/i, '')}` }));
+  const secondPlaceSlots = sortedGroups.map(g => ({ key: `__2nd_${g.id}`, label: `Nhì ${g.name.replace(/^Bảng\s+/i, '')}` }));
+  const thirdPlaceSlots = Array.from({length: numBestThirds}).map((_, i) => ({ key: `__3rd_${i+1}`, label: `Ba XS ${i+1}` }));
+
+  const usedParticipants = new Set<string>();
+  koMatches.forEach(m => {
+    if (m.teamAId) usedParticipants.add(m.teamAId);
+    if (m.teamBId) usedParticipants.add(m.teamBId);
+  });
+
+  const finishedGroupTeamNames: string[] = [];
+  Object.values(groups).forEach(g => {
+    if (groupStandingsMap[g.id]?.isFinished) {
+      finishedGroupTeamNames.push(...g.teamIds.map(tid => teams[tid]?.name));
+    }
+  });
+
+  const resolveSlotName = (slotKey: string) => {
+    if (!slotKey) return '';
+    if (slotKey.startsWith('__1st_')) {
+      const gid = slotKey.replace('__1st_', '');
+      const groupInfo = groupStandingsMap[gid];
+      if (groupInfo?.isFinished && groupInfo.standings[0]) {
+        return groupInfo.standings[0].teamName;
+      }
+      return `Nhất ${groupNamesMap[gid]?.replace(/^Bảng\s+/i, '') || ''}`;
+    }
+    if (slotKey.startsWith('__2nd_')) {
+      const gid = slotKey.replace('__2nd_', '');
+      const groupInfo = groupStandingsMap[gid];
+      if (groupInfo?.isFinished && groupInfo.standings[1]) {
+        return groupInfo.standings[1].teamName;
+      }
+      return `Nhì ${groupNamesMap[gid]?.replace(/^Bảng\s+/i, '') || ''}`;
+    }
+    if (slotKey.startsWith('__3rd_')) {
+      const rank = parseInt(slotKey.replace('__3rd_', ''), 10);
+      if (allGroupsFinished && calculatedBestThirds[rank - 1]) {
+        return calculatedBestThirds[rank - 1].teamName;
+      }
+      return `Ba XS ${rank}`;
+    }
+    if (teams[slotKey]) return teams[slotKey].name;
+    const foundTeam = Object.values(teams).find(t => t.name === slotKey);
+    if (foundTeam) return foundTeam.name;
+
+    return getReadableTeamName(slotKey);
+  };
 
   const handleGenerateBracket = () => {
     generateKnockoutBracket(sz);
@@ -178,14 +252,25 @@ export default function KnockoutBracket() {
             </button>
           </div>
         ) : (
-          <button
-            onClick={() => setShowClearConfirmModal(true)}
-            disabled={!isAdmin}
-            className="px-5 py-3 text-xs font-black bg-red-50 hover:bg-red-100 dark:bg-red-955/40 text-red-650 dark:text-red-400 rounded-xl cursor-pointer border border-red-250 transition-colors uppercase tracking-wider shadow-xs disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-55"
-            id="btn-delete-knockout"
-          >
-            Hủy & Tạo Lại Sơ Đồ
-          </button>
+          <div className="flex items-center gap-2">
+            {!isEditMode && (
+              <button
+                onClick={() => setIsEditMode(true)}
+                disabled={!isAdmin}
+                className="px-5 py-3 text-xs font-black bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl cursor-pointer border border-zinc-250 dark:border-zinc-700 transition-colors uppercase tracking-wider shadow-xs disabled:opacity-50"
+              >
+                Sửa Tên Các Đội Vào Nhánh
+              </button>
+            )}
+            <button
+              onClick={() => setShowClearConfirmModal(true)}
+              disabled={!isAdmin || isEditMode}
+              className="px-5 py-3 text-xs font-black bg-red-50 hover:bg-red-100 dark:bg-red-955/40 text-red-650 dark:text-red-400 rounded-xl cursor-pointer border border-red-250 transition-colors uppercase tracking-wider shadow-xs disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-55"
+              id="btn-delete-knockout"
+            >
+              Hủy & Tạo Lại Sơ Đồ
+            </button>
+          </div>
         )}
       </div>
 
@@ -198,6 +283,82 @@ export default function KnockoutBracket() {
       ) : (
         <div className="space-y-8">
           
+          {isEditMode && (
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-4 rounded-2xl shadow-sm mb-4 sticky top-0 z-10" style={{ top: '65px' }}>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-zinc-800 dark:text-zinc-200 text-sm">Danh sách đội đi tiếp (Kéo để xếp vào nhánh)</h3>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-zinc-500">Số đội hạng 3:</span>
+                    <input 
+                      type="number" 
+                      min="0" max="16" 
+                      className="w-16 px-2 py-1 text-xs border rounded bg-zinc-50 dark:bg-zinc-800 dark:text-white"
+                      value={numBestThirds} 
+                      onChange={(e) => setNumBestThirds(Number(e.target.value) || 0)} 
+                    />
+                  </div>
+                  <button 
+                    onClick={() => setIsEditMode(false)}
+                    className="px-4 py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors cursor-pointer"
+                  >
+                    Xong
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {/* Hàng 1: Nhất Bảng */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                  <div className="w-14 shrink-0 text-[10px] font-black uppercase text-amber-600 bg-amber-50 dark:bg-amber-950/30 text-center py-1.5 rounded">Nhất</div>
+                  {firstPlaceSlots.filter(s => !usedParticipants.has(s.key)).map((slot) => (
+                    <div 
+                      key={slot.key}
+                      draggable
+                      onDragStart={(e) => e.dataTransfer.setData('text/plain', slot.key)}
+                      className="shrink-0 px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-[11px] font-bold cursor-move border border-zinc-200 dark:border-zinc-700 hover:border-blue-400"
+                    >
+                      {slot.label}
+                    </div>
+                  ))}
+                  {firstPlaceSlots.filter(s => !usedParticipants.has(s.key)).length === 0 && <span className="text-xs text-zinc-400 italic">Trống</span>}
+                </div>
+                
+                {/* Hàng 2: Nhì Bảng */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                  <div className="w-14 shrink-0 text-[10px] font-black uppercase text-zinc-600 bg-zinc-100 dark:bg-zinc-800 text-center py-1.5 rounded">Nhì</div>
+                  {secondPlaceSlots.filter(s => !usedParticipants.has(s.key)).map((slot) => (
+                    <div 
+                      key={slot.key}
+                      draggable
+                      onDragStart={(e) => e.dataTransfer.setData('text/plain', slot.key)}
+                      className="shrink-0 px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-[11px] font-bold cursor-move border border-zinc-200 dark:border-zinc-700 hover:border-blue-400"
+                    >
+                      {slot.label}
+                    </div>
+                  ))}
+                  {secondPlaceSlots.filter(s => !usedParticipants.has(s.key)).length === 0 && <span className="text-xs text-zinc-400 italic">Trống</span>}
+                </div>
+
+                {/* Hàng 3: Ba Xuất Sắc */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                  <div className="w-14 shrink-0 text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 text-center py-1.5 rounded">Hạng 3</div>
+                  {thirdPlaceSlots.filter(s => !usedParticipants.has(s.key)).map((slot) => (
+                    <div 
+                      key={slot.key}
+                      draggable
+                      onDragStart={(e) => e.dataTransfer.setData('text/plain', slot.key)}
+                      className="shrink-0 px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-[11px] font-bold cursor-move border border-zinc-200 dark:border-zinc-700 hover:border-blue-400"
+                    >
+                      {slot.label}
+                    </div>
+                  ))}
+                  {thirdPlaceSlots.filter(s => !usedParticipants.has(s.key)).length === 0 && <span className="text-xs text-zinc-400 italic">Trống</span>}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Hướng Dẫn Tải Đầy Đủ */}
           <div className="p-4 bg-blue-50/70 dark:bg-blue-950/20 border border-blue-250 text-[#111c30] dark:text-blue-300 rounded-xl flex items-start gap-3">
             <HelpCircle size={18} className="shrink-0 mt-0.5 text-blue-500" />
@@ -267,23 +428,46 @@ export default function KnockoutBracket() {
                               <div className="flex items-center justify-between gap-3" style={(m.id === 'ko-QF1-ww7imxn' || m.id === 'ko-QF2-3f2hlbu') ? { marginBottom: '0px' } : undefined}>
                                 <div className="flex items-center gap-1.5 truncate max-w-[210px] sm:max-w-[250px]">
                                   {!isFinished && m.round === 1 ? (
-                                    <select
-                                      value={m.teamAId}
-                                      onChange={(e) => updateKnockoutParticipant(m.id, 'A', e.target.value)}
-                                      disabled={!isAdmin}
-                                      className="px-2 py-1.5 font-black rounded-lg border border-zinc-250 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-[230px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                      style={m.id === 'ko-QF1-ww7imxn' ? { width: '300px', maxWidth: 'none' } : undefined}
-                                    >
-                                      {/* Thêm option placeholder nếu chưa nằm trong list đội giải */}
-                                      {!teamNames.includes(m.teamAId) && (
-                                        <option value={m.teamAId}>{getReadableTeamName(m.teamAId)}</option>
-                                      )}
-                                      {teamList.map((t) => (
-                                        <option key={t.id} value={t.name}>
-                                          {t.name}
-                                        </option>
-                                      ))}
-                                    </select>
+                                    isEditMode ? (
+                                      <div
+                                        onDragOver={(e) => { e.preventDefault(); }}
+                                        onDrop={(e) => {
+                                          e.preventDefault();
+                                          const teamId = e.dataTransfer.getData('text/plain');
+                                          if (teamId) updateKnockoutParticipant(m.id, 'A', teamId);
+                                        }}
+                                        className="font-black flex items-center justify-between rounded-lg border-2 border-dashed border-zinc-400 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs min-w-[200px]"
+                                      >
+                                        <span className="px-2 py-1.5">{m.teamAId ? resolveSlotName(m.teamAId) : 'Thả đội vào đây'}</span>
+                                        {m.teamAId && (
+                                          <button 
+                                            title="Xoá khỏi nhánh"
+                                            onClick={() => updateKnockoutParticipant(m.id, 'A', '')} 
+                                            className="px-2 py-1.5 hover:text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-r-lg"
+                                          >
+                                            ✕
+                                          </button>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <select
+                                        value={m.teamAId}
+                                        onChange={(e) => updateKnockoutParticipant(m.id, 'A', e.target.value)}
+                                        disabled={!isAdmin}
+                                        className="px-2 py-1.5 font-black rounded-lg border border-zinc-250 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-[230px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                        style={m.id === 'ko-QF1-ww7imxn' ? { width: '300px', maxWidth: 'none' } : undefined}
+                                      >
+                                        {/* Thêm option placeholder nếu chưa nằm trong list đội giải */}
+                                        {!teamNames.includes(m.teamAId) && (
+                                          <option value={m.teamAId}>{resolveSlotName(m.teamAId)}</option>
+                                        )}
+                                        {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamAId === t.name).map((t) => (
+                                          <option key={t.id} value={t.name}>
+                                            {t.name}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    )
                                   ) : (
                                     <span 
                                       className={`font-black text-xs sm:text-sm truncate block max-w-[190px] sm:max-w-[230px] ${
@@ -291,9 +475,9 @@ export default function KnockoutBracket() {
                                           ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
                                           : 'text-zinc-800 dark:text-zinc-200'
                                       }`}
-                                      title={getReadableTeamName(m.teamAId)}
+                                      title={resolveSlotName(m.teamAId)}
                                     >
-                                      {getReadableTeamName(m.teamAId)}
+                                      {resolveSlotName(m.teamAId)}
                                     </span>
                                   )}
                                 </div>
@@ -315,22 +499,45 @@ export default function KnockoutBracket() {
                               <div className="flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-1.5 truncate max-w-[210px] sm:max-w-[250px]">
                                   {!isFinished && m.round === 1 ? (
-                                    <select
-                                      value={m.teamBId}
-                                      onChange={(e) => updateKnockoutParticipant(m.id, 'B', e.target.value)}
-                                      disabled={!isAdmin}
-                                      className="px-2 py-1.5 font-black rounded-lg border border-zinc-250 bg-white dark:bg-zinc-900 text-[#111c30] dark:text-zinc-105 text-xs focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-[230px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                      style={m.id === 'ko-QF1-ww7imxn' ? { width: '300px', maxWidth: 'none' } : undefined}
-                                    >
-                                      {!teamNames.includes(m.teamBId) && (
-                                        <option value={m.teamBId}>{getReadableTeamName(m.teamBId)}</option>
-                                      )}
-                                      {teamList.map((t) => (
-                                        <option key={t.id} value={t.name}>
-                                          {t.name}
-                                        </option>
-                                      ))}
-                                    </select>
+                                    isEditMode ? (
+                                      <div
+                                        onDragOver={(e) => { e.preventDefault(); }}
+                                        onDrop={(e) => {
+                                          e.preventDefault();
+                                          const teamId = e.dataTransfer.getData('text/plain');
+                                          if (teamId) updateKnockoutParticipant(m.id, 'B', teamId);
+                                        }}
+                                        className="font-black flex items-center justify-between rounded-lg border-2 border-dashed border-zinc-400 bg-white dark:bg-zinc-900 text-[#111c30] dark:text-zinc-105 text-xs min-w-[200px]"
+                                      >
+                                        <span className="px-2 py-1.5">{m.teamBId ? resolveSlotName(m.teamBId) : 'Thả đội vào đây'}</span>
+                                        {m.teamBId && (
+                                          <button 
+                                            title="Xoá khỏi nhánh"
+                                            onClick={() => updateKnockoutParticipant(m.id, 'B', '')} 
+                                            className="px-2 py-1.5 hover:text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-r-lg"
+                                          >
+                                            ✕
+                                          </button>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <select
+                                        value={m.teamBId}
+                                        onChange={(e) => updateKnockoutParticipant(m.id, 'B', e.target.value)}
+                                        disabled={!isAdmin}
+                                        className="px-2 py-1.5 font-black rounded-lg border border-zinc-250 bg-white dark:bg-zinc-900 text-[#111c30] dark:text-zinc-105 text-xs focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-[230px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                        style={m.id === 'ko-QF1-ww7imxn' ? { width: '300px', maxWidth: 'none' } : undefined}
+                                      >
+                                        {!teamNames.includes(m.teamBId) && (
+                                          <option value={m.teamBId}>{resolveSlotName(m.teamBId)}</option>
+                                        )}
+                                        {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamBId === t.name).map((t) => (
+                                          <option key={t.id} value={t.name}>
+                                            {t.name}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    )
                                   ) : (
                                     <span 
                                       className={`font-black text-xs sm:text-sm truncate block max-w-[190px] sm:max-w-[230px] ${
@@ -338,9 +545,9 @@ export default function KnockoutBracket() {
                                           ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
                                           : 'text-zinc-800 dark:text-zinc-200'
                                       }`}
-                                      title={getReadableTeamName(m.teamBId)}
+                                      title={resolveSlotName(m.teamBId)}
                                     >
-                                      {getReadableTeamName(m.teamBId)}
+                                      {resolveSlotName(m.teamBId)}
                                     </span>
                                   )}
                                 </div>

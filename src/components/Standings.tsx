@@ -27,8 +27,10 @@ export default function Standings() {
 
   // 1. Tính toán BXH toàn bộ các bảng ở trạng thái tức thì
   const standingsByGroup: Record<string, ReturnType<typeof calculateGroupStandings>> = {};
+  const groupFinishedMap: Record<string, boolean> = {};
   groupList.forEach((group) => {
     const groupMatches = matches.filter((m) => m.groupId === group.id);
+    groupFinishedMap[group.id] = groupMatches.length > 0 && groupMatches.every((m) => m.status === 'finished');
     standingsByGroup[group.id] = calculateGroupStandings(
       group.id,
       group.teamIds,
@@ -37,6 +39,7 @@ export default function Standings() {
       settings
     );
   });
+  const allGroupsFinished = groupList.length > 0 && groupList.every(g => groupFinishedMap[g.id]);
 
   // 2. Tính toán BXH Hạng 3 xuất sắc nhất (UEFA)
   const groupNamesMap: Record<string, string> = {};
@@ -196,7 +199,7 @@ export default function Standings() {
                       {standings.map((s, idx) => {
                         const isAdvancing = advanceSelectionMode === 'manual'
                           ? (manualQualifiedTeamIds || []).includes(s.teamId)
-                          : s.rank <= settings.advanceCount;
+                          : (groupFinishedMap[group.id] && s.rank <= settings.advanceCount);
                         
                         const isSpecialEl = (group.id === 'group-1' || group.id.startsWith('group-1-')) && idx === 0;
                         
@@ -311,7 +314,7 @@ export default function Standings() {
               </thead>
               <tbody>
                 {bestThirdPlaces.map((cand, idx) => {
-                  const isTopThirdAdvancing = idx < 2; // Ví dụ, lấy top 2 đội hạng 3 đi tiếp
+                  const isTopThirdAdvancing = allGroupsFinished && advanceSelectionMode !== 'manual' && idx < 2; // Ví dụ, lấy top 2 đội hạng 3 đi tiếp
                   return (
                     <tr
                       key={cand.teamId}

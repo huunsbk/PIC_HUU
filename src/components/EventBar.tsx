@@ -25,8 +25,12 @@ export default function EventBar() {
     deleteEvent, 
     renameEvent, 
     setCurrentEvent,
-    isAdmin
+    isAdmin,
+    selectedTab
   } = useTournamentStore();
+
+  const isReadOnlyTab = ['groups', 'matches', 'standings', 'knockout'].includes(selectedTab);
+  const canEdit = isAdmin && !isReadOnlyTab;
 
   const [isAdding, setIsAdding] = useState(false);
   const [newEventName, setNewEventName] = useState('');
@@ -145,7 +149,7 @@ export default function EventBar() {
                   <span className="truncate max-w-[120px]">{evt.name}</span>
                   
                   {/* Icon chỉnh sửa / xóa hiển thị khi hoever (hoặc luôn hiện trên di động) */}
-                  {isAdmin && (
+                  {canEdit && (
                     <div className={`flex items-center gap-1 ${isActive ? 'opacity-90' : 'opacity-0 group-hover:opacity-100 transition-opacity'}`}>
                       <button
                         onClick={(e) => {
@@ -177,7 +181,7 @@ export default function EventBar() {
               );
             })}
 
-            {isAdmin && (isAdding ? (
+            {canEdit && (isAdding ? (
               <motion.form
                 key="add-form"
                 layoutId="add-button"
