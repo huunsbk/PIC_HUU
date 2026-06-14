@@ -314,7 +314,7 @@ export default function App() {
         <div className="flex-1 flex flex-col min-w-0">
           
           {/* Header Bar thông báo tên giải chuyên nghiệp */}
-          <header className="sticky top-0 z-30 bg-white/95 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80 px-5 py-2.5 flex items-center justify-between shadow-xs print:hidden">
+          <header className="sticky top-0 z-30 bg-white/95 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80 px-3 sm:px-5 py-2 sm:py-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-start sm:justify-between gap-2 sm:gap-0 shadow-xs print:hidden">
             <div className="space-y-0.5">
               <p className="text-[8px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest leading-none">Cổng Điều Hành Trực Tuyến</p>
               <h2 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 max-w-2xl truncate">
