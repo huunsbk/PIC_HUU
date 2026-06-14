@@ -32,9 +32,9 @@ interface AppState {
   accounts: Account[];
   currentUser: string | null;
   currentSessionId: string | null;
-  userRole: 'guest' | 'admin1' | 'admin2'; // guest = viewer, admin1 = huunsbk (root), admin2 = level 2 account
+  userRole: 'guest' | 'admin1' | 'admin2' | 'admin3'; // guest = viewer, admin1 = root, admin2 = level 2, admin3 = level 3
   activeTenantId: string; // 'default' or username of level 2 account
-  setAuthStatus: (role: 'guest' | 'admin1' | 'admin2', username: string | null, tenantId: string, sessionId?: string) => void;
+  setAuthStatus: (role: 'guest' | 'admin1' | 'admin2' | 'admin3', username: string | null, tenantId: string, sessionId?: string) => void;
   logout: () => void;
   setTenantId: (tenantId: string) => Promise<void>;
   addAccount2: (acc: Account) => Promise<boolean>;
@@ -643,12 +643,12 @@ export const useTournamentStore = create<AppState>()(
             currentUser: username,
             currentSessionId: sessionId,
             activeTenantId: tenantId,
-            isAdmin: role === 'admin1' || role === 'admin2',
-            selectedTab: 'dashboard',
+            isAdmin: role === 'admin1' || role === 'admin2' || role === 'admin3',
+            selectedTab: role === 'admin3' ? 'scoreEntry' : 'dashboard',
             isLoadingSupabase: true
           });
-          
-          if (username && role === 'admin2') {
+
+          if (username && (role === 'admin2' || role === 'admin3')) {
             // Cập nhật session_id lên Supabase (fire and forget)
             supabase.from('accounts')
               .update({ session_id: sessionId })
@@ -1841,14 +1841,31 @@ export const useTournamentStore = create<AppState>()(
             let forceLogout = false;
             try {
               const { data: accData, error: accError } = await supabase.from('accounts').select('*');
+              const accountsConfigRow = (tData || []).find((row: any) => row.id === 'accounts_config');
+              const jsonAccounts: Account[] = accountsConfigRow?.settings?.accounts || [];
+              
               if (!accError && accData && accData.length > 0) {
-                loadedAccounts = accData.map((row: any) => ({
-                  username: row.username,
-                  password: row.password,
-                  displayName: row.display_name || row.displayName,
-                  tournamentName: row.tournament_name || row.tournamentName,
-                  session_id: row.session_id
-                }));
+                loadedAccounts = accData.map((row: any) => {
+                  const baseAcc = {
+                    username: row.username,
+                    password: row.password,
+                    displayName: row.display_name || row.displayName,
+                    tournamentName: row.tournament_name || row.tournamentName,
+                    session_id: row.session_id,
+                    role: row.role || 'admin2',
+                    parentTenantId: row.parent_tenant_id || row.parentTenantId,
+                    permittedEventIds: row.permitted_event_ids || row.permittedEventIds || []
+                  };
+                  // JSON might have the extra fields if table is missing them
+                  const jsonExt = jsonAccounts.find(a => a.username === row.username);
+                  return { ...baseAcc, ...jsonExt };
+                });
+                // Thêm cả những account chỉ tồn tại trong JSON
+                jsonAccounts.forEach(jAcc => {
+                  if (!loadedAccounts.find(a => a.username === jAcc.username)) {
+                    loadedAccounts.push(jAcc);
+                  }
+                });
                 
                 // Kiểm tra bảo mật phiên đăng nhập (chỉ áp dụng cho admin2)
                 if (localState.userRole === 'admin2' && localState.currentUser) {
@@ -1858,8 +1875,7 @@ export const useTournamentStore = create<AppState>()(
                   }
                 }
               } else {
-                const accountsConfigRow = (tData || []).find((row: any) => row.id === 'accounts_config');
-                loadedAccounts = accountsConfigRow?.settings?.accounts || [];
+                loadedAccounts = jsonAccounts;
               }
             } catch (e) {
               const accountsConfigRow = (tData || []).find((row: any) => row.id === 'accounts_config');

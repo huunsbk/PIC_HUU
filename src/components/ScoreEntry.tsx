@@ -4,7 +4,7 @@ import { useTournamentStore } from '../store';
 import { getReadableTeamName, balanceMatchesRestTime } from '../utils/tournamentEngine';
 
 export default function ScoreEntry() {
-  const { events, updateMatchScore, updateMatchStatus, currentEventId, setCurrentEvent } = useTournamentStore();
+  const { events, updateMatchScore, updateMatchStatus, currentEventId, setCurrentEvent, userRole, currentUser, accounts } = useTournamentStore();
 
   const [localScores, setLocalScores] = useState<Record<string, { a: string, b: string }>>({});
 
@@ -17,6 +17,12 @@ export default function ScoreEntry() {
   // Safe checks for currentEventId
   const currentEvt = currentEventId && events[currentEventId] ? events[currentEventId] : eventList[0];
   
+  const isPermitted = React.useMemo(() => {
+    if (userRole !== 'admin3') return true;
+    const admin3Acc = accounts.find(a => a.username === currentUser);
+    return admin3Acc?.permittedEventIds?.includes(currentEvt.id) || false;
+  }, [userRole, accounts, currentUser, currentEvt.id]);
+
   if (!currentEvt.matches || currentEvt.matches.length === 0) {
      return (
         <div className="space-y-6">
@@ -150,7 +156,8 @@ export default function ScoreEntry() {
                         btnJsx = (
                             <button
                                 onClick={() => handleSetPlaying(m.id)}
-                                className="text-[9px] font-bold text-zinc-600 bg-zinc-150 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 px-2.5 py-1.5 rounded leading-none shrink-0 shadow-sm cursor-pointer transition-colors mt-1 text-center"
+                                disabled={!isPermitted}
+                                className={`text-[9px] font-bold px-2.5 py-1.5 rounded leading-none shrink-0 shadow-sm transition-colors mt-1 text-center ${!isPermitted ? 'text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 cursor-not-allowed' : 'text-zinc-600 bg-zinc-150 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer'}`}
                             >
                                 CHỜ
                             </button>
@@ -184,7 +191,13 @@ export default function ScoreEntry() {
 
         {/* Right Panel: Khu vực nhập điểm */}
         <div className="lg:col-span-2 space-y-8">
-           {playingMatches.length === 0 ? (
+           {!isPermitted ? (
+               <div className="bg-zinc-50 dark:bg-zinc-950/50 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col items-center justify-center py-32 text-zinc-400">
+                  <Play size={48} className="mb-4 opacity-20 text-zinc-400" />
+                  <p className="font-bold text-sm text-zinc-600 dark:text-zinc-400 uppercase tracking-wider">Trọng tài không có quyền</p>
+                  <p className="text-xs font-medium text-zinc-500 mt-2 px-8 text-center">Bạn không được phân công nhập điểm cho nội dung này. Vui lòng chuyển sang nội dung bạn phụ trách.</p>
+               </div>
+           ) : playingMatches.length === 0 ? (
                <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col items-center justify-center py-32 text-zinc-400">
                   <Play size={48} className="mb-4 opacity-20 text-zinc-400" />
                   <p className="font-bold text-sm">Chưa có trận đấu nào đang diễn ra.</p>

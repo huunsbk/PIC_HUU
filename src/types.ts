@@ -109,6 +109,9 @@ export interface Account {
   displayName: string;
   tournamentName: string;
   session_id?: string;
+  role?: 'admin2' | 'admin3';
+  parentTenantId?: string;
+  permittedEventIds?: string[];
 }
 
 

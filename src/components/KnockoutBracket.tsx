@@ -5,8 +5,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTournamentStore } from '../store';
-import { Trophy, PlayCircle, HelpCircle, AlertTriangle } from 'lucide-react';
+import { Trophy, PlayCircle, HelpCircle, AlertTriangle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { getReadableTeamName, getReadableKoMatchName, calculateGroupStandings, calculateBestThirdPlaces } from '../utils/tournamentEngine';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 export default function KnockoutBracket() {
   const {
@@ -281,97 +282,127 @@ export default function KnockoutBracket() {
           <p className="text-xs text-zinc-500 max-w-sm mx-auto font-semibold">Nhấn nút "Khởi tạo sơ đồ nhánh" ở trên để hệ thống tự động bốc thăm xếp lịch đấu loại trực tiếp.</p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className={isEditMode ? "fixed inset-0 z-[100] bg-zinc-50 dark:bg-zinc-950 flex flex-row w-screen h-screen overflow-hidden" : "space-y-8"}>
           
           {isEditMode && (
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-4 rounded-2xl shadow-sm mb-4 sticky top-0 z-10" style={{ top: '65px' }}>
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-zinc-800 dark:text-zinc-200 text-sm">Danh sách đội đi tiếp (Kéo để xếp vào nhánh)</h3>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-zinc-500">Số đội hạng 3:</span>
-                    <input 
-                      type="number" 
-                      min="0" max="16" 
-                      className="w-16 px-2 py-1 text-xs border rounded bg-zinc-50 dark:bg-zinc-800 dark:text-white"
-                      value={numBestThirds} 
-                      onChange={(e) => setNumBestThirds(Number(e.target.value) || 0)} 
-                    />
-                  </div>
+            <div className="w-80 shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 p-5 flex flex-col h-full shadow-2xl z-50 overflow-y-auto">
+              {/* Header */}
+              <div className="flex flex-col gap-4 mb-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-extrabold text-zinc-900 dark:text-zinc-100 text-sm uppercase tracking-wider">Đội Kéo-Thả</h3>
                   <button 
                     onClick={() => setIsEditMode(false)}
-                    className="px-4 py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors cursor-pointer"
+                    className="px-4 py-2 text-xs font-black bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-transform hover:scale-105 cursor-pointer shadow-md"
                   >
-                    Xong
+                    XONG
                   </button>
+                </div>
+                
+                <div className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-inner">
+                  <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Số suất Hạng 3</span>
+                  <input 
+                    type="number" 
+                    min="0" max="16" 
+                    className="w-full px-3 py-2 text-sm font-bold border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    value={numBestThirds} 
+                    onChange={(e) => setNumBestThirds(Number(e.target.value) || 0)} 
+                  />
                 </div>
               </div>
 
-              <div className="space-y-3">
-                {/* Hàng 1: Nhất Bảng */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                  <div className="w-14 shrink-0 text-[10px] font-black uppercase text-amber-600 bg-amber-50 dark:bg-amber-950/30 text-center py-1.5 rounded">Nhất</div>
-                  {firstPlaceSlots.filter(s => !usedParticipants.has(s.key)).map((slot) => (
-                    <div 
-                      key={slot.key}
-                      draggable
-                      onDragStart={(e) => e.dataTransfer.setData('text/plain', slot.key)}
-                      className="shrink-0 px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-[11px] font-bold cursor-move border border-zinc-200 dark:border-zinc-700 hover:border-blue-400"
-                    >
-                      {slot.label}
-                    </div>
-                  ))}
-                  {firstPlaceSlots.filter(s => !usedParticipants.has(s.key)).length === 0 && <span className="text-xs text-zinc-400 italic">Trống</span>}
+              {/* Lists */}
+              <div className="flex-1 space-y-6">
+                {/* Nhất Bảng */}
+                <div className="space-y-3">
+                  <div className="text-[11px] font-black uppercase text-amber-600 bg-amber-50 dark:bg-amber-950/40 text-center py-2.5 rounded-lg border border-amber-200 dark:border-amber-900/50 shadow-sm">Nhóm Nhất Bảng</div>
+                  <div className="flex flex-col gap-2">
+                    {firstPlaceSlots.filter(s => !usedParticipants.has(s.key)).map((slot) => (
+                      <div 
+                        key={slot.key}
+                        draggable
+                        onDragStart={(e) => e.dataTransfer.setData('text/plain', slot.key)}
+                        className="px-4 py-3 bg-white dark:bg-zinc-800 rounded-xl text-xs font-bold cursor-move border border-zinc-200 dark:border-zinc-700 hover:border-blue-500 hover:shadow-md hover:-translate-y-0.5 transition-all text-center"
+                      >
+                        {slot.label}
+                      </div>
+                    ))}
+                    {firstPlaceSlots.filter(s => !usedParticipants.has(s.key)).length === 0 && <div className="text-xs text-zinc-400 text-center py-4 italic font-medium bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">Hết / Đã xếp xong</div>}
+                  </div>
                 </div>
                 
-                {/* Hàng 2: Nhì Bảng */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                  <div className="w-14 shrink-0 text-[10px] font-black uppercase text-zinc-600 bg-zinc-100 dark:bg-zinc-800 text-center py-1.5 rounded">Nhì</div>
-                  {secondPlaceSlots.filter(s => !usedParticipants.has(s.key)).map((slot) => (
-                    <div 
-                      key={slot.key}
-                      draggable
-                      onDragStart={(e) => e.dataTransfer.setData('text/plain', slot.key)}
-                      className="shrink-0 px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-[11px] font-bold cursor-move border border-zinc-200 dark:border-zinc-700 hover:border-blue-400"
-                    >
-                      {slot.label}
-                    </div>
-                  ))}
-                  {secondPlaceSlots.filter(s => !usedParticipants.has(s.key)).length === 0 && <span className="text-xs text-zinc-400 italic">Trống</span>}
+                {/* Nhì Bảng */}
+                <div className="space-y-3">
+                  <div className="text-[11px] font-black uppercase text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 text-center py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm">Nhóm Nhì Bảng</div>
+                  <div className="flex flex-col gap-2">
+                    {secondPlaceSlots.filter(s => !usedParticipants.has(s.key)).map((slot) => (
+                      <div 
+                        key={slot.key}
+                        draggable
+                        onDragStart={(e) => e.dataTransfer.setData('text/plain', slot.key)}
+                        className="px-4 py-3 bg-white dark:bg-zinc-800 rounded-xl text-xs font-bold cursor-move border border-zinc-200 dark:border-zinc-700 hover:border-blue-500 hover:shadow-md hover:-translate-y-0.5 transition-all text-center"
+                      >
+                        {slot.label}
+                      </div>
+                    ))}
+                    {secondPlaceSlots.filter(s => !usedParticipants.has(s.key)).length === 0 && <div className="text-xs text-zinc-400 text-center py-4 italic font-medium bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">Hết / Đã xếp xong</div>}
+                  </div>
                 </div>
 
-                {/* Hàng 3: Ba Xuất Sắc */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                  <div className="w-14 shrink-0 text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 text-center py-1.5 rounded">Hạng 3</div>
-                  {thirdPlaceSlots.filter(s => !usedParticipants.has(s.key)).map((slot) => (
-                    <div 
-                      key={slot.key}
-                      draggable
-                      onDragStart={(e) => e.dataTransfer.setData('text/plain', slot.key)}
-                      className="shrink-0 px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-[11px] font-bold cursor-move border border-zinc-200 dark:border-zinc-700 hover:border-blue-400"
-                    >
-                      {slot.label}
-                    </div>
-                  ))}
-                  {thirdPlaceSlots.filter(s => !usedParticipants.has(s.key)).length === 0 && <span className="text-xs text-zinc-400 italic">Trống</span>}
+                {/* Ba Xuất Sắc */}
+                <div className="space-y-3">
+                  <div className="text-[11px] font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-center py-2.5 rounded-lg border border-emerald-200 dark:border-emerald-900/50 shadow-sm">Nhóm Ba Xuất Sắc</div>
+                  <div className="flex flex-col gap-2">
+                    {thirdPlaceSlots.filter(s => !usedParticipants.has(s.key)).map((slot) => (
+                      <div 
+                        key={slot.key}
+                        draggable
+                        onDragStart={(e) => e.dataTransfer.setData('text/plain', slot.key)}
+                        className="px-4 py-3 bg-white dark:bg-zinc-800 rounded-xl text-xs font-bold cursor-move border border-zinc-200 dark:border-zinc-700 hover:border-blue-500 hover:shadow-md hover:-translate-y-0.5 transition-all text-center"
+                      >
+                        {slot.label}
+                      </div>
+                    ))}
+                    {thirdPlaceSlots.filter(s => !usedParticipants.has(s.key)).length === 0 && <div className="text-xs text-zinc-400 text-center py-4 italic font-medium bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">Hết / Đã xếp xong</div>}
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Hướng Dẫn Tải Đầy Đủ */}
-          <div className="p-4 bg-blue-50/70 dark:bg-blue-950/20 border border-blue-250 text-[#111c30] dark:text-blue-300 rounded-xl flex items-start gap-3">
-            <HelpCircle size={18} className="shrink-0 mt-0.5 text-blue-500" />
-            <div className="text-xs leading-relaxed font-semibold">
-              <span className="font-black text-sm uppercase text-blue-850 dark:text-blue-400 block mb-1">MẸO QUẢN LÝ / CHỌN ĐỘI TIẾN VÀO:</span>
-              Tại Cột Vòng Khởi Đầu (Tứ kết hoặc 1/8), bạn có thể nhấp chọn trực tiếp từ <strong className="underline text-blue-600 dark:text-blue-450">Dropdown menu</strong> của từng trận đấu để chỉ định đích danh đội đi tiếp một cách thủ công, không bị bó buộc bởi kết quả tự động! Điểm số trực tiếp sẽ cập nhật nhánh ngay lập tức.
-            </div>
-          </div>
-
           {/* Bracket Tree Layout bằng CSS Flexbox Columns nối tiếp */}
-          <div className="overflow-x-auto select-none py-10 bg-white dark:bg-zinc-900 rounded-3xl border border-solid border-zinc-200 dark:border-zinc-805 shadow-md" style={{ borderStyle: 'solid' }} id="bracket-scroller">
-            <div className="flex gap-14 min-w-[950px] justify-between items-center px-8 relative" style={{ paddingLeft: '32px', paddingTop: '0px', marginTop: '-30px' }}>
-              {roundsKeys.map((roundIdx) => {
+          <div className={isEditMode ? "flex-1 h-full relative" : "relative bg-white dark:bg-zinc-900 rounded-3xl border border-solid border-zinc-200 dark:border-zinc-805 shadow-md overflow-hidden min-h-[700px] mt-4"} style={!isEditMode ? { borderStyle: 'solid' } : undefined} id="bracket-view-wrapper">
+            <TransformWrapper
+              initialScale={1}
+              minScale={0.3}
+              maxScale={2}
+              centerOnInit={false}
+              wheel={{ step: 0.1 }}
+              panning={{ disabled: false }}
+            >
+              {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => (
+                <React.Fragment>
+                  <div className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
+                    <button onClick={() => zoomOut()} className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-300 transition-colors pointer-events-auto" title="Thu nhỏ">
+                      <ZoomOut size={18} />
+                    </button>
+                    <input 
+                      type="range" 
+                      min="0.3" max="2" step="0.05"
+                      value={state.scale}
+                      onChange={(e) => setTransform(state.positionX, state.positionY, parseFloat(e.target.value))}
+                      className="w-24 mx-1 accent-blue-500 cursor-pointer pointer-events-auto"
+                    />
+                    <button onClick={() => zoomIn()} className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-300 transition-colors pointer-events-auto" title="Phóng to">
+                      <ZoomIn size={18} />
+                    </button>
+                    <div className="w-px h-6 bg-zinc-300 dark:bg-zinc-700 mx-1"></div>
+                    <button onClick={() => resetTransform()} className="p-2 hover:bg-white dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-300 transition-colors pointer-events-auto" title="Vừa màn hình">
+                      <Maximize size={18} />
+                    </button>
+                  </div>
+                  <TransformComponent wrapperClass="w-full h-full" wrapperStyle={{ width: '100%', height: isEditMode ? '100%' : '700px' }} contentStyle={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: '32px' }}>
+                    <div className="flex gap-10 min-w-[900px] justify-between items-center relative py-10" style={{ marginTop: '-30px' }}>
+                      {roundsKeys.map((roundIdx) => {
                 const roundMatches = roundsMap[roundIdx];
                 const roundName = roundMatches[0]?.knockoutRoundName || `Vòng đấu ${roundIdx}`;
 
@@ -451,7 +482,7 @@ export default function KnockoutBracket() {
                                       </div>
                                     ) : (
                                       <select
-                                        value={m.teamAId}
+                                        value={m.teamAId || ''}
                                         onChange={(e) => updateKnockoutParticipant(m.id, 'A', e.target.value)}
                                         disabled={!isAdmin}
                                         className="px-2 py-1.5 font-black rounded-lg border border-zinc-250 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-[230px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
@@ -459,7 +490,7 @@ export default function KnockoutBracket() {
                                       >
                                         {/* Thêm option placeholder nếu chưa nằm trong list đội giải */}
                                         {!teamNames.includes(m.teamAId) && (
-                                          <option value={m.teamAId}>{resolveSlotName(m.teamAId)}</option>
+                                          <option value={m.teamAId || ''}>{resolveSlotName(m.teamAId)}</option>
                                         )}
                                         {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamAId === t.name).map((t) => (
                                           <option key={t.id} value={t.name}>
@@ -522,14 +553,14 @@ export default function KnockoutBracket() {
                                       </div>
                                     ) : (
                                       <select
-                                        value={m.teamBId}
+                                        value={m.teamBId || ''}
                                         onChange={(e) => updateKnockoutParticipant(m.id, 'B', e.target.value)}
                                         disabled={!isAdmin}
                                         className="px-2 py-1.5 font-black rounded-lg border border-zinc-250 bg-white dark:bg-zinc-900 text-[#111c30] dark:text-zinc-105 text-xs focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-[230px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                         style={m.id === 'ko-QF1-ww7imxn' ? { width: '300px', maxWidth: 'none' } : undefined}
                                       >
                                         {!teamNames.includes(m.teamBId) && (
-                                          <option value={m.teamBId}>{resolveSlotName(m.teamBId)}</option>
+                                          <option value={m.teamBId || ''}>{resolveSlotName(m.teamBId)}</option>
                                         )}
                                         {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamBId === t.name).map((t) => (
                                           <option key={t.id} value={t.name}>
@@ -572,7 +603,11 @@ export default function KnockoutBracket() {
                   </div>
                 );
               })}
-            </div>
+                    </div>
+                  </TransformComponent>
+                </React.Fragment>
+              )}
+            </TransformWrapper>
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@ import React from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Match, EventData } from '../types';
 import { getReadableTeamName, getReadableKoMatchName } from '../utils/tournamentEngine';
+import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 
 interface LiveBracketProps {
   koMatches: Match[];
@@ -106,22 +107,45 @@ export const LiveBracket: React.FC<LiveBracketProps> = ({ koMatches, currentEvt 
         centerOnInit={true}
         wheel={{ step: 0.1 }}
       >
-        <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="p-12 flex flex-col items-center justify-center min-h-[600px] min-w-[800px]">
-            <div className="flex gap-12 items-center">
-              <MatchNode match={finalMatch} roundsMap={roundsMap} currentEvt={currentEvt} />
-              
-              {bronzeMatch && (
-                <div className="flex flex-col justify-end">
-                  <div className="pl-8 relative opacity-85 mt-20">
-                     <div className="text-[10px] font-black text-amber-600/80 uppercase mb-2 absolute -top-4 left-10">Tranh Hạng 3</div>
-                     <MatchNode match={bronzeMatch} roundsMap={roundsMap} currentEvt={currentEvt} isBronze={true} />
-                  </div>
-                </div>
-              )}
+        {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => (
+          <React.Fragment>
+            <div className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-white dark:bg-zinc-800 p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-md">
+              <button onClick={() => zoomOut()} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-300 pointer-events-auto transition-colors" title="Thu nhỏ">
+                <ZoomOut size={18} />
+              </button>
+              <input 
+                type="range" 
+                min="0.2" max="2" step="0.05"
+                value={state.scale}
+                onChange={(e) => setTransform(state.positionX, state.positionY, parseFloat(e.target.value))}
+                className="w-24 mx-1 accent-blue-500 cursor-pointer"
+              />
+              <button onClick={() => zoomIn()} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-300 pointer-events-auto transition-colors" title="Phóng to">
+                <ZoomIn size={18} />
+              </button>
+              <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-1"></div>
+              <button onClick={() => resetTransform()} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-300 pointer-events-auto transition-colors" title="Vừa màn hình">
+                <Maximize size={18} />
+              </button>
             </div>
-          </div>
-        </TransformComponent>
+            <TransformComponent wrapperClass="w-full h-full" wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '3840px', height: '2160px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="p-12 flex flex-col items-center justify-center w-full h-full">
+                <div className="flex gap-12 items-center scale-150 transform origin-center">
+                  <MatchNode match={finalMatch} roundsMap={roundsMap} currentEvt={currentEvt} />
+                  
+                  {bronzeMatch && (
+                    <div className="flex flex-col justify-end">
+                      <div className="pl-8 relative opacity-85 mt-20">
+                         <div className="text-[10px] font-black text-amber-600/80 uppercase mb-2 absolute -top-4 left-10">Tranh Hạng 3</div>
+                         <MatchNode match={bronzeMatch} roundsMap={roundsMap} currentEvt={currentEvt} isBronze={true} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TransformComponent>
+          </React.Fragment>
+        )}
       </TransformWrapper>
     </div>
   );

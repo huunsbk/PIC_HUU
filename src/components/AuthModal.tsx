@@ -70,7 +70,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       }
     }
 
-    // 3. Kiểm tra tài khoản cấp 2
+    // 3. Kiểm tra tài khoản cấp 2 & 3
     const targetAccount = accounts.find(
       acc => acc.username.toLowerCase() === trimmedUser
     );
@@ -79,8 +79,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       if (targetAccount.password === trimmedPass) {
         setSuccessMsg(`Đăng nhập thành công! Chào mừng đại diện ${targetAccount.displayName}.`);
         setTimeout(() => {
-          // Gắn tài khoản này với cơ sở dữ liệu riêng (tenantId = username)
-          setAuthStatus('admin2', targetAccount.username, targetAccount.username);
+          // Gắn tài khoản này với cơ sở dữ liệu (tenantId của admin2)
+          const role = targetAccount.role === 'admin3' ? 'admin3' : 'admin2';
+          const tenantId = targetAccount.role === 'admin3' ? (targetAccount.parentTenantId || 'default') : targetAccount.username;
+          setAuthStatus(role, targetAccount.username, tenantId);
           onClose();
         }, 800);
         return;

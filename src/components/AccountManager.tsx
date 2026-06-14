@@ -27,13 +27,17 @@ export default function AccountManager() {
     updateAccount2, 
     deleteAccount2, 
     initSupabase, 
-    supabaseConnected 
+    supabaseConnected,
+    userRole,
+    currentUser,
+    events
   } = useTournamentStore();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [tournamentName, setTournamentName] = useState('');
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Edit State
@@ -41,6 +45,7 @@ export default function AccountManager() {
   const [editPassword, setEditPassword] = useState('');
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editTournamentName, setEditTournamentName] = useState('');
+  const [editSelectedEventIds, setEditSelectedEventIds] = useState<string[]>([]);
 
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -80,21 +85,32 @@ export default function AccountManager() {
     }
 
     setIsSyncing(true);
+    const role = userRole === 'admin2' ? 'admin3' : 'admin2';
+    const parentTenantId = userRole === 'admin2' ? (currentUser || '') : undefined;
+    
     const success = await addAccount2({
       username: trimmedUsername,
       password: trimmedPassword,
       displayName: trimmedDisplay,
-      tournamentName: trimmedTournament || `Giải Pickleball thuộc ${trimmedDisplay}`
+      tournamentName: trimmedTournament || (role === 'admin3' ? '' : `Giải Pickleball thuộc ${trimmedDisplay}`),
+      role,
+      parentTenantId,
+      permittedEventIds: role === 'admin3' ? selectedEventIds : undefined
     });
 
     setIsSyncing(false);
     if (success) {
-      const slugUser = trimmedUsername.replace(/_/g, '-');
-      setSuccessMsg(`Đã tạo thành công tài khoản cấp 2 cho đơn vị "${trimmedDisplay}". Đường dẫn xem giải: https://huunsbk.github.io/PIC_HUU/#/${slugUser}`);
+      if (role === 'admin3') {
+        setSuccessMsg(`Đã tạo tài khoản trọng tài (Cấp 3) "${trimmedUsername}" thành công!`);
+      } else {
+        const slugUser = trimmedUsername.replace(/_/g, '-');
+        setSuccessMsg(`Đã tạo thành công tài khoản cấp 2 cho đơn vị "${trimmedDisplay}". Đường dẫn xem giải: https://huunsbk.github.io/PIC_HUU/#/${slugUser}`);
+      }
       setUsername('');
       setPassword('');
       setDisplayName('');
       setTournamentName('');
+      setSelectedEventIds([]);
     } else {
       setErrorMsg('Đã có lỗi xảy ra khi lưu tài khoản vào cơ sở dữ liệu.');
     }
@@ -105,6 +121,7 @@ export default function AccountManager() {
     setEditPassword(acc.password);
     setEditDisplayName(acc.displayName);
     setEditTournamentName(acc.tournamentName);
+    setEditSelectedEventIds(acc.permittedEventIds || []);
   };
 
   const handleSaveEdit = async () => {
@@ -118,11 +135,15 @@ export default function AccountManager() {
     }
 
     setIsSyncing(true);
+    const existingAcc = accounts.find(a => a.username === editingUsername);
     const success = await updateAccount2({
       username: editingUsername,
       password: editPassword.trim(),
       displayName: editDisplayName.trim(),
-      tournamentName: editTournamentName.trim() || `Giải Pickleball thuộc ${editDisplayName.trim()}`
+      tournamentName: editTournamentName.trim() || (existingAcc?.role === 'admin3' ? '' : `Giải Pickleball thuộc ${editDisplayName.trim()}`),
+      role: existingAcc?.role,
+      parentTenantId: existingAcc?.parentTenantId,
+      permittedEventIds: existingAcc?.role === 'admin3' ? editSelectedEventIds : undefined
     });
 
     setIsSyncing(false);
@@ -160,11 +181,19 @@ export default function AccountManager() {
     setSuccessMsg('Đã đồng bộ và làm mới danh sách tài khoản từ đám mây.');
   };
 
-  const filteredAccounts = accounts.filter(acc => 
-    acc.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    acc.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    acc.tournamentName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAccounts = accounts.filter(acc => {
+    // Nếu là admin2, chỉ hiển thị tài khoản cấp 3 thuộc về admin2 này
+    if (userRole === 'admin2') {
+      if (acc.role !== 'admin3' || acc.parentTenantId !== currentUser) return false;
+    } else {
+      // admin1 thấy các tài khoản cấp 2
+      if (acc.role === 'admin3') return false;
+    }
+    
+    return acc.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           acc.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           acc.tournamentName.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   return (
     <div className="space-y-6 w-full" id="account-manager-page">
@@ -177,9 +206,9 @@ export default function AccountManager() {
           </div>
           <div>
             <span className="text-[10px] bg-indigo-500/20 text-indigo-300 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-indigo-500/30">
-              Quản Trị Tối Cao - Cấp 1 (huunsbk)
+              {userRole === 'admin1' ? 'Quản Trị Tối Cao - Cấp 1 (huunsbk)' : 'Quản Trị Giải Đấu - Cấp 2'}
             </span>
-            <h1 className="text-lg font-black tracking-tight mt-1">CẤP & PHÂN QUYỀN TÀI KHOẢN ĐƠN VỊ</h1>
+            <h1 className="text-lg font-black tracking-tight mt-1">CẤP & PHÂN QUYỀN TÀI KHOẢN {userRole === 'admin1' ? 'ĐƠN VỊ' : 'TRỌNG TÀI'}</h1>
           </div>
         </div>
         
@@ -209,7 +238,7 @@ export default function AccountManager() {
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         
-        {/* Cột Trái: Tạo tài khoản Cấp 2 */}
+        {/* Cột Trái: Tạo tài khoản */}
         <div className="xl:col-span-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-md p-5 space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">
             <UserPlus size={16} className="text-blue-600 dark:text-blue-400 stroke-[2.5]" />
@@ -218,12 +247,12 @@ export default function AccountManager() {
 
           <form onSubmit={handleCreate} className="space-y-3.5 text-xs text-zinc-600 dark:text-zinc-300">
             <div>
-              <label className="block font-bold mb-1 text-zinc-700 dark:text-zinc-300">Tên Đăng Nhập (Cấp 2) <span className="text-red-500">*</span></label>
+              <label className="block font-bold mb-1 text-zinc-700 dark:text-zinc-300">Tên Đăng Nhập ({userRole === 'admin1' ? 'Cấp 2' : 'Cấp 3'}) <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                placeholder="ví dụ: nganson_a, clb_pickleball"
+                placeholder={userRole === 'admin1' ? 'ví dụ: nganson_a' : 'ví dụ: trongtai_1'}
                 className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1.5 focus:ring-blue-600 focus:bg-white"
                 required
               />
@@ -237,7 +266,7 @@ export default function AccountManager() {
                   type="text"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="Nhập mật khẩu đơn giản hoặc mã số"
+                  placeholder="Nhập mật khẩu đơn giản"
                   className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none"
                   required
                 />
@@ -246,27 +275,52 @@ export default function AccountManager() {
             </div>
 
             <div>
-              <label className="block font-bold mb-1 text-zinc-700 dark:text-zinc-300">Tên Đơn Vị / Câu Lạc Bộ <span className="text-red-500">*</span></label>
+              <label className="block font-bold mb-1 text-zinc-700 dark:text-zinc-300">{userRole === 'admin1' ? 'Tên Đơn Vị / Câu Lạc Bộ' : 'Tên Trọng Tài (Hiển thị)'} <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
-                placeholder="ví dụ: Đơn Vị Ngân Sơn A"
+                placeholder={userRole === 'admin1' ? 'ví dụ: Đơn Vị Ngân Sơn A' : 'ví dụ: Trọng tài Nguyễn Văn A'}
                 className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none"
                 required
               />
             </div>
 
-            <div>
-              <label className="block font-bold mb-1 text-zinc-700 dark:text-zinc-300">Tên Giải Đấu Riêng (Tùy chọn)</label>
-              <input
-                type="text"
-                value={tournamentName}
-                onChange={e => setTournamentName(e.target.value)}
-                placeholder="Hệ thống tự động tạo nếu bỏ trống"
-                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none"
-              />
-            </div>
+            {userRole === 'admin1' && (
+              <div>
+                <label className="block font-bold mb-1 text-zinc-700 dark:text-zinc-300">Tên Giải Đấu Riêng (Tùy chọn)</label>
+                <input
+                  type="text"
+                  value={tournamentName}
+                  onChange={e => setTournamentName(e.target.value)}
+                  placeholder="Hệ thống tự động tạo nếu bỏ trống"
+                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none"
+                />
+              </div>
+            )}
+
+            {userRole === 'admin2' && (
+              <div>
+                <label className="block font-bold mb-2 text-zinc-700 dark:text-zinc-300">Phân quyền nhập điểm</label>
+                <div className="space-y-1.5 max-h-40 overflow-y-auto bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3">
+                  {Object.values(events).map(evt => (
+                    <label key={evt.id} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedEventIds.includes(evt.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedEventIds([...selectedEventIds, evt.id]);
+                          else setSelectedEventIds(selectedEventIds.filter(id => id !== evt.id));
+                        }}
+                        className="rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>{evt.name}</span>
+                    </label>
+                  ))}
+                  {Object.keys(events).length === 0 && <span className="text-zinc-400 italic">Chưa có nội dung thi đấu</span>}
+                </div>
+              </div>
+            )}
 
             <button
               type="submit"
@@ -274,7 +328,7 @@ export default function AccountManager() {
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl mt-2 cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-md border border-blue-700"
             >
               <Plus size={14} className="stroke-[2.5]" />
-              Kích Hoạt Tài Khoản Cấp 2
+              {userRole === 'admin1' ? 'Kích Hoạt Tài Khoản Cấp 2' : 'Tạo Tài Khoản Cấp 3'}
             </button>
           </form>
 
@@ -282,7 +336,11 @@ export default function AccountManager() {
           <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/50 dark:border-indigo-900/20 rounded-xl p-3 text-[11px] text-indigo-700 dark:text-indigo-300 flex gap-2">
             <Info size={14} className="text-indigo-500 shrink-0 mt-0.5" />
             <div>
-              <strong>Lưu ý đồng bộ:</strong> Mỗi tài khoản cấp 2 sẽ tự động có một phân vùng giải đấu và cơ sở dữ liệu riêng, hoàn toàn không dính dáng hay ảnh hưởng tới các đơn vị và tài khoản khác.
+              {userRole === 'admin1' ? (
+                <strong>Lưu ý đồng bộ:</strong>
+              ) : (
+                <strong>Phân quyền cấp 3:</strong>
+              )} {userRole === 'admin1' ? 'Mỗi tài khoản cấp 2 sẽ tự động có một phân vùng giải đấu và cơ sở dữ liệu riêng, hoàn toàn không dính dáng hay ảnh hưởng tới các đơn vị và tài khoản khác.' : 'Tài khoản Cấp 3 chỉ được xem 2 menu (Nhập điểm, Trình chiếu TV). Trọng tài chỉ có thể nhập điểm cho những nội dung được cấp quyền bằng checkbox ở trên.'}
             </div>
           </div>
         </div>
@@ -325,9 +383,9 @@ export default function AccountManager() {
                   <tr className="border-b border-zinc-150 dark:border-zinc-800 text-zinc-400 font-bold">
                     <th className="py-2.5 px-3">Tài khoản</th>
                     <th className="py-2.5 px-3">Mật khẩu</th>
-                    <th className="py-2.5 px-3">Tên đơn vị quản lý</th>
-                    <th className="py-2.5 px-3">Giải đấu liên kết</th>
-                    <th className="py-2.5 px-3">Đường dẫn xem giải (Khán giả)</th>
+                    <th className="py-2.5 px-3">{userRole === 'admin1' ? 'Tên đơn vị quản lý' : 'Tên hiển thị'}</th>
+                    <th className="py-2.5 px-3">{userRole === 'admin1' ? 'Giải đấu liên kết' : 'Quyền thi đấu'}</th>
+                    <th className="py-2.5 px-3">{userRole === 'admin1' ? 'Đường dẫn xem giải (Khán giả)' : ''}</th>
                     <th className="py-2.5 px-3 text-right">Thao tác</th>
                   </tr>
                 </thead>
@@ -387,21 +445,51 @@ export default function AccountManager() {
                         </td>
 
                         <td className="py-2 px-3 text-zinc-500 dark:text-zinc-450 italic">
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={editTournamentName}
-                              onChange={e => setEditTournamentName(e.target.value)}
-                              className="bg-zinc-100 dark:bg-zinc-950 text-xs border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 w-full focus:outline-none"
-                            />
+                          {userRole === 'admin1' ? (
+                            isEditing ? (
+                              <input
+                                type="text"
+                                value={editTournamentName}
+                                onChange={e => setEditTournamentName(e.target.value)}
+                                className="bg-zinc-100 dark:bg-zinc-950 text-xs border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 w-full focus:outline-none"
+                              />
+                            ) : (
+                              acc.tournamentName
+                            )
                           ) : (
-                            acc.tournamentName
+                            isEditing ? (
+                              <div className="space-y-1 mt-1 max-h-32 overflow-y-auto">
+                                {Object.values(events).map(evt => (
+                                  <label key={evt.id} className="flex items-center gap-1.5 cursor-pointer text-[10px]">
+                                    <input
+                                      type="checkbox"
+                                      checked={editSelectedEventIds.includes(evt.id)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) setEditSelectedEventIds([...editSelectedEventIds, evt.id]);
+                                        else setEditSelectedEventIds(editSelectedEventIds.filter(id => id !== evt.id));
+                                      }}
+                                      className="rounded w-3 h-3 border-zinc-300"
+                                    />
+                                    <span>{evt.name}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-[10px] space-y-0.5">
+                                {(acc.permittedEventIds || []).map(id => {
+                                  const e = events[id];
+                                  return e ? <div key={id} className="truncate">• {e.name}</div> : <div key={id} className="truncate text-red-500">• Lỗi nội dung</div>;
+                                })}
+                                {(!acc.permittedEventIds || acc.permittedEventIds.length === 0) && "Không có nội dung được cấp"}
+                              </div>
+                            )
                           )}
                         </td>
 
                         <td className="py-2 px-3">
-                          <div className="flex flex-col gap-1 min-w-[220px] max-w-[320px]">
-                            {/* GitHub Pages URL */}
+                          {userRole === 'admin1' && (
+                            <div className="flex flex-col gap-1 min-w-[220px] max-w-[320px]">
+                              {/* GitHub Pages URL */}
                             <div className="flex items-center justify-between gap-1.5 bg-zinc-50 dark:bg-zinc-950 px-2 py-1 rounded-lg border border-zinc-200/50 dark:border-zinc-800/60 transition-colors hover:border-zinc-300 dark:hover:border-zinc-700">
                               <div className="flex items-center gap-1.5 min-w-0 truncate">
                                 <span className="text-[9px] font-bold text-white bg-indigo-600 px-1 py-0.2 rounded shrink-0 uppercase tracking-widest scale-90">GH</span>
@@ -461,6 +549,7 @@ export default function AccountManager() {
                               </div>
                             </div>
                           </div>
+                          )}
                         </td>
 
                         <td className="py-2 px-3 text-right">
