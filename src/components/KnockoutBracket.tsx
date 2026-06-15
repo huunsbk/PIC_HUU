@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTournamentStore } from '../store';
 import { Trophy, PlayCircle, HelpCircle, AlertTriangle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
-import { getReadableTeamName, getReadableKoMatchName, calculateGroupStandings, calculateBestThirdPlaces } from '../utils/tournamentEngine';
+import { getReadableTeamName, getReadableKoMatchName, calculateGroupStandings, calculateBestThirdPlaces, getBracketDisplayName } from '../utils/tournamentEngine';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 export default function KnockoutBracket() {
@@ -175,34 +175,11 @@ export default function KnockoutBracket() {
 
   const resolveSlotName = (slotKey: string) => {
     if (!slotKey) return '';
-    if (slotKey.startsWith('__1st_')) {
-      const gid = slotKey.replace('__1st_', '');
-      const groupInfo = groupStandingsMap[gid];
-      if (groupInfo?.isFinished && groupInfo.standings[0]) {
-        return groupInfo.standings[0].teamName;
-      }
-      return `Nhất Bảng ${groupNamesMap[gid]?.replace(/^Bảng\s+/i, '') || ''}`;
-    }
-    if (slotKey.startsWith('__2nd_')) {
-      const gid = slotKey.replace('__2nd_', '');
-      const groupInfo = groupStandingsMap[gid];
-      if (groupInfo?.isFinished && groupInfo.standings[1]) {
-        return groupInfo.standings[1].teamName;
-      }
-      return `Nhì Bảng ${groupNamesMap[gid]?.replace(/^Bảng\s+/i, '') || ''}`;
-    }
-    if (slotKey.startsWith('__3rd_')) {
-      const rank = parseInt(slotKey.replace('__3rd_', ''), 10);
-      if (allGroupsFinished && calculatedBestThirds[rank - 1]) {
-        return calculatedBestThirds[rank - 1].teamName;
-      }
-      return `Ba XS ${rank}`;
-    }
     if (teams[slotKey]) return teams[slotKey].name;
-    const foundTeam = Object.values(teams).find(t => t.name === slotKey);
+    const foundTeam = Object.values(teams).find(t => t.id === slotKey || t.name === slotKey);
     if (foundTeam) return foundTeam.name;
 
-    return getReadableTeamName(slotKey, groups);
+    return getBracketDisplayName(slotKey, groups);
   };
 
   const findSlotKeyForPlaceholder = (placeholder: string): string | null => {

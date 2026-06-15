@@ -1,7 +1,7 @@
 import React from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Match, EventData } from '../types';
-import { getReadableTeamName, getReadableKoMatchName, getMatchDisplayName } from '../utils/tournamentEngine';
+import { getReadableTeamName, getReadableKoMatchName, getBracketDisplayName } from '../utils/tournamentEngine';
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 
 interface LiveBracketProps {
@@ -44,8 +44,8 @@ const MatchNode: React.FC<MatchNodeProps> = ({ match, koMatches, currentEvt, isB
   const [childA, childB] = isBronze ? [null, null] : findFeedingMatches(match, koMatches);
   const hasChildren = childA !== null || childB !== null;
 
-  const teamAName = getMatchDisplayName(match.teamAId, match.placeholderA, currentEvt.teams, currentEvt.groups, currentEvt.matches, currentEvt.settings || {});
-  const teamBName = getMatchDisplayName(match.teamBId, match.placeholderB, currentEvt.teams, currentEvt.groups, currentEvt.matches, currentEvt.settings || {});
+  const teamAName = getBracketDisplayName(match.teamAId || match.placeholderA, currentEvt.groups);
+  const teamBName = getBracketDisplayName(match.teamBId || match.placeholderB, currentEvt.groups);
 
   return (
     <div className="flex flex-row items-stretch">

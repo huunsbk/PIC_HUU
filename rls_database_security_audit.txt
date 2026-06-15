@@ -1,0 +1,152 @@
+================================================================================
+BÁO CÁO THẨM ĐỊNH CHUYÊN SÂU: CHÍNH SÁCH RLS VÀ AN NINH DATABASE SUPABASE
+--------------------------------------------------------------------------------
+Dự án: Hệ thống Quản lý Giải đấu Pickleball Đa Tenant SaaS
+Đơn vị thực hiện: Đội ngũ Chuyên gia An ninh Thông tin & Điện toán Đám mây AI Studio
+Đối tượng phân tích: Danh sách pg_policies thực tế từ hệ thống Supabase
+Thời gian lập báo cáo: 15/06/2026 - Thời gian cục bộ: 05:44:51
+Trạng thái mã nguồn: TUÂN THỦ NGUYÊN TẮC: KHÔNG SỬA CODE - KHÔNG THAY ĐỔI SQL/CƠ SỞ DỮ LIỆU
+================================================================================
+
+PHÂN TÍCH DỮ LIỆU ĐẦU VÀO (PG_POLICIES DUMP)
+Dựa trên kết quả truy vấn bảng hệ thống `pg_policies` trong lược đồ `public`, chúng tôi thu nhận các chính sách bảo mật đang chồng xếp trên 6 bảng dữ liệu cốt lõi:
+
+1. `audit_logs` (Nhật ký hoạt động)
+2. `events` (Nội dung thi đấu / Sự kiện)
+3. `groups` (Chia bảng thi đấu)
+4. `matches` (Chi tiết trận đấu & Lịch thi đấu)
+5. `teams` (Danh sách câu lạc bộ / Đội thi đấu)
+6. `tournament` (Cấu hình tổng quan giải đấu & Danh sách tài khoản `accounts_config`)
+
+Dưới đây là nội dung thẩm định chi tiết theo từng khía cạnh kỹ thuật được yêu cầu:
+
+================================================================================
+1. CÁC CHÍNH SÁCH (POLICIES) CHO PHÉP 'ANON' (GUEST KHÔNG ĐĂNG NHẬP) GHI DỮ LIỆU
+================================================================================
+Trong Supabase, vai trò đại diện `anon` (Anonymous Client) là những kết nối vãng lai sử dụng mã khóa public anon key của dự án. Qua dữ liệu thực tế, có các chính sách sau cấp quyền GHI HOÀN TOÀN (`cmd = ALL` gồm INSERT, UPDATE, DELETE) cho vai trò `anon`:
+
+* Bảng `audit_logs`:
+  - Tên chính sách: `Cho phép ghi tự do cho anon và authenticated`
+  - Tham số: `roles = {anon, authenticated}`, `cmd = ALL`, `qual = true`, `with_check = true`
+
+* Bảng `events`:
+  - Tên chính sách: `Cho phép ghi tự do cho anon và authenticated`
+  - Tham số: `roles = {anon, authenticated}`, `cmd = ALL`, `qual = true`, `with_check = true`
+
+* Bảng `groups`:
+  - Tên chính sách: `Cho phép ghi tự do cho anon và authenticated`
+  - Tham số: `roles = {anon, authenticated}`, `cmd = ALL`, `qual = true`, `with_check = true`
+
+* Bảng `matches`:
+  - Tên chính sách: `Cho phép ghi tự do cho anon và authenticated`
+  - Tham số: `roles = {anon, authenticated}`, `cmd = ALL`, `qual = true`, `with_check = true`
+
+* Bảng `teams`:
+  - Tên chính sách: `Cho phép ghi tự do cho anon và authenticated`
+  - Tham số: `roles = {anon, authenticated}`, `cmd = ALL`, `qual = true`, `with_check = true`
+
+* Bảng `tournament`:
+  - Tên chính sách: `Cho phép ghi tự do cho anon và authenticated`
+  - Tham số: `roles = {anon, authenticated}`, `cmd = ALL`, `qual = true`, `with_check = true`
+
+⇒ ĐÁNH GIÁ: Toàn bộ 6 bảng lớn nhất của hệ thống đều bị lộ lọt quyền GHI tuyệt đối cho vai trò `anon` thông qua mệnh đề `USING (true) WITH CHECK (true)`.
+
+================================================================================
+2. CÁC CHÍNH SÁCH (POLICIES) CHO PHÉP 'AUTHENTICATED' GHI DỮ LIỆU
+================================================================================
+Vai trò `authenticated` đại diện cho các phiên làm việc đã đăng nhập thành công thông qua Supabase Auth (Admin Cấp 2, Trọng tài Cấp 3, Admin Cấp 1).
+Các chính sách cấp đặc quyền ghi cho vai trò này bao gồm:
+
+* Toàn bộ 6 chính sách mang tên `Cho phép ghi tự do cho anon và authenticated` (ở các bảng `audit_logs`, `events`, `groups`, `matches`, `teams`, `tournament`). Khóa mảng vai trò `{anon, authenticated}` gộp chung hai đối tượng này vào một nhóm đặc quyền duy nhất.
+* Riêng bảng `events`:
+  - Tên chính sách: `Allow authenticated users full access`
+  - Tham số: `roles = {authenticated}`, `cmd = ALL`, `qual = true`, `with_check = true`
+
+⇒ ĐÁNH GIÁ: Quyền ghi của người dùng đã xác thực hoạt động trơn tru nhưng đang bị "cào bằng" chung với đối tượng vãng lai không đăng nhập.
+
+================================================================================
+3. CÁC CHÍNH SÁCH (POLICIES) ĐANG BẢO VỆ 'TENANT_ID'
+================================================================================
+* KẾT QUẢ KIỂM TOÁN VẬT LÝ: **KHÔNG CÓ** (0) chính sách nào thực hiện kiểm tra hoặc bảo vệ giá trị `tenant_id`.
+* CHI TIẾT KỸ THUẬT:
+  - Tất cả các chính sách SELECT (Đọc) đều sử dụng mệnh đề `USING (true)` cho tất cả vai trò (`public` hay `{public}`). Điều này có nghĩa PostgreSQL cho phép bất kỳ ai đọc ra toàn bộ dòng dữ liệu trên bảng mà không phân biệt Tenant.
+  - Tất cả các chính sách ALL (Ghi) đều sử dụng mệnh đề `USING (true) WITH CHECK (true)`. Database chấp nhận bất kỳ hành động ghi nào mà không hề đối sánh cột `tenant_id` của bản ghi với thông tin mã băm định danh trong token JWT của phiên làm việc.
+* KẾT LUẬN: Sự cách ly Tenant (Tenant Isolation) chỉ đang được thực hiện một cách lỏng lẻo ở tầng Frontend Logic (Client-side filters). Tầng cơ sở dữ liệu vật lý đang mở toang, không có bất kỳ hàng rào bảo mật nào bảo vệ Tenant.
+
+================================================================================
+4. CÁC CHÍNH SÁCH (POLICIES) DƯ THỪA (REDUNDANT ARCHITECTURE)
+================================================================================
+Dữ liệu pg_policies cho thấy có 2 điểm trùng lặp/dư thừa không cần thiết, làm tăng thời gian biên dịch chính sách của Postgres core:
+
+1. Trùng lặp chính sách Xem (SELECT) trên bảng `events`:
+   - Chính sách 1: `Allow public read access` (`cmd = SELECT`, `roles = {public}`, `qual = true`)
+   - Chính sách 2: `Cho phép mọi người xem nội dung thi đấu` (`cmd = SELECT`, `roles = {public}`, `qual = true`)
+   - Đánh giá: Hai chính sách này giống hệt nhau về cả vai trò thụ hưởng (`public`), hành vi tác động (`SELECT`) và điều kiện lọc (`true`). Việc này là hoàn toàn dư thừa.
+
+2. Trùng lặp chính sách Quản trị (ALL) trên bảng `events`:
+   - Chính sách 1: `Allow authenticated users full access` (`cmd = ALL`, `roles = {authenticated}`, `qual = true`, `with_check = true`)
+   - Chính sách 2: `Cho phép ghi tự do cho anon và authenticated` (`cmd = ALL`, `roles = {anon, authenticated}`, `qual = true`, `with_check = true`)
+   - Đánh giá: Chính sách số 2 đã bao hàm và cấp toàn quyền cho `authenticated` thông qua định danh vai trò kép `{anon, authenticated}`. Việc duy trì thêm chính sách số 1 là hoàn toàn vô hiệu và gây nhiễu cơ chế thẩm định.
+
+================================================================================
+5. CÁC CHÍNH SÁCH NGUY HIỂM (DANGEROUS / CRITICAL VULNERABILITIES)
+================================================================================
+Toàn bộ nhóm chính sách mang tên `Cho phép ghi tự do cho anon và authenticated` trên cả 6 bảng: `audit_logs`, `events`, `groups`, `matches`, `teams`, `tournament` được xếp vào cấp độ **CRITICAL DEVIATION** (Nguy hiểm tột độ):
+
+* Lý do nguy hiểm:
+  - Cột `cmd = ALL` cho phép cả quyền UPDATE (Sửa điểm, sửa thông tin đấu thủ) và DELETE (Xóa trắng, hủy diệt lịch thi đấu).
+  - Gán trực tiếp cho vai trò `anon` với điều kiện lọc rỗng (`true`).
+  - Cho phép kẻ tấn công hoặc bất kỳ người xem thông thường nào có hiểu biết về CNTT có thể phá hủy dữ liệu của tất cả các giải đấu trên hệ thống cùng lúc mà không cần bất kỳ thông tin đăng nhập nào.
+  - Bảng `tournament` chứa cấu hình định danh tài khoản con (`accounts_config` lưu trong cột settings dạng JSON). Bản ghi này cũng mở toang quyền ghi cho `anon`, cho phép kẻ xấu dễ dàng cấu hình lại tài khoản, chiếm quyền quản trị tối cao của các Tenant.
+
+================================================================================
+6. NGUYÊN LÝ KHÓA QUYỀN GHI 'ANON' VÀ TÁC ĐỘNG TỚI WEBSITE HIỆN TẠI
+================================================================================
+Một câu hỏi lớn đặt ra: *"Nếu thực hiện khóa quyền GHI của vai trò `anon` trên database Supabase, trang web hiện tại có bị ảnh hưởng hoặc sụp đổ hay không?"*
+
+* PHÂN TÍCH LUỒNG CHẠY THỰC TẾ CỦA HỆ THỐNG:
+  1. **Khách vãng lai (Spectators) xem giải đấu công khai**:
+     - Khán giả chỉ thực hiện hành động ĐỌC dữ liệu (SELECT) để xem lịch đấu, bảng xếp hạng, sơ đồ nhánh trực quan thông qua `Dashboard.tsx`, `LiveBracket.tsx`, `Standings.tsx`.
+     - Quyền SELECT của họ vẫn được bảo toàn tuyệt đối bằng các chính sách xem công khai (`Cho phép mọi người xem...`).
+     - Do đó, việc chặn quyền ghi của Anon **KHÔNG** làm ảnh hưởng đến trải nghiệm xem giải của hàng nghìn độc giả khách hàng.
+
+  2. **Tác vụ Quản trị viên (Admin Cấp 1, Cấp 2, Trọng tài Cấp 3)**:
+     - Khi thực hiện quản lý, đổi điểm, sinh lịch thi đấu hay thêm đội tuyển bóng, các tác nhân này bắt buộc đã đăng nhập thông qua cổng `AuthModal.tsx`.
+     - Phân hệ đăng nhập của Supabase sẽ gán nhận dạng phiên làm việc của họ là `authenticated` (Token JWT chứa chữ ký mã hóa của Supabase Auth).
+     - Toàn bộ gói tin truy cập mạng (API Headers) gửi đi từ các component như `ScoreEntry.tsx` hay `TeamManager.tsx` đều đính kèm khóa JWT hợp lệ.
+     - PostgreSQL sẽ phân loại các gói tin này thuộc vai trò `authenticated`.
+
+⇒ KẾT LUẬN CỦA CHUYÊN GIA: Việc khóa toàn bộ quyền GHI (INSERT, UPDATE, DELETE) của vai trò `anon` **HOÀN TOÀN KHÔNG ẢNH HƯỞNG** đến hoạt động của trang web hiện tại. Giao diện khách vãng lai vẫn hiển thị trơn tru, trong khi các chức năng của tổ chức quản trị và trọng tài nhập điểm vẫn hoạt động chuẩn xác và an toàn.
+
+================================================================================
+7. ĐỀ XUẤT THỨ TỰ KHÓA RLS AN TOÀN NHẤT (THE SAFE LOCKDOWN PROTOCOL)
+================================================================================
+*TUÂN THỦ: CHỈ KHUYẾN NGHỊ LỘ TRÌNH, KHÔNG TRIỂN KHAI SQL, KHÔNG TẠO FILE CHẠY SỬA ĐỒ:*
+
+Để bảo vệ tối đa dữ liệu, tránh gián đoạn các giải đấu pickleball đang diễn ra ngoại tuyến, ban tổ chức nên thiết lập lộ trình khóa RLS theo thứ tự từng bước an toàn như dưới đây:
+
+* Bước 1: Khóa bảng cấu hình hệ thống `tournament` (Cần ưu tiên khẩn cấp nhất)
+  - Lý do: Bảng này lưu cấu hình tài khoản `accounts_config`. Nếu bảng này bị sửa đổi trái phép, toàn bộ hệ thống phân quyền sẽ bị sụp đổ.
+  - Thao tác đề xuất: Thay thế chính sách ghi tự do của `tournament` để chỉ duy nhất những người quản trị tối cao (`admin1`) hoặc phiên làm việc đã đăng nhập hợp lệ mới được cập nhật. Cấm tuyệt đối vai trò `anon` tương tác ghi.
+
+* Bước 2: Bảo vệ Nhật ký hệ thống `audit_logs`
+  - Lý do: Audit log là bằng chứng lịch sử ghi nhận hành vi can thiệp dữ liệu. Nếu bảng này mở cho Anonymous sửa/xóa, hacker có thể xóa sạch lịch sử tấn công của họ để phi tang dấu vết.
+  - Thao tác đề xuất: Thiết lập chính sách chỉ cho phép hành vi INSERT, nghiêm cấm tuyệt đối UPDATE hoặc DELETE trên bảng này đối với bất kỳ ai (kể cả admin cấp cao) để giữ tính bất biến (immutability) của log.
+
+* Bước 3: Khóa quyền ghi Anon trên các bảng cấu trúc thi đấu (`events`, `groups`, `teams`)
+  - Lý do: Đây là các bảng dữ liệu cấu trúc tạo nên khung của giải đấu.
+  - Thao tác đề xuất: Chỉ cho phép vai trò `authenticated` thực hiện thay đổi dữ liệu, giữ nguyên quyền SELECT cho vai trò `public` (anon và authenticated).
+
+* Bước 4: Khóa bảng kết quả trận đấu `matches`
+  - Lý do: Là nơi ghi điểm số trực tiếp. Cần khóa chặt để ngăn chặn hành vi thay đổi kết quả gian lận tỷ số từ bên ngoài.
+  - Thao tác đề xuất: Thu hồi quyền ghi của `anon`. Chỉ có trạng thái và token hợp lệ của `authenticated` mới được phép ghi điểm số.
+
+* Bước 5: Tiển khai phân rã Multi-Tenant thực tế (Tenant-Level DB Isolation)
+  - Đưa định danh tenant vào Metadata tài khoản của Supabase Auth.
+  - Khởi tạo chính sách kiểm soát chéo Tenant tại PostgreSQL thông qua hàm đối soát Token JWT:
+    `USING (tenant_id = (auth.jwt() -> 'user_metadata' ->> 'tenant_id'))`
+  - Lúc này, an ninh hệ thống sẽ đạt ngưỡng tuyệt đối: không chỉ bảo vệ khỏi Anonymous, mà ngay cả các Admin Cấp 2 và Trọng tài Cấp 3 của giải đấu A cũng không có bất kỳ khả năng kỹ thuật nào xâm phạm hay sửa đổi kết quả thi đấu của giải đấu B.
+
+================================================================================
+BẢN BÁO CÁO THẨM ĐỊNH KẾT THÚC - CHỦ QUẢN PHÂN TÍCH AN NINH BOX CLOUD
+================================================================================

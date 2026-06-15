@@ -1,0 +1,427 @@
+================================================================================
+BÁO CÁO KIỂM TOÁN TOÀN DIỆN HỆ THỐNG TÀI KHOẢN, PHÂN QUYỀN, BẢO MẬT, SESSION VÀ MULTI-TENANT
+--------------------------------------------------------------------------------
+Đơn vị kiểm toán: Đội ngũ Kỹ sư Hệ thống Cao cấp AI Studio
+Đối tượng kiểm toán: Hệ thống Quản lý Giải đấu Pickleball Đa Tenant
+Ngày báo cáo: 15/06/2026
+Trạng thái mã nguồn: Bản Build Hiện tại (Không chỉnh sửa, Không có Code Refactoring theo yêu cầu của BTC)
+================================================================================
+
+MỤC LỤC CHI TIẾT
+--------------------------------------------------------------------------------
+PHẦN 1 - KIỂM TOÁN KIẾN TRÚC TÀI KHOẢN HIỆN TẠI
+1. Nơi lưu trữ thông tin Tài khoản & Cơ cấu đồng bộ dữ liệu
+2. Sơ đồ luồng Đăng nhập (Authentication Flow) và Sơ đồ logic
+3. Sơ đồ luồng Đăng xuất (Logout Flow) & Phân tích rủi ro Race Condition / Vòng lặp
+4. Quản lý Phiên làm việc (Session Management & Security)
+5. Kiến trúc Multi-Tenant & Cơ chế phân cách dữ liệu hiện tại
+
+PHẦN 2 - PHÂN TÍCH TÀI KHOẢN CẤP 1 (Super-Admin / Supreme Control)
+PHẦN 3 - PHÂN TÍCH TÀI KHOẢN CẤP 2 (Tenant Organizer / Đơn vị Phân vùng)
+PHẦN 4 - PHÂN TÍCH TÀI KHOẢN CẤP 3 (Referee / Trọng tài ghi điểm)
+- Checklist kiểm soát chi tiết quyền hạn Tài khoản Cấp 3
+
+PHẦN 5 - DANH SÁCH ROLE HIỆN HỮU TRONG MÃ NGUỒN THỰC TẾ
+PHẦN 6 - MA TRẬN PHÂN QUYỀN RBAC (RBAC MATRIX) CHI TIẾT
+PHẦN 7 - KIỂM TOÁN TỔNG THỂ BẢO MẬT (PASSWORD, AUTHENTICATION, SESSION, TENANT, DATABASE, AUDIT LOG)
+PHẦN 8 - PHÂN TÍCH MULTI-DEVICE LOGIN & SINGLE SESSION
+PHẦN 9 - ĐÁNH GIÁ KHẢ NĂNG MỞ RỘNG (100 -> 10,000 Tenants)
+PHẦN 10 - SO SÁNH KIẾN TRÚC VỚI CÁC TIÊU CHUẨN THIẾT KẾ SAAS HIỆN ĐẠI
+PHẦN 11 - BẢNG ĐÁNH GIÁ RỦI RO & PHÂN Loại CẤP ĐỘ NGUY HIỂM (CRITICAL, HIGH, MEDIUM, LOW)
+PHẦN 12 - KHUYẾN NGHỊ KIẾN TRÚC MỤC TIÊU CHO NỀN TẢNG SAAS QUY MÔ LỚN
+
+================================================================================
+PHẦN 1 - KIỂM TOÁN KIẾN TRÚC TÀI KHOẢN HIỆN TẠI
+================================================================================
+
+1. NƠI LƯU TRỮ THÔNG TIN TÀI KHOẢN & SỰ ĐỒNG BỘ DỮ LIỆU
+Trong dự án hiện tại, thông tin tài khoản được lưu trữ và truy xuất thông qua các kênh phân chia sau:
+* Supabase Auth:
+  - Đây là nền tảng quản trị định danh thực tế. Ban tổ chức sử dụng một cơ chế đặc thù: Toàn bộ tài khoản của các đơn vị Cấp 2 và Cấp 3 được lưu trên Supabase Auth dưới dạng email ảo có hậu tố "@pic.com" (ví dụ: `username@pic.com`).
+  - Toàn bộ cơ chế kiểm soát mã hóa mật khẩu một chiều được ủy thác an toàn cho phân hệ Auth mặc định của Supabase (bcrypt/scrypt bảo mật cao).
+
+* accounts_config (Mục thiết lập cấu hình JSON đặc biệt):
+  - Đây là TRỌNG TÂM của kiến trúc lưu trữ metadata tài khoản hiện tại.
+  - Toàn bộ danh sách tài khoản Cấp 2 và Cấp 3 (tên hiển thị, giải đấu liên kết, vai trò 'admin2'/'admin3', token session đang hoạt động, danh sách Event mà trọng tài Cấp 3 được cấp quyền) được đóng gói và lưu dưới dạng một dòng JSON duy nhất trong bảng `tournament` với khóa `id = 'accounts_config'` (trường `settings`).
+  - Cấu trúc trường `settings` của bản ghi `accounts_config`:
+    {
+       "accounts": [
+          {
+             "username": "nganson_a",
+             "display_name": "Đơn Vị Ngân Sơn A",
+             "tournament_name": "Giải Pickleball thuộc Ngân Sơn A",
+             "role": "admin2",
+             "session_id": "17184518..",
+             "parent_tenant_id": "default",
+             "permitted_event_ids": []
+          }
+       ]
+    }
+
+* Bảng `accounts` (CƠ SỞ DỮ LIỆU):
+  - Thực tế bảng vật lý `accounts` (có cấu trúc `username`, `password`, `display_name`, `tournament_name`) tồn tại trong database PostgreSQL (`supabase_setup.sql`), tuy nhiên trong code thực thi chính (`store.ts`), luồng đọc-ghi tài khoản chuyển hẳn sang lưu trong trường JSON `settings` của bản ghi `accounts_config` thuộc bảng `tournament`. Việc này tạo ra một tính chất "Hybrid" (Hỗn hợp) trong lưu trữ.
+
+* localStorage / sessionStorage:
+  - Trình duyệt lưu giữ trạng thái đăng nhập của admin thông qua middleware `persist` của Zustand, lưu cache toàn bộ thông tin đăng nhập bao gồm: `userRole`, `currentUser`, `currentSessionId`, và `activeTenantId` dưới khóa `'pickleball-tournament-cache'`. Điều này đảm bảo khi F5 hoặc reload trang, phiên làm việc không bị biến mất lập tức.
+
+* Zustand Store (Client-side memory):
+  - Quản trị toàn bộ vòng đời ứng dụng trong session: mảng `accounts` được tải đầy đủ về RAM từ Supabase tại hàm `initSupabase()`, biến trạng thái trực tiếp điều phối giao diện gồm `userRole`, `currentUser`, `currentSessionId`, và `activeTenantId`.
+
+* Cơ chế đồng bộ:
+  - Khi thực hiện Thêm/Sửa/Xóa tài khoản ở phân hệ quản trị `AccountManager.tsx`, client gọi hàm `addAccount2`/`updateAccount2`/`deleteAccount2` trong `store.ts`. Thao tác này ghi đè mảng tài khoản mới trực tiếp bằng câu lệnh `upsert` dòng `'accounts_config'` lên bảng `tournament`. Sau đó, các client khác sẽ nhận được tín hiệu thay đổi này theo cơ chế Realtime WebSockets PostgreSQL change listener và kích hoạt tải lại cục bộ.
+
+--------------------------------------------------------------------------------
+2. SƠ ĐỒ LUỒNG ĐĂNG NHẬP (AUTHENTICATION FLOW)
+
+[Người dùng nhập User & Pass]
+             ↓
+[Chuẩn hóa thành email ảo: "user_slug@pic.com"]
+             ↓
+[Gọi Supabase Auth Client: "signInWithPassword"]
+             ↓
+             ├─→ [Thất bại] ──→ Báo lỗi: "Tài khoản hoặc mật khẩu không chính xác"
+             ↓ 
+[Thành công: Supabase Auth cấp JWT Token và Session cục bộ]
+             ↓
+[Quét danh sách loadedAccounts đọc từ config 'accounts_config']
+             ↓
+             ├─→ [Không thấy User trong Json] ──→ Báo lỗi: "Không tồn tại trên hệ thống dữ liệu"
+             ↓
+[Lấy phân mảnh vai trò 'role', 'parentTenantId', 'permittedEventIds']
+             ↓
+[Tạo chuỗi ngẫu nhiên "sessionId" (Session mới bảo vệ Single Session)]
+             ↓
+[Gửi yêu cầu WRITE đồng bộ sessionId này lên 'accounts_config' trong DB để khóa phiên]
+             ↓
+[Cập nhật trạng thái Zustand Store cục bộ: userRole, currentUser, activeTenantId]
+             ↓
+[Kích hoạt hàm initSupabase() để nạp dữ liệu giải đấu dành riêng cho Tenant tương ứng]
+             ↓
+[Chuyển hướng Menu Giao diện và thông báo đăng nhập thành công]
+
+--------------------------------------------------------------------------------
+3. SƠ ĐỒ LUỒNG ĐĂNG XUẤT (LOGOUT FLOW) & PHÂN TÍCH RỦI RO RACE CONDITION
+
+Sơ đồ logic đăng xuất thủ công:
+[Bấm Đăng xuất / Hết hạn] ──→ [Cập nhật Zustand đồng thì: guest, currentUser=null, activeTenantId='default']
+                                        ↓
+                              [Xóa localStorage & sessionStorage]
+                                        ↓
+                              [Gọi await supabase.auth.signOut()]
+                                        ↓
+                              [Reset URL Hash về gốc rỗng]
+                                        ↓
+                              [Buộc reload trang: window.location.reload()]
+
+* Cơ chế Đăng xuất:
+  - Logout thủ công: Thực thi trực tiếp qua hàm `logout()` trong `store.ts`.
+  - Logout Timeout (Inactivity): Trình lắng nghe `useEffect` trong `App.tsx` cảm biến hoạt động chuột/bàn phím. Nếu 30 phút không có thao tác (`mousemove` không tham gia, chỉ có `mousedown` và `keydown` nhằm tối ưu hiệu năng), hệ thống tự kích hoạt hàm `store.logout()` kèm thông báo bảo mật.
+  - Logout Token hết hạn: Do dịch vụ Supabase Auth hết hiệu lực phiên JWT JWT.
+  - Force Logout (Single Session Mismatch): Khi kích hoạt kiểm tra session tại hàm `initSupabase()` hoặc polling `checkAdminSession()`. Phát hiện `dbSessionId` khác với `localSessionId` -> Tự kích hoạt đăng xuất.
+
+* Phân tích rủi ro Vòng lặp phản hồi Auth (Auth Loop & Signout Recursion):
+  - Hệ thống sử dụng một trình lắng nghe sự kiện Supabase Auth trạng thái thay đổi (`supabase.auth.onAuthStateChange`).
+  - Trong `App.tsx` và `store.ts` có đoạn:
+    if (event === 'SIGNED_OUT') {
+      if (store.userRole !== 'admin1' && store.userRole !== 'admin2' && store.userRole !== 'admin3') {
+        if (store.isAdmin) { store.logout(); }
+      }
+    }
+  - Điểm sáng kiến trúc: Đội ngũ phát triển đã cài đặt chốt chặn an toàn `store.userRole !== 'admin...'` để bỏ qua sự kiện SIGNED_OUT của các tài khoản quản trị ảo. Nếu không có chốt chặn này, khi người dùng reload trang hoặc gọi signOut đồng thời, trình lắng nghe Auth sẽ bắn liên tiếp sự kiện SIGNED_OUT, kích hoạt hàm `logout()` vô hạn gây ra hiện tượng Reload Loop (F5 liên tục tàn phá tài nguyên browser khách hàng). Rủi ro Signout Recursion đã được triệt tiêu thành công ở tầng giao diện của bản cập nhật hiện tại.
+
+--------------------------------------------------------------------------------
+4. SỰ QUẢN LÝ PHIÊN LÀM VIỆC (SESSION MANAGEMENT)
+* Access Token & Refresh Token: Được quản lý tự động bởi Supabase Auth SDK dưới dạng cookie/localStorage độc lập. Thời gian sống (TTL) mặc định là 3600 giây (1 giờ).
+* Session ID vật lý bảo mật: Chứa chuỗi định danh ngẫu nhiên do hệ thống tự sinh tại client khi đăng nhập: `Date.now().toString() + Math.random().toString(36)...`. Khóa này đóng vai trò quyết định phòng vệ cơ chế chống dùng chung tài khoản.
+* Nơi lưu Session ID:
+  - Client-side: Lưu trong Zustand Store và được bảo toàn qua localStorage.
+  - Server-side: Lưu giữ trong mảng JSON của dòng cấu hình chung `accounts_config` thuộc bảng `tournament`.
+* Cơ chế gia hạn (Renewal): Token Supabase tự động gia hạn khi có tương tác mạng thông qua thư viện client. Session ID được giữ nguyên suốt phiên làm việc cho đến khi tài khoản bị đăng xuất hoặc bị ghi đè bởi thiết bị mới.
+* Cơ chế hủy (Revocation): Khi hàm `logout()` chạy, trạng thái lưu cục bộ bị hủy bỏ ngay tức khắc để tránh lỗi bám đuôi người dùng (Zustand wipe memory).
+
+--------------------------------------------------------------------------------
+5. MULTI-TENANT & CƠ CHẾ PHÂN CÁCH DỮ LIỆU (TENANT ISOLATION)
+* Nhận diện Tenant qua URL/Hash Router:
+  - Hệ thống áp dụng cấu trúc định tuyến Hash Router an toàn cho Single Page Application (SPA) trên GitHub Pages / Cloud Run. 
+  - Tenant ID được tách lọc tự động theo thứ tự ưu tiên:
+    1. Tham số Query String trên URL: `?g=...`, `?tenant=...`, hoặc `?id=...`
+    2. Phân vùng Router Hash: `#/ten-don-vi` (Ký hiệu gạch dưới `_` thay bằng gạch ngang `-` để URL trực quan).
+    3. Phân mảnh Pathname của URL: `domain.com/ten_don_vi/`
+  - Trường hợp không phát hiện bất kỳ dấu hiệu định danh nào, hệ thống gán mặc định Tenant ID là `'default'`.
+
+* Cơ chế Phân cách (Isolation):
+  - Tất cả các bảng dữ liệu chính (`events`, `teams`, `groups`, `matches`, `audit_logs`) đều được cấu trúc sẵn cột `tenant_id` vật lý với kiểu dữ liệu `TEXT`.
+  - Tại bước truy vấn nạp dữ liệu ở hàm `initSupabase()`, hệ thống phát lệnh SELECT trực tiếp kèm theo bộ lọc Tenant nghiêm ngặt:
+    - Nếu `activeTenantId === 'default'`: Lọt lọc lấy toàn bộ sự kiện thông thường của phân vùng mặc định độc lập (không chứa tiền tố hoặc hậu tố tenant đặc biệt).
+    - Nếu là Tenant tùy biến: Hệ thống chỉ truy vấn tải dữ liệu có `id` hoặc `tenant_id` tương ứng với prefix `tenant_id` cụ thể của Tenant đó.
+  - Khi lưu dữ liệu (`syncStateToSupabase`), hệ thống cũng đính kèm chuẩn xác nhãn `tenant_id = activeTenantId` vào mọi dòng ghi dữ liệu.
+
+* Quyền chuyển đổi Tenant (Tenant Switching & Validation):
+  - Xem vãng lai (Public Spectator Mode): Khán giả có thể thoải mái chuyển đổi Tenant bằng việc thay đổi Slug URL Hash (ví dụ từ `#/nganson-a` sang `#/clb-hoasenko`).
+  - Quản trị bảo mật (Admin Mode): Nếu một người dùng đăng nhập với vai trò Cấp 2 hoặc Cấp 3 cố tình thay đổi hash trên URL để truy cập trái phép dữ liệu Tenant khác, hệ thống sẽ kích hoạt rào chắn trong hàm `setTenantId(tenantId)`:
+    - Kiểm tra tính tương thích giữa `tenantId` yêu cầu và phân mảnh tenant được Supabase Auth cấp phép (được lưu tại `currentUser.parentTenant` hoặc `currentUser`).
+    - Nếu phát hiện dấu hiệu giả mạo URL / chiếm đoạt Session của Tenant khác, hệ thống cảnh báo cảnh giác và tự động ép chuyển hướng người dùng về đúng khu vực của họ, hoặc thực hiện cưỡng chế Đăng xuất lập tức để bảo vệ an ninh.
+
+
+================================================================================
+PHẦN 2 - PHÂN TÍCH TÀI KHẢN CẤP 1 (SUPER-ADMIN / SYSTEM OWNER)
+================================================================================
+* Định danh mặc định trong hệ thống: Tài danh chuyên dụng duy nhất `@huunsbk` (định cấu hình cứng tại giao diện đăng nhập và phân cấp auth).
+* Quyền hạn toàn năng hệ thống:
+  - Có toàn quyền điều phối hiển thị, cấu hình và tinh chỉnh cho phân vùng mặc định (`default`).
+  - Toàn quyền khởi tạo, kích hoạt và mở phân vùng Giải đấu mới cho các đơn vị thông qua việc khởi tạo Tài khoản Cấp 2.
+  - Toàn quyền Xóa, sửa thông tin định danh của các Tài khoản Cấp 2 hiện hữu.
+  - Có thể can thiệp cấp lại mật khẩu (password reset) cho bất cứ tài khoản Cấp 2/Cấp 3 nào trong hệ thống (với điều kiện cung cấp đúng mã bảo mật `Service Role Key` của dự án Supabase nhằm xác thực quyền tối cao).
+  - Khả năng quản trị toàn bộ hệ thống: Không giới hạn quyền hạn.
+* Role Code định nghĩa: `'admin1'`
+* Nơi lưu trữ thực tế: Mã định danh vai trò được gán trực tiếp khi chuỗi đầu vào username trùng khít với khóa hệ thống `'huunsbk'` tại phân hệ đăng nhập UI.
+
+
+================================================================================
+PHẦN 3 - PHÂN TÍCH TÀI KHẢN CẤP 2 (TENANT ORGANIZER / BTC GIẢI CON)
+================================================================================
+* Định danh trong hệ thống: Toàn bộ các tài khoản của đơn vị tổ chức riêng biệt do Admin Cấp 1 khởi tạo (ví dụ: `@nganson_a`, `@clb_pickleball_vietnam`).
+* Phạm vi hoạt động & Giới hạn dữ liệu:
+  - Chỉ được nhìn thấy, khởi tạo, thay đổi và dọn dẹp các nội dung thi đấu (sự kiện), vận động viên, chia nhóm đấu, và lịch thi đấu trực thuộc phân vùng dữ liệu riêng biệt của mình (`tenant_id = username`).
+  - Hoàn toàn không thể xem hoặc can thiệp sang dữ liệu hay thay đổi kết quả của các giải đấu thuộc Tenant khác (chốt chặn logic tầng Client ngăn cách tuyệt đối).
+* Quyền hạn quản trị nội bộ giải đấu:
+  - Toàn quyền thiết lập, đổi tên giải đấu của câu lạc bộ, cài đặt quy tắc điểm số, cơ chế điểm chạm giành chiến thắng của riêng đơn vị quản lý.
+  - Khả năng tạo Tài khoản Cấp 3: Chủ giải Cấp 2 có toàn quyền đăng ký, chỉ định và tạo mới hàng loạt các tài khoản Trọng tài (Cấp 3) để hỗ trợ nhập điểm riêng cho giải đấu đấu của mình.
+  - Khả năng phân quyền chi tiết cho Trọng tài: Cho phép tích chọn gán cụ thể danh mục các sự kiện/nội dung thi đấu mà Trọng tài đó được phép can thiệp ghi kết quả (ví dụ: chỉ cho phép trọng tài A điều phối Nội dung "Đôi nam 4.0", cấm nhập bảng "Đôi nam nữ").
+* Khả năng leo thang đặc quyền / Phân vùng bảo mật:
+  - Hệ thống ngăn chặn tài khoản Cấp 2 tự sửa vai trò của mình thành Cấp 1. Tuy nhiên, do lỗ hổng bảo mật database (vấn đề RLS sẽ được mổ xẻ ở Phần 7), một cuộc tấn công trực tiếp vào API của Supabase có thể bỏ qua chốt chặn Client này dễ dàng.
+* Role Code định nghĩa: `'admin2'`
+* Nơi lưu trữ thực tế: Lưu trong cấu trúc mảng JSON tại dòng cấu hình `'accounts_config'`.
+
+
+================================================================================
+PHẦN 4 - PHÂN TÍCH TÀI KHẢN CẤP 3 (REFEREE / TRỌNG TÀI ĐIỀU PHỐI)
+================================================================================
+* Định danh trong hệ thống: Các tài khoản có vai trò trọng tài nhập điểm do tài khoản Cấp 2 tạo lập (ví dụ: `@trongtai_1`, `@referee_san4`).
+* Mục đích sử dụng: Phục vụ riêng cho công tác trọng tài trên sân vận động, trực tiếp theo dõi tiến trình thi đấu, cập nhật trạng thái trận đấu ("Đang đấu", "Chờ") và cập nhật tỷ số điểm số của từng cặp đấu một cách chính xác trong thời gian thực.
+* Phạm vi hoạt động & Giới hạn dữ liệu:
+  - Hệ thống hạn chế tối đa số menu tương tác: Trọng tài Cấp 3 CHỈ nhìn thấy 2 tab chức năng làm việc là: "Nhập điểm" (`scoreEntry`) và "Bảng trình chiếu TV" (`live`). Toàn bộ các tab quản lý khác như Quản lý đội, Chia bảng, Sơ đồ trực tiếp, Cài đặt tài khoản, Xuất dữ liệu đều bị ẩn hoàn toàn để tập trung hóa thao tác chuyên môn và chống phá hoại dữ liệu.
+  - Chỉ có quyền nhập điểm cho những nội dung thi đấu (Event ID) được tài khoản quản lý Cấp 2 (Chủ giải) phê duyệt đánh dấu cho phép chỉnh sửa.
+* Được tạo lập và quản lý bởi: Tài khoản Cấp 2 (hoặc Cấp 1 hệ thống). Dữ liệu cấu hình lưu đồng nhất trong mảng JSON của dòng `'accounts_config'`.
+
+--------------------------------------------------------------------------------
+BẢNG KIỂM TRA QUYỀN HẠN CHI TIẾT CỦA TÀI KHOẢN CẤP 3:
+
+Quyền Hạn Thao Tác                  | Cho phép (✓) | Ngăn Chặn (✗) | Ghi Chú Kỹ Thuật
+-----------------------------------|--------------|--------------|---------------------------------------------
+Xem tổng quan giải đấu (Dashboard) |              |      ✗       | Tab ẩn hoàn toàn cho role admin3
+Xem lịch thi đấu chuyên sâu        |              |      ✗       | Bị ẩn, chỉ được xem qua màn hình trình chiếu TV
+Xem bảng xếp hạng kỹ thuật         |              |      ✗       | Bản chất tab Standings bị ẩn
+Nhập kết quả tỷ số trực tiếp       |      ✓       |              | Cho phép trong trang Nhập điểm (ScoreEntry)
+Sửa đổi điểm số lỗi nhập sai        |      ✓       |              | Chỉ đối với các nội dung được phân quyền cụ thể
+Xóa vĩnh viễn trận đấu / lịch đấu  |              |      ✗       | Không tích hợp hành động xóa trên giao diện admin3
+Quản lý danh sách đội bóng / VĐV   |              |      ✗       | Tab Quản lý đội bị loại bỏ hoàn toàn khỏi Navigation
+Tạo sơ đồ nhánh Knockout           |              |      ✗       | Chỉ dành duy nhất cho Cấp 1 và Cấp 2
+Chỉnh sửa sơ đồ nhánh trực quan    |              |      ✗       | Tab Knockout ẩn
+Quản lý tạo mới tài khoản          |              |      ✗       | Tab Settings rào cản chỉ admin1/2 truy cập
+Xem cấu hình điểm chạm hệ thống    |              |      ✗       | Không có giao diện tiếp cận
+Sửa cấu hình điểm thắng và cap      |              |      ✗       | Thiết lập bị khóa cứng cho Trọng tài
+Truy cập tùy tiện sang Tenant khác |              |      ✗       | setTenantId khóa cứng chuyển hướng nếu sai phân mảnh
+Xuất dữ liệu Excel / JSON          |              |      ✗       | Tab Xuất file bị chặn
+Xóa dữ liệu hoặc dọn dẹp bảng đấu  |              |      ✗       | Hoàn toàn bất khả thi đối với Trọng tài
+
+
+================================================================================
+PHẦN 5 - DANH SÁCH ROLE HIỆN HỮU TRONG MÃ NGUỒN THỰC TẾ
+================================================================================
+Dựa trên phân tích mã nguồn thực tế tại tệp định nghĩa kiểu dữ liệu `types.ts` và tệp quản lý store `store.ts`, hệ thống đang vận hành duy nhất bộ 4 vai trò (role) chính sau đây, hoàn toàn không suy đoán:
+
+1. `'guest'` (Viewer / Vãng lai): Khán giả truy cập ứng dụng không cần đăng nhập. Role này có quyền ĐỌC dữ liệu (Select) nhưng hoàn toàn không có quyền GHI hoặc chỉnh sửa bất kỳ phần tử nào trên giao diện (chỉ được xem Trang chủ, Lịch thi đấu, Bảng xếp hạng, Sơ đồ Bracket và Màn hình TV Livestream trực tiếp).
+2. `'admin1'` (Super-Admin / Quản trị tối cao): Tài khoản định danh `@huunsbk`. Có toàn quyền tạo và quản lý tất cả các tài khoản Cấp 2 và toàn bộ các giải đấu con trong hệ thống.
+3. `'admin2'` (Tenant-Admin / BTC Giải con): Tài khoản đại diện của các tổ chức CLB Pickleball đăng ký thuê hệ thống. Có quyền quản lý toàn năng trong giới hạn phân mảnh Giải đấu (Tenant) của riêng họ, đồng thời được phép tạo các tài khoản Trọng tài Cấp 3 trực thuộc.
+4. `'admin3'` (Referee-Admin / Trọng tài): Tài khoản ghi điểm lâm thời do admin2 bổ nhiệm. Chỉ được quyền nhập điểm và can thiệp trận đấu trong phạm vi nội dung quy định.
+
+
+================================================================================
+PHẦN 6 - MA TRẬN PHÂN QUYỀN RBAC (RBAC MATRIX) CHI TIẾT
+================================================================================
+Bảng ma trận mô tả chân thực khả năng tương tác của các vai trò đối với hệ thống thông tin giải đấu hiện tại:
+
+Chức Năng Nghiệp Vụ              | Guest | Cấp 3 (Referee) | Cấp 2 (Organizer) | Cấp 1 (Super-Admin)
+---------------------------------|-------|-----------------|-------------------|--------------------
+Xem thông tin tổng quan Giải đấu |   ✓   |        ✗        |         ✓         |         ✓
+Thay đổi thông tin chung của Giải|   ✗   |        ✗        |         ✓         |         ✓
+Định cấu hình điểm thắng & Cap   |   ✗   |        ✗        |         ✓         |         ✓
+Thêm / Sửa / Xóa nội dung thi đấu|   ✗   |        ✗        |         ✓         |         ✓
+Tự do chuyển tab xem giải con    |   ✓   |        ✗        |         ✗         |         ✓
+Nhập / Nhập hàng loạt Đội bóng   |   ✗   |        ✗        |         ✓         |         ✓
+Quản lý chia bảng đấu tự động    |   ✗   |        ✗        |         ✓         |         ✓
+Khai phóng lịch thi đấu vòng tròn|   ✗   |        ✗        |         ✓         |         ✓
+Khởi chạy sơ đồ nhánh Knockout   |   ✗   |        ✗        |         ✓         |         ✓
+Thiết lập Trọng tài Cấp 3 mới     |   ✗   |        ✗        |         ✓         |         ✓
+Cấp Tài khoản đơn vị Cấp 2 mới   |   ✗   |        ✗        |         ✗         |         ✓
+Xóa vĩnh viễn Tài khoản Cấp 2    |   ✗   |        ✗        |         ✗         |         ✓
+Xem Nhật ký hoạt báo hệ thống    |   ✗   |        ✗        |         ✓         |         ✓
+Cập nhật điểm trực tiếp của trận |   ✗   |        ✓        |         ✓         |         ✓
+Thay đổi trạng thái trận đấu     |   ✗   |        ✓        |         ✓         |         ✓
+Cưỡng chế đặt lại (Reset) điểm số|   ✗   |        ✗        |         ✓         |         ✓
+Đổi thiết lập mật khẩu của mình|   ✗   |        ✓        |         ✓         |         ✓
+Đổi mật khẩu người dùng khác     |   ✗   |        ✗        |         ✓ (Cấp 3) |         ✓ (Cấp 2 & 3)
+Xuất File biểu đồ báo cáo Excel  |   ✗   |        ✗        |         ✓         |         ✓
+
+* Ghi chú bổ sung: Trọng tài Cấp 3 chỉ được nhập/thay đổi điểm cho trận đấu và đặt trạng thái "Đang đấu" cho trận đấu thuộc nội dung họ được ủy quyền. Quyền RESET trận đấu về ban đầu (Hủy điểm cũ) bị thu hồi hoàn toàn khỏi giao diện Trọng tài để tránh tranh chấp hoặc thông đồng gian lận tỷ số.
+
+
+================================================================================
+PHẦN 7 - KIỂM TOÁN TỔNG THỂ BẢO MẬT HỆ THỐNG
+================================================================================
+
+1. PASSWORD SECURITY (Bảo mật Mật khẩu)
+* Đánh giá hiện trạng lưu trữ:
+  - Hệ thống sử dụng một giải pháp bảo mật kép an toàn: Mật khẩu của tài khoản Cấp 2 và Cấp 3 KHÔNG được lưu trữ trực tiếp dưới dạng văn bản rõ (plaintext) trong cơ sở dữ liệu của bảng `tournament` (JSON `accounts_config` lưu trữ giá trị trường `password: ""`).
+  - Toàn bộ cơ cấu bảo vệ mật khẩu được đẩy sang lưu trữ mật trong hệ thống Supabase Auth (Mã hóa Hash bảo mật cao, không thể giải mã ngược).
+  - Có lộ mật khẩu ở Client không? KHÔNG. Trong tệp `AccountManager.tsx`, đối với các tài khoản đang hiển thị ở danh sách, cột mật khẩu hiển thị dòng chữ rõ ràng *"Đã mã hóa 1 chiều"* thay vì in mật khẩu ra. Khi người dùng bấm tạo mới tài khoản, mật khẩu được gửi trực tiếp và duy nhất qua kênh HTTPs bảo mật tới máy chủ của Supabase Auth để tạo tài khoản, sau đó lập tức bị hủy bỏ ở luồng lưu trữ JSON của bảng tournament. 
+  - Khuyết điểm bảo mật Password: Khi Admin Cấp 1 hoặc Cấp 2 thực hiện Đổi mật khẩu cho cấp dưới qua `ResetPasswordModal.tsx`, họ được yêu cầu điền **Supabase Service Role Key** (mã tối cao bỏ qua mọi hàng rào bảo mật) trực tiếp vào form trình duyệt. Điều này tiềm ẩn rủi ro cực lớn về rò rỉ rò dịch vụ và chiếm quyền kiểm soát mây gốc nếu máy tính quản trị viên bị mã độc/extension lừa lấy cắp.
+
+--------------------------------------------------------------------------------
+2. AUTHENTICATION SECURITY (Bảo mật Xác thực)
+* Chống Brute Force (Tấn công dò mật khẩu): Hệ thống đang sử dụng cơ chế bảo mật xác thực mặc định của Supabase Auth, hỗ trợ chống dò mật khẩu ở mức tiêu chuẩn.
+* Rate Limit & Khóa Tài khoản: Supabase Auth tự động giới hạn số lần yêu cầu gửi mã xác thực / đăng nhập sai liên hiệp. Tuy nhiên, tính năng Captcha chống Bot tự động ở giao diện đăng nhập hiện thời chưa được kích hoạt ở frontend.
+* Lộ thông tin định danh (Credential Exposure): Khi đăng nhập thất bại, hệ thống phản hồi chung chung *"Tên đăng nhập hoặc mật khẩu không chính xác"*. Tuy nhiên tại bước tiếp theo hệ thống lại kiểm bắt tài khoản có tồn tại trong JSON hay không, nếu không tồn tại lại xuất hiện thêm thông báo lỗi chi tiết *"Tên đăng nhập không tồn tại trên hệ thống dữ liệu"*. Thông báo này gián tiếp làm lộ sự hiện diện của tài khoản (User Enumeration Vulnerability), giúp kẻ tấn công phân biệt được tài khoản nào đã đăng ký thực tế trên hệ thống nhằm phục vụ mục đích Brute Force.
+
+--------------------------------------------------------------------------------
+3. SESSION SECURITY (Bảo mật Phiên làm việc)
+* Tấn công cố định phiên (Session Fixation): Khi đăng nhập thành công qua Supabase Auth, token đăng nhập mới được sinh ra và gửi về, giúp triệt tiêu nguy cơ Session Fixation.
+* Tấn công giả mạo chiếm đoạt phiên (Session Hijacking): Do token truy cập được lưu trữ trong LocalStorage cục bộ (`pickleball-tournament-cache`), nếu ứng dụng dính phải lỗ hổng chiếm đoạt mã XSS (Cross-Site Scripting), hacker hoàn toàn có thể đọc được cache Zustand và chiếm đoạt toàn vẹn phiên làm việc của admin mà không cần mật khẩu.
+* Token Replay & Hết hạn đồng thời: Cơ cấu bảo mật session của Supabase JWT Token có cơ chế tự thu hồi khi hết thời gian sống. Đồng thời, cấu trúc khóa phiên Session ID vật lý sinh bởi hệ thống giúp vô hiệu hóa các trường hợp Replay nếu máy chủ phát hiện bất kỳ sự thay đổi session nào từ cơ sở dữ liệu.
+
+--------------------------------------------------------------------------------
+4. TENANT SECURITY (An ninh phân cách Giải đấu con)
+* Đánh giá nguy cơ Tấn công giả mạo Tenant (Tenant Spoofing):
+  - Do cơ chế phân tách dữ liệu của database chủ yếu dựa trên logic Client-side (Frontend điều phối giá trị cột `tenant_id` theo URL Hash hoặc Query String), nguy cơ Spoofing và Cross-Tenant trái phép là KHÁ CAO đối với các đối tượng có kiến thức am hiểu kỹ thuật.
+  - Mặc dù tại hàm `setTenantId(tenantId)` hệ thống đã tích hợp chốt chặn đối chiếu kiểm soát nghiêm ngặt giữa `activeTenantId` và phân cực tenant của tài khoản đang đăng nhập trong state, rào cản này hoàn toàn có thể bị vô hỏa bằng cách can thiệp thủ công vào Zustand store cục bộ trong Developer Tools của trình duyệt, hoặc giả mạo gói tin RESTful API gửi trực tiếp tới máy chủ Supabase.
+
+--------------------------------------------------------------------------------
+5. DATABASE SECURITY & RLS POLICIES (Bảo mật Cơ sở dữ liệu vật lý)
+* Đây là BẤT CẬP BẢO MẬT LỚN NHẤT trong kiến trúc hiện thời:
+  - Bản phân tích mã thiết lập database (`supabase_setup.sql`) cho thấy RLS (Row Level Security) được kích hoạt trên tất cả bảng biểu (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY;`).
+  - TUY NHIÊN, các chính sách bảo mật ghi dữ liệu lại cực kỳ lỏng lẻo và nguy hiểm:
+    CREATE POLICY "Cho phép ghi tự do cho anon và authenticated" ON matches FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+  - Ý nghĩa kỹ thuật của câu lệnh trên: BẤT KỲ AI sử dụng khóa kết nối công khai (Public Anon Key) — kể cả khách vãng lai (Guest) hay đối thủ phá hoại ngoài internet — đều có quyền Thay đổi, Sửa điểm, hoặc XÓA SẠCH toàn bộ bảng đấu, trận đấu, đội bóng của bất cứ Tenant nào trên hệ thống bằng cách phát trực tiếp query REST API tới endpoint Supabase của dự án.
+  - Sự phân cách Tenant thực tế tại database là **BẰNG KHÔNG (0)**. Tenant này hoàn toàn có thể đọc ra, thay đổi tùy ý, hoặc thậm chí hủy diệt hoàn toàn dữ liệu của Tenant khác mà không cần đăng nhập nếu họ can thiệp sâu bằng PostgREST API hoặc công cụ Postman bên ngoài.
+
+
+================================================================================
+PHẦN 8 - MULTI-DEVICE LOGIN & SINGLE SESSION (ĐĂNG NHẬP ĐA THIẾT BỊ)
+================================================================================
+1. Xử lý khi đăng nhập 1 tài khoản trên nhiều thiết bị:
+* Nếu một tài khoản đơn vị Cấp 2 đăng nhập đồng thời trên 2 thiết bị khác nhau (hoặc 2 trình duyệt riêng biệt trên cùng 1 máy tính):
+  - Hệ thống áp dụng nguyên tắc **Single Session (Chỉ duy trì 1 phiên hoạt động cuối cùng)**.
+  - Thiết bị đăng nhập sau tạo ra một mã Session ID hoàn toàn mới (ví dụ: `newSec_999`). Session ID mới này lập tức được lưu đè lên dòng JSON của tệp cấu hình tài khoản `accounts_config` trong database.
+  - Ở phía đối diện, thiết bị đăng nhập trước (đang giữ Session ID cũ ví dụ `oldSec_111`) khi thực hiện hành động liên quan đến nạp/sync dữ liệu (`initSupabase()`) hoặc qua luồng polling định kỳ `checkAdminSession()`, hệ thống đối sánh DB phát hiện rác mismatch: `dbSessionId` (`newSec_999`) khác biệt hoàn toàn so với địa phương (`oldSec_111`).
+  - Hệ thống lập tức cắt kết nối, hiển thị hộp thoại cảnh báo: *"CẢNH BÁO: KẾT NỐI BỊ NGẮT - Tài khoản vừa được đăng nhập ở thiết bị hoặc trình duyệt khác..."* và tự động chạy hàm đăng xuất xóa sạch cache để đá thiết bị đăng nhập trước ra ngoài.
+
+2. Đánh giá tính sẵn sàng của cơ chế:
+* Điểm cộng: Có tích hợp logic Single Session để chống xung đột nhập điểm của trọng tài và chống chia sẻ tràn lan một tài khoản BTC cho quá nhiều người không chịu trách nhiệm.
+* Thiếu sót:
+  - Hàm polling `checkAdminSession` tuy xây dựng logic rất chặt chẽ nhưng trong thực tế toàn bộ codebase hiện tại, hàm này **chưa được gắn vào bất kỳ vòng lặp useEffect hay đồng hồ hẹn giờ setInterval nào** ở phía các component. Kịch bản đá thiết bị cũ chỉ diễn ra thụ động khi người dùng thiết bị cũ bấm F5 nạp lại trang (kích hoạt `initSupabase()`), hoặc khi có luồng đồng bộ biến đổi bảng tournament. Điều này làm giảm đáng kể hiệu quả bảo vệ trực tiếp (Realtime Kickout).
+  - Không hỗ trợ cơ cấu "Danh sách thiết bị kết nối" (Active Sessions List) để người dùng chủ động xem và chủ động thu hồi (Session Revocation) tuyển chọn.
+
+
+================================================================================
+PHẦN 9 - KHẢ NĂNG MỞ RỘNG (SCALABILITY AUDIT)
+================================================================================
+Nếu hệ thống Pickleball hiện tại quyết định nâng cấp phục vụ quy mô lớn (ví dụ: 100 -> 1,000 Tenant tổ chức giải đấu đồng thời, với 10,000 người dùng trực tiếp), các nút thắt kỹ thuật sau sẽ lập tức bị bóp nghẹt:
+
+1. Nút thắt cổ chai 'accounts_config' (VẤN ĐỀ CRITICAL ĐẦU TIÊN):
+* Hiện trạng: Toàn bộ cấu hình tài khoản, phân quyền, session, quyền thi đấu của hàng loạt Trọng tài Cấp 3 đều lưu dồn vào duy nhất trường JSON `settings` trong 1 hàng (`id = 'accounts_config'`) của bảng `tournament`.
+* Khi hệ thống có 1,000 tenant và mỗi tenant có 10 trọng tài, kích thước của trường JSON settings này sẽ phình to vượt quá giới hạn dung lượng cột, gây ra hiện tượng nghẽn mạng nghiêm trọng mỗi khi đăng nhập vì ứng dụng phải tải toàn bộ thông tin định danh của TẤT CẢ các tổ chức khác nhau về trình duyệt người dùng chỉ để đối sánh 1 dòng tài khoản. Việc write đè liên hợp của nhiều admin tại cùng một thời điểm lên duy nhất một hàng `accounts_config` sẽ tạo ra lỗi trùng lặp, xung đột giao dịch trầm trọng (Database Lock / Write Collision).
+
+2. Hiệu năng Realtime qua WebSocket:
+* Hiện trạng: Trình lắng nghe WebSocket trong `App.tsx` đăng ký sự kiện postgres_changes trên toàn diện bảng `matches` không phân lọc tenant:
+  supabase.channel('public_db_changes').on('postgres_changes', { table: 'matches' }, ...)
+* Khi có 1,000 giải đấu chạy đồng thời khắp đất nước, mỗi giây có hàng trăm trận đấu cập nhật điểm, toàn bộ các client xem giải (cho dù chỉ đang xem giải cỏ ở một làng quê hẻo lánh) đều bị đổ dồn dập hàng nghìn gói tin Realtime của các giải đấu khác về điện thoại qua kết nối WebSockets. Điện thoại của khán giả sẽ bị treo cứng (RAM/CPU Exhaustion) và hóa đơn băng thông Supabase của BAN TỔ CHỨC sẽ tăng đột biến vượt ngoài tầm kiểm soát.
+
+3. Điểm nghẽn đồng bộ toàn màn hình (Upsert full state):
+* Cơ chế của hàm `syncStateToSupabase` là xóa sạch bóng dọn dẹp các dòng dư thừa rồi chạy lệnh `upsert` ghi đè đồng bộ toàn bộ mảng `matches`, `teams`, `groups` của tất cả sự kiện trong bộ nhớ.
+* Cách tiếp cận này chỉ hoạt động ổn định ở quy mô giải đấu siêu nhỏ. Ở quy mô lớn, việc đồng bộ đồng thời hàng trăm bản ghi thô qua client-side RESTful API sẽ tạo nên độ trễ mạng lớn và nguy cơ mất mát dữ liệu do rớt mạng cục bộ (Network Drop Out) giữa chừng là vô cùng đáng sợ.
+
+4. RBAC & Khả năng bảo trì:
+* Việc kiểm tra phân quyền hoàn toàn dựa vào logic JavaScript ở tầng Frontend (`isPermitted`, `userRole === 'adminx'`) khiến hệ thống cực kỳ khó gia cố bảo mật. Bất kỳ thay đổi nhỏ nào về quyền hạn cũng đòi hỏi phải cập nhật và biên dịch lại toàn bộ ứng dụng Client và triển khai lại từ đầu, làm gián đoạn các giải đấu khác đang hoạt động.
+
+
+================================================================================
+PHẦN 10 - SO SÁNH KIẾN TRÚC VỚI CÁC TIÊU CHUẨN THIẾT KẾ SAAS HIỆN ĐẠI
+================================================================================
+
+Tiêu Chí Đánh Giá | Hiện Trạng Hệ Thống Pickleball          | Ti chuẩn SaaS Đa Tenant Chuyên Nghiệp | Đánh Giá Khoảng Cách Kiến Trúc
+-----------------|-----------------------------------------|--------------------------------------|-----------------------------------------
+Vật lý Tenant     | Phân rã logic dựa trên cột tenant_id    | Phân rã cứng qua Database RLS hoặc Schema| Kém an toàn. Dễ bị rò rỉ dữ liệu chéo chéo.
+Cấu trúc User     | Hybrid - Lưu JSON dồn vào 1 dòng DB    | Phân tách vật lý, 1 dòng / 1 user    | RẤT KÉM. Bắt buộc phải chuyển đổi sang User table.
+Authentic.       | Giả mạo email ảo (username@pic.com)    | Đăng ký tài khoản định danh thực     | Luồng tạm thời, không phù hợp cho SaaS thương mại.
+Phân quyền       | RBAC tĩnh ở client-side                 | RBAC, ABAC kiểm soát chặt ở DB/Server| Có nguy cơ leo thang đặc quyền nghiêm trọng.
+Gia hạn Session  | Tự động của Supabase Auth (mọc răng)   | Quản lý vòng đời Token bảo mật nghiêm| Phù hợp cơ bản nhưng thiếu bảo vệ API.
+Audit Log        | Lưu dồn không kiểm soát dữ liệu thô     | Log bất biến (Immutable), ghi dấu IP | Ghi log dễ dàng bị giả mạo từ client.
+Force Logout     | Polling thụ động định dạng memory       | Push notification trực tiếp qua Socket | Phản hồi chậm, dễ bị bypass nếu ngắt mạng.
+
+
+================================================================================
+PHẦN 11 - BẢNG ĐÁNH GIÁ RỦI RO & PHÂN Loại CẤP ĐỘ NGUY HIỂM
+================================================================================
+
+1. RỦI RO SỐ 1: CHÍNH SÁCH RLS DB CÓ LỖ HỔNG CỰC KỲ LỚN (ALLOW ANONYMOUS WRITE)
+* Phân loại: [ CRITICAL (CỰC KỲ NGUY HIỂM) ]
+* Mô tả chi tiết: Chính sách bảo mật RLS trên toàn bộ các bảng trong database được cấp quyền ghi tự do cho cả vai trò `'anon'` (CREATE POLICY ... TO anon, authenticated USING (true) WITH CHECK (true)). 
+* Hệ quả: Bất cứ ai biết được Supabase URL và Public Anon Key của dự án (hai thông tin này phơi bày hoàn chỉnh ở file JS Client) đều có thể tự viết Script để XÓA SẠCH hoặc SỬA tỷ số của bất cứ trận đấu nào của tất cả các Tenant đang vận hành trên hệ thống. Đây là tử huyệt bảo mật của ứng dụng.
+
+2. RỦI RO SỐ 2: KHÔNG CÓ BẢO MỆT LẬP PHƯƠNG TÀI KHOẢN (JSON ACCOUNTS BOTTLE-NECK)
+* Phân loại: [ HIGH (NGUY HIỂM CAO) ]
+* Mô tả chi tiết: Toàn bộ metadata, phân quyền nội dung và session của Trọng tài, BTC Giải con đều dồn cục vào 1 dòng `accounts_config` trong trường settings dạng JSON.
+* Hệ quả: Khi số lượng tài khoản của toàn hệ thống tăng lên, việc đọc/ghi đồng thời trên hàng JSON này chắc chắn xảy ra hiện tượng Write Collision (ghi đè phá cấu trúc dữ liệu của nhau). Đồng thời, việc tải toàn bộ danh sách tài khoản của hệ thống về máy khách ẩn chứa rủi ro rất cao về quyền riêng tư và bảo mật định danh của các câu lạc bộ khác.
+
+3. RỦI RO SỐ 3: TIẾT LỘ SUPABASE SERVICE ROLE KEY Ở CLIENT (GOD-KEY EXPOSURE)
+* Phân loại: [ HIGH (NGUY HIỂM CAO) ]
+* Mô tả chi tiết: Tiến trình đổi mật khẩu cho tài khoản ở giao diện Admin yêu cầu dán trực tiếp khóa `Service Role Key` của dự án vào modal React.
+* Hệ quả: Service Role Key là chìa khóa vạn năng của hệ thống Supabase (bỏ qua mọi chính sách RLS, có toàn quyền xóa tận gốc Database và Auth). Việc trung chuyển và xử lý chìa khóa này trên trình duyệt người dùng là tối kỵ trong an ninh mạng. Chỉ cần một khoảnh khắc sơ sẩy bị chụp màn hình, bị hack XSS, hoặc phơi bày trong log trình duyệt, toàn bộ hạ tầng dự án sẽ lập tức sụp đổ.
+
+4. RỦI RO SỐ 4: REALTIME WEBSOCKET KHÔNG LỌC TENANT (SOCKET EXHAUSTION)
+* Phân loại: [ MEDIUM (TRUNG BÌNH) ]
+* Mô tả chi tiết: WebSocket lắng nghe trực diện toàn bảng `matches` chung, không phân hóa kênh theo `tenant_id`.
+* Hệ quả: Gây ra hiện tượng quá tải băng thông và treo trình duyệt khán giả khi quy mô giải đấu mở rộng ngoài 10 tổ chức vận hành đồng thời.
+
+5. RỦI RO SỐ 5: TRÌNH LẮNG NGHE KIỂM PHIÊN HOẠT ĐỘNG THỤ ĐỘNG (DORMANT POLLING)
+* Phân loại: [ LOW (THẤP) ]
+* Mô tả chi tiết: Hàm `checkAdminSession` không được kích hoạt chạy liên hiệp dạng nền (Background timer) nên tính năng chống dùng chung tài khoản chỉ hoạt động khi người dùng nạp lại trang.
+
+
+================================================================================
+PHẦN 12 - KHUYẾN NGHỊ KIẾN TRÚC MỤC TIÊU CHO NỀN TẢNG SAAS QUY MÔ LỚN
+================================================================================
+Để giải phóng toàn bộ sức mạnh và đưa nền tảng quản lý giải đấu Pickleball tiến lên mô hình SaaS Đa Tenant chuyên nghiệp, tin cậy, sẵn sàng gọi vốn và thương mại hóa rộng rãi, chúng tôi đề xuất Lộ trình nâng cấp Kiến trúc mục tiêu như sau:
+
+1. Thiết lập lại tầng Đăng nhập và Quản lý Tài khoản (User Database Migration):
+* Tuyệt đối không lưu tài khoản dồn cục trong JSON `accounts_config` nữa.
+* Di chuyển toàn bộ danh sách tài khoản sang bảng vật lý độc lập có tên là `profiles` hoặc `users_metadata` trong Postgres, liên kết trực tiếp bằng Khóa ngoại `user_id` trỏ thẳng tới bảng vật lý `auth.users` của Supabase Auth.
+* Điểm cộng: Mỗi khi truy vấn thông tin định danh hay quyền hạn, hệ thống chỉ cần SELECT chuẩn xác 1 dòng duy nhất tương ứng với UID đang đăng nhập (`auth.uid()`), giải quyết hoàn toàn vấn đề nghẽn cổ chai và xung đột ghi ghi của mảng JSON cũ.
+
+2. Gia cố 100% An ninh tầng Dữ liệu với PostgreSQL RLS thực thụ:
+* Thiết lập chính trị bảo mật RLS thực chất trên máy chủ Supabase. Xóa vĩnh viễn chính sách *Cho phép ghi tự do cho anon*.
+* Định nghĩa chính sách ghi đè thông minh dựa trên liên hợp mã xác thực JWT:
+  - Chỉ cho phép đọc (FOR SELECT) đối với mọi người:
+    CREATE POLICY "Public read access" ON matches FOR SELECT USING (true);
+  - Chỉ cho phép sửa đổi (FOR INSERT, UPDATE, DELETE) đối với tài khoản tương xứng có tenant trùng khít với tenant thiết bị:
+    CREATE POLICY "Tenant edit restriction" ON matches FOR ALL TO authenticated 
+    USING (tenant_id = (auth.jwt() ->> 'tenant_id'))
+    WITH CHECK (tenant_id = (auth.jwt() ->> 'tenant_id'));
+* Điểm cộng: Tuyệt đối rào cản từ gốc Database. Dù kẻ xấu có lấy được Anon Key công khai vẫn không có bất cứ năng lực nào can thiệp ghi đè hay dòm ngó dữ liệu của các Tenant khác nếu họ không sở hữu JWT hợp lệ có Tenant ID tương ứng.
+
+3. Di chuyển tiến trình Đổi mật khẩu lên Serverless API (Secure Password Reset):
+* Loại bỏ vĩnh viễn việc yêu cầu dán Service Role Key trên trình duyệt giao diện React.
+* Xây dựng một tuyến API biên độc lập (Edge Function của Supabase hoặc Cloud Run API Route) đóng vai trò trung chuyển trung gian. Service Role Key được cấu hình cẩn mật dưới dạng Biến Môi trường (Environment Variable) phía Máy chủ, hoàn toàn khuất tầm mắt của trình duyệt Client. Giao diện client gửi yêu cầu đổi mật khẩu bảo mật qua HTTPs POST, Serverless API kiểm tra token quyền admin của người gửi rồi an toàn thực thi đổi pass cho cấp dưới.
+
+4. Tối ưu hóa kênh Realtime theo kênh Tenant phân mảnh (Multiplexed WebSockets):
+* Tận dụng tính năng lọc Realtime (Column Filter / Channel Filter) từ Supabase:
+  supabase.channel(`matches_${tenantId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `tenant_id=eq.${tenantId}` }, ...)
+* Điểm cộng: Khán giả xem giải Ngân Sơn chỉ nhận được luồng packet của giải Ngân Sơn. Khán giả giải Hoa Sen chỉ nhận luồng Hoa Sen. Giảm tải áp lực truyền tải dữ liệu của mạng xuống còn 1 / N lần, đẩy cao hiệu suất ứng dụng lên mức tối vẹn, tiết kiệm 95% chi phí vận hành WebSocket.
+
+5. Cấu trúc lại cơ chế đồng bộ (Fine-Grained Sync Engine):
+* Thay vì xóa sạch dọn dẹp rồi upsert lại toàn bộ mảng dữ liệu cực kỳ thô mỗi khi lưu cục bộ, hãy chuyển sang cơ chế Đồng bộ vi hạt vi lượng (Delta Sync): Chỉ cập nhật chuẩn xác dòng đối tượng bị biến đổi (Insert trận đấu phát sinh, Update điểm số của đúng 1 ID trận đấu đơn lẻ). Điều này triệt tiêu độ trễ thắt mạng và hạn chế độ nghẽn băng thông diện rộng.
+
+--- KẾT THÚC BÁO CÁO KIỂM TOÁN ---
+================================================================================

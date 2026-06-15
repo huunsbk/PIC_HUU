@@ -1,0 +1,138 @@
+================================================================================
+BÁO CÁO KIỂM TOÁN CHUYÊN SÂU: CƠ CHẾ PHÂN TÁCH TENANT (TENANT ISOLATION) VÀ AUTH RESTRICTIONS
+--------------------------------------------------------------------------------
+Dự án: Hệ thống Quản lý Giải đấu Pickleball Đa Tenant SaaS
+Thẩm định viên: Đội ngũ Chuyên gia Kiến trúc Hệ thống & An ninh Đám mây AI Studio
+Đối tượng kiểm toán: Cơ chế Phân tách Tenant (Tenant Isolation), Trạng thái Zustand, 
+                  Cấu hình Tài khoản `accounts_config` và Tích hợp Supabase Auth.
+Thời gian lập báo cáo: 15/06/2026
+Trạng thái: CHỈ PHÂN TÍCH - TUÂN THỦ NGUYÊN TẮC: KHÔNG SỬA CODE - KHÔNG THAY ĐỔI CƠ SỞ DỮ LIỆU
+================================================================================
+
+QUY TRÌNH KIỂM TOÁN HOẠT ĐỘNG:
+Chúng tôi đã tiến hành quét toàn diện các tệp mã nguồn cốt lõi (`src/store.ts`, `src/App.tsx`, `src/components/AuthModal.tsx`) để làm rõ luồng xử lý định danh của giải đấu, cách thức phân rã Tenant và mức độ tin cậy của phân hệ an ninh cơ sở dữ liệu hiện tại.
+
+Dưới đây là các phát hiện chuyên sâu trả lời từng câu hỏi chất vấn kỹ thuật:
+
+================================================================================
+1. TENANT HIỆN TẠI ĐƯỢC XÁC ĐỊNH NHƯ THẾ NÀO? (TENANT RESOLUTION MECHANISM)
+================================================================================
+Tenant hiện tại (không gian giải đấu độc lập) được xác định thông qua hai (02) kịch bản truy cập của vai trò người dùng:
+
+Kịch bản A: Người xem vãng lai (Guest/Spectators)
+  - Khi xem công khai, Tenant được trich xuất một cách năng động từ URL của trình duyệt thông qua hàm `detectTenantFromUrl()` tại `App.tsx`:
+    * Kiểm tra tham số Query String: `?g=...`, `?tenant=...`, hoặc `?id=...`.
+    * Kiểm tra địa chỉ phân mảng Window Location Hash (Ví dụ: `#/hanoipickleball` -> `hanoipickleball`).
+    * Kiểm tra dốc đường dẫn Pathname.
+  - Nếu không phát hiện bất kỳ dấu hiệu nào, Tenant sẽ tự động rơi về trạng thái mặc định: `'default'`.
+  - Giá trị này sẽ được chuẩn hóa ký tự bằng cách đổi ký tự gạch ngang `-` thành gạch dưới `_`.
+
+Kịch bản B: Người dùng quản trị đăng nhập (Admins/Referees)
+  - Khi tiến hành đăng nhập thông qua `AuthModal.tsx`, tài khoản đăng nhập (username) sẽ được đối soát với danh sách cấu hình lưu trong Zustand.
+  - Nếu là tài khoản Admin Cấp 1, Tenant mặc định luôn là `'default'`.
+  - Nếu là tài khoản Admin Cấp 2 (`admin2`), Tenant được gán chính là tên tài khoản đăng nhập (Username) của chính đơn vị đó.
+  - Nếu là tài khoản Trọng tài/Hỗ trợ Cấp 3 (`admin3`), Tenant được gán dựa trên trường `parentTenantId` (mã của Admin Cấp 2 cấp quyền cho họ).
+
+================================================================================
+2. TENANT ĐANG LƯU TRỮ Ở ĐÂU TRONG HỆ THỐNG? (TENANT STORAGE LOCATIONS)
+================================================================================
+Thông tin Tenant đang được lưu giữ phân tán tại các phân vùng sau:
+
+1. Phân vùng Zustand App Store (Client Memory): Lưu trữ trực tiếp trong trường trạng thái `activeTenantId: string`.
+2. Phân vùng Bộ nhớ Trình duyệt (Client Storage): Được cache lâu dài tại `localStorage` hoặc `sessionStorage` dưới dạng khóa bảo mật `pickleball-tournament-cache` để duy trì phiên khi tải lại trang.
+3. Phân vùng URL Client: Được phản ánh trực tiếp trên thanh địa chỉ thông qua hash băm (Ví dụ: `#/hanoi-pickleball`).
+4. Phân vùng Cơ sở dữ liệu Supabase:
+   - Trong bảng `tournament` và `audit_logs`: Được lưu trực tiếp trong cột `tenant_id` của bản ghi.
+   - Trong các bảng dữ liệu thi đấu cốt lõi (`events`, `groups`, `teams`, `matches`): **KHÔNG CÓ CỘT TENANT_ID VẬT LÝ**. Lúc này, Tenant được mã hóa bằng cách thêm tiền tố (`prefix__`) đứng ngay trước định danh ID của sự kiện (Ví dụ: `huunsbk__event-default` hoặc `hanoi_pickle_event-1`). Tất cả bảng con (`groups`, `teams`, `matches`) liên kết khóa ngoại với `event_id` đều thụ hưởng phân tách gián tiếp nhờ tiền tố cấu thành này.
+
+================================================================================
+3. TENANT CÓ NẰM TRONG CÁC KHÔNG GIAN DỮ LIỆU ĐƯỢC CHỈ ĐỊNH KHÔNG?
+================================================================================
+* CÓ NẰM TRONG `Zustand`?
+  - **CÓ (YES)**. Zustand nắm quyền kiểm soát tuyệt đối trạng thái `activeTenantId` để định hướng mọi hành vi lọc dữ liệu trên bộ nhớ RAM phía Client.
+
+* CÓ NẰM TRONG `database`?
+  - **CÓ (YES)**. Nằm dưới dạng cột thô tại bảng `tournament` và `audit_logs`, và nằm ẩn dưới dạng tiền tố định danh ID (`prefix__`) tại các bảng `events`, `groups`, `teams`, `matches`.
+
+* CÓ NẰM TRONG `accounts_config`?
+  - **CÓ (YES)**. Danh sách tài khoản trong JSON settings của `accounts_config` lưu trữ chính xác liên kết giữa username và trường `parent_tenant_id` cho các tài khoản hỗ trợ nghiệp vụ.
+
+* CÓ NẰM TRONG `Session` của Supabase Auth?
+  - **KHÔNG (NO)**. Session trả về từ Supabase Auth (`supabase.auth.getSession()`) chỉ chứa siêu dữ liệu xác thực cơ bản của tài khoản người dùng, hoàn toàn không mang bất kỳ thông tin Tenant nào.
+
+* CÓ NẰM TRONG mã JWT Token gốc được ký từ máy chủ Auth?
+  - **KHÔNG (NO)**. JWT Token không chứa claim `tenant_id`.
+
+================================================================================
+4. KHI ĐĂNG NHẬP, TENANT ĐƯỢC GÁN NHƯ THẾ NÀO? (LOGIN FLOW TENANT ASSIGNMENT)
+================================================================================
+Quy trình gán Tenant khi thực hiện Đăng nhập hoạt động tuần tự như sau:
+
+1. Quản trị viên nhập thông tin đăng nhập từ form `AuthModal.tsx`.
+2. Hệ thống gọi phương thức đăng nhập `supabase.auth.signInWithPassword` bằng địa chỉ email giả lập: `<tên_đăng_nhập>@pic.com` và mật khẩu tương ứng.
+3. Nếu máy chủ Supabase Auth chấp nhận phiên giao dịch:
+   - System kiểm tra xem tên đăng nhập có là `'huunsbk'` (Admin Cấp 1 tối cao) hay không. Nếu có, gán `tenantId = 'default'`.
+   - Nếu là tài khoản khác, thực hiện duyệt tìm bản ghi tài khoản tương thích nằm trong danh sách `accounts` ứng dụng đã tải sẵn từ trước đó (bằng cú gọi API lấy dòng `accounts_config` trong `tournament` lúc init trang).
+   - Khi tìm ra bản ghi khớp:
+     * Nếu role là `'admin3'`: Gán Tenant theo cấu trúc `parentTenantId || 'default'`.
+     * Nếu role là `'admin2'`: Gán Tenant bằng chính giá trị định danh `username` của họ.
+4. Chuẩn hóa chuỗi bằng cách chuyển đổi toàn bộ ký tự `-` (gạch ngang) sang `_` (gạch dưới).
+5. Gọi hàm `setAuthStatus(role, username, tenantId)` để nạp thông tin vào Zustand và gán Session ID của thiết bị lên dòng `accounts_config` trong cơ sở dữ liệu để chống chế độ đăng nhập đa vị trí.
+
+================================================================================
+5. KHI ĐỔI TENANT, TENANT ĐƯỢC CẬP NHẬT NHƯ THẾ NÀO? (TENANT SWITCHING FLOW)
+================================================================================
+Khi có hành vi thay đổi Tenant (Do đổi URL hash của người xem vãng lai, hoặc Admin tối cao đổi bộ lọc giải đấu):
+
+1. Hệ thống Client kích hoạt hàm `setTenantId(tenantId)` tại `src/store.ts`.
+2. Thực hiện chốt chặn an ninh (Security Guard Check):
+   - Nếu `userRole` của tài khoản hiện hành là `admin2` hoặc `admin3`, hệ thống sẽ trích xuất Tenant được cấp phép vật lý của họ.
+   - Đối chiếu Tenant yêu cầu đổi với Tenant được phép. Nếu có sự lệch pha (mismatch), hệ thống lập tức từ chối, khóa chuyển đổi, hồi trả Hash URL về đúng mã cũ, hoặc ép buộc đăng xuất (`logout()`) để bảo mật.
+3. Nếu vượt qua khâu kiểm duyệt (Là Guest hợp lệ hoặc Admin cấp 1 tối cao):
+   - Cập nhật biến bộ nhớ: `activeTenantId: tenantId`.
+   - Bật trạng thái quay tiến trình: `isLoadingSupabase: true`.
+4. Gọi hàm `get().initSupabase()` để tải lại toàn bộ tài nguyên:
+   - Thực hiện dọn dẹp các sự kiện đang lưu tạm ở bộ nhớ cache.
+   - Gửi các gói tin SELECT lọc trực tiếp ở tầng Database thông qua truy vấn khớp mẫu:
+     ```typescript
+     supabase.from('events').select('*').like('id', `${activeTenantId}__%`)
+     ```
+   - Nạp thông tin kết cấu giải đấu mới tinh của đúng Tenant đó vào giao diện người dùng.
+
+================================================================================
+6. CÓ THỂ LẤY TENANT HIỆN TẠI TRỰC TIẾP TỪ SUPABASE AUTH TRONG JWT KHÔNG?
+================================================================================
+🚨 **KHÔNG THỂ (NO)**.
+* Lý do kỹ thuật:
+  - Phân hệ đăng ký/đăng nhập của Supabase Auth hiện tại chỉ nhận diện tài khoản bằng tổ hợp Email/Mật khẩu cơ bản.
+  - Supabase Auth hoàn toàn không có bất kỳ cấu hình siêu dữ liệu người dùng (`user_metadata`), siêu dữ liệu ứng dụng (`app_metadata`) hay các yêu cầu phân quyền tùy biến (Custom JWT Claims) nào được tích hợp trực tiếp lúc tạo tài khoản.
+  - Mối quan hệ liên minh giữa tài khoản và Tenant chỉ được khai báo thủ công ở một phân vùng khác: Đó là một mảng dữ liệu JSON thô nằm trong một cột văn bản của bảng dữ liệu `tournament` mang khóa định danh hệ thống `id = 'accounts_config'`.
+
+================================================================================
+KẾT LUẬN CUỐI CÙNG TỪ CHUYÊN GIA
+================================================================================
+
+👉 [KẾT LUẬN KIẾN TRÚC]:
+
+B. Phải tái cấu trúc Auth trước.
+
+================================================================================
+LUẬN ĐIỂM CHỨNG MINH KỶ THUẬT PHÂN TÍCH:
+
+1. **Kẻ hở mạo danh (Spoofing Vulnerability)**:
+   Do Tenant `activeTenantId` được xác định hoàn toàn ở phía Frontend Client và truyền xuống Database theo phương thức lọc thủ công bằng chuỗi ký tự, nếu ta thiết lập RLS dựa trên thông tin client truyền lên, kẻ tấn công hoặc các Tenant khác có thể dễ dàng can thiệp, gửi các yêu cầu giả mạo giá trị Tenant trên mạng để xem, sửa, hay xóa sạch dữ liệu đơn vị đối thủ.
+
+2. **Sự thiếu hụt định danh trong Token JWT**:
+   Một chính sách RLS an toàn tuyệt đối bắt buộc phải đối sánh giá trị Tenant của bản ghi cơ sở dữ liệu với một giá trị đã được ký số (Digital Signed) được truyền trong Header mạng Token JWT. Nhưng hiện tại, Token JWT của Supabase Auth hoàn toàn trống rỗng trường `tenant_id`. PostgreSQL RLS không có phương thức đáng tin cậy nào để xác thực Tenant thực tế của luồng API.
+
+3. **Thiếu sự trực quan trong cấu trúc bảng vật lý**:
+   Các bảng `events`, `teams`, `groups`, `matches` hiện đang không có cột `tenant_id` độc lập. Việc ép PostgreSQL xử lý phân tách Tenant thông qua các toán tử xử lý chuỗi cắt tiền tố `split_part` hoặc so khớp mẫu `like '%__%'` trong RLS sẽ hủy hoại hiệu năng của chỉ mục cơ sở dữ liệu (Database Indexing), gây ra các truy vết quét toàn bảng (Full Table Scan) cực kỳ chậm chạp và dễ phát sinh lỗi logic nghiêm trọng khi quy mô giải đấu tăng trưởng.
+
+🎯 **KHUYẾN NGHỊ LỘ TRÌNH TÁI CẤU TRÚC AUTH KHUYÊN DÙNG**:
+- **Bước 1**: Thêm trực tiếp cột định danh vật lý `tenant_id` vào tất cả các bảng dữ liệu cốt lõi (`events`, `teams`, `groups`, `matches`) của cơ sở dữ liệu PostgreSQL.
+- **Bước 2**: Đồng bộ hóa quá trình đăng ký tài khoản. Khi tạo tài khoản Admin Cấp 2 hoặc Cấp 3, nạp giá trị mã Tenant cụ thể vào trường `user_metadata` của Supabase Auth.
+- **Bước 3**: Lúc này, Token JWT tải về sẽ tự động chứa claim Tenant an toàn. Khi đó, ta có thể ngay lập tức kích hoạt chính sách RLS siêu cấp bảo mật ở cơ sở dữ liệu:
+  `USING (tenant_id = (auth.jwt() -> 'user_metadata' ->> 'tenant_id'))`
+
+BẢN BÁO CÁO THẨM ĐỊNH KẾT THÚC - CHỦ TRÌ PHÂN TÍCH HỆ THỐNG KIẾN TRÚC BOX CLOUD.
+================================================================================

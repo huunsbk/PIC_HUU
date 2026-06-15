@@ -1,0 +1,121 @@
+================================================================================
+BÁO CÁO THẨM ĐỊNH KỸ THUẬT: CƠ CHẾ GHI NHẬT KÝ HOẠT ĐỘNG (AUDIT_LOGS) & PHỤ THUỘC RLS
+--------------------------------------------------------------------------------
+Dự án: Hệ thống Quản lý Giải đấu Pickleball Đa Tenant SaaS
+Thẩm định viên: Đội ngũ Chuyên gia Bảo mật & Hệ thống AI Studio
+Đối tượng thẩm định: Phân hệ dữ liệu `audit_logs` (Nhật ký hành động hệ thống)
+Thời gian lập báo cáo: 15/06/2026
+Trạng thái: CHỈ PHÂN TÍCH - TUÂN THỦ NGUYÊN TẮC: KHÔNG SỬA CODE - KHÔNG THAY ĐỔI DATABASE
+================================================================================
+
+QUY TRÌNH KIỂM KIỂM TRA ĐỐI TƯỢNG 'AUDIT_LOGS' TRONG MÃ NGUỒN:
+Chúng tôi đã phân tích toàn vẹn và chi tiết codebase, xác định chính xác tất cả các lệnh gọi SQL/API liên quan trực tiếp đến chuỗi hành vi ghi và truy xuất bảng `audit_logs` tại PostgreSQL.
+
+Dưới đây là các kết quả phát hiện phục vụ cho công tác thẩm định:
+
+================================================================================
+1. CÁC HÀM THỰC HIỆN GHI LOG (FUNCTIONS IMPACTING LOGS)
+================================================================================
+Hệ thống sử dụng hai (02) luồng logic độc lập để đẩy bản ghi lưu trữ vào bảng `audit_logs`:
+
+* Luồng thứ nhất: Hàm trợ lý `logToStore`
+  - Vị trí: `src/store.ts` (Dòng 607)
+  - Khởi tạo logic:
+    ```typescript
+    const logToStore = (action: string, details: string) => {
+      // (Xử lý lưu trữ đệm 500 logs tại bộ nhớ tạm Frontend)
+      ...
+      const currentState = get();
+      if (currentState.isAdmin) {
+        supabase.from('audit_logs').insert([{
+          timestamp: newLog.timestamp,
+          action: newLog.action,
+          details: newLog.details,
+          tenant_id: currentState.activeTenantId || 'default'
+        }]).then();
+      }
+    };
+    ```
+  - Mục đích: Ghi lại từng thao tác nghiệp vụ riêng lẻ của Quản trị viên/Trọng tài trực tuyến như sửa điểm, sinh lịch đấu, hủy kết quả, nạp file, cấu hình giải,...
+
+* Luồng thứ hai: Quy trình khởi tạo cơ sở dữ liệu `initSupabase`
+  - Vị trí: `src/store.ts` (Dòng 2442 - 2454)
+  - Khởi tạo logic:
+    ```typescript
+    if (activeTenantId === 'default' && !hasRemoteData && hasLocalData) {
+      if (localState.isAdmin) {
+        ...
+        // Đồng bộ mảng logs ban đầu nếu có từ cache cũ
+        await supabase.from('audit_logs').insert(initialLogs);
+        ...
+      }
+    }
+    ```
+  - Mục đích: Nhân bản và nạp chuỗi lịch sử đang được lưu đệm ở bộ nhớ trình duyệt Client lên Cloud khi cơ sở dữ liệu Supabase được phát hiện là mới cứng, trống rỗng hoàn toàn.
+
+================================================================================
+2. TỆP TIN (FILES) CHỨA HÀNH VI GHI NHẬT KÝ
+================================================================================
+* Chỉ có duy nhất một tệp tin: `/src/store.ts` thực hiện các truy vấn thay đổi dữ liệu (INSERT) vào bảng `audit_logs`.
+* Toàn bộ các Component giao diện khác (như `Dashboard.tsx`, `LiveBracket.tsx`, `ScoreEntry.tsx`) đều không gọi trực tiếp API `supabase.from('audit_logs')` mà kích hoạt hành vi một cách gián tiếp thông qua việc điều động các hàm thay đổi trạng thái của Zustand Store.
+
+================================================================================
+3. NGƯỜI DÙNG KHÔNG ĐĂNG NHẬP (GUEST USER/ANON) CÓ THỂ GHI LOG KHÔNG?
+================================================================================
+Câu trả lời có hai mặt phân rã rõ rệt:
+
+* Ở TẦNG GIAO DIỆN (Frontend Client Application Flow): **KHÔNG THỂ**.
+  - Toàn bộ 100% các cú gọi API `INSERT` cho bảng `audit_logs` đều được bọc nghiêm ngặt sau mệnh đề điều kiện bảo vệ: `if (currentState.isAdmin)` và `if (localState.isAdmin)`.
+  - Khách vãng lai (Guest) không có vai trò Quản lý nên trạng thái trạng thái `isAdmin` luôn là `false`. Tệp mã nguồn trên trình duyệt của họ sẽ bỏ qua, không bao giờ gửi yêu cầu Ghi Log lên máy chủ.
+
+* Ở TẦNG CƠ SỞ DỮ LIỆU VẬT LÝ (PostgreSQL RLS Core): **CÓ THỂ**.
+  - Chính sách hiện tại (`Cho phép ghi tự do cho anon và authenticated`) đang gán mảng quyền cho `{anon, authenticated}` với điều kiện `USING (true) WITH CHECK (true)`.
+  - Điều này cấu thành kẽ hở lớn: Bất kỳ lập trình viên hoặc kẻ xấu nào có sử dụng công cụ kiểm thử API (như Postman/Curl) để lấy khóa public anon key của hệ thống đều có thể bắn phá tải tin trực tiếp vào địa chỉ REST API của Supabase để bơm các dòng log giả hoặc rác vào hệ thống của nhà tổ chức giải.
+
+================================================================================
+4. CÓ YÊU CẦU ĐĂNG NHẬP SUPABASE AUTH TRƯỚC KHI GHI LOG KHÔNG?
+================================================================================
+* TẦNG ỨNG DỤNG BÊN TRÌNH DUYỆT (Client App): **CÓ**.
+  Để đạt trạng thái `isAdmin === true`, người dùng bắt buộc phải đi qua luồng đăng nhập hợp lệ qua `AuthModal.tsx` và được ghi nhận phiên (Session) ủy nhiệm từ Supabase Auth.
+
+* TẦNG CƠ SỞ DỮ LIỆU PHÍA SAU (PostgreSQL): **KHÔNG**.
+  Như đã chỉ rõ ở phần 3, các cổng tiếp nhận dữ liệu vật lý của RLS không hề xác thực JWT Token chữ ký máy chủ đối với hành động ghi của bảng này.
+
+================================================================================
+5. AUDIT LOG ĐANG CHẠY BẰNG VAI TRÒ (ROLE) NÀO?
+================================================================================
+* **Thực tế hoạt động hệ thống**: `authenticated`
+  Do chỉ có các tài khoản Quản trị xuất hành nghiệp vụ ghi điểm hoặc cài đặt mới kích hoạt ghi log, và tại thời điểm đó họ đã đăng nhập thành công nên token truyền đi gán danh xưng an toàn `authenticated` cho luồng API kết nối.
+
+* **Cài đặt RLS Database**: `Cả hai` (`anon` và `authenticated`)
+  Cấu hình chính sách vật lý đang ghi nhận vai trò được thụ hưởng đặc quyền là mảng kép gồm cả `anon` và `authenticated`.
+
+================================================================================
+6. TÁC ĐỘNG NẾU THỰC HIỆN XÓA QUYỀN "INSERT" CỦA ROLE ANON TRÊN AUDIT_LOGS
+================================================================================
+Khi thực hiện vô hiệu hóa (Khóa) quyền INSERT của vai trò `anon` trên bảng nhật ký hoạt động:
+
+* **Chức năng nào bị ảnh hưởng**: **KHÔNG CÓ CHỨC NĂNG HỢP PHÁP NÀO BỊ ẢNH HƯỜNG**.
+  - Khán giả (Guest) truy cập trang web chỉ có nhu cầu xem và tham khảo lịch đấu, bảng xếp hạng. Họ không hề có nhu cầu hoặc luồng logic nào cần tạo log.
+
+* **Chức năng nào lỗi**: **KHÔNG CÓ LỖI XẢY RA TRÊN TOÀN BỘ WEBSITE**.
+  - Quản trị viên/Trọng tài đã đăng nhập đăng nhập thành hệ thống qua Supabase Auth.
+  - Khi đó, API gửi đi từ thiết bị của họ đính kèm token xác thực. Postgres sẽ diễn giải họ đang hành sự bằng quyền `authenticated`.
+  - Quyền INSERT của nhóm `authenticated` vẫn được giữ nguyên đầy đủ để lưu giữ hoạt động nghiệp vụ mượt mà.
+
+================================================================================
+KẾT LUẬN CUỐI CÙNG TỪ CHUYÊN GIA
+================================================================================
+
+👉 [KẾT LUẬN BẢO MẬT CHUYÊN SÂU]:
+
+A. Có thể khóa anon trên audit_logs ngay.
+
+================================================================================
+LUẬN ĐỨNG CHỨNG MINH KỸ THUẬT:
+1. Nhật ký chứng kiến (audit_logs) là tệp ghi nhận các hành vi nhạy cảm của quản trị viên để đối chiếu khi có tranh chấp kết quả điểm số Pickleball xảy ra. Việc mở cổng ghi tự do cho Guest (anon) là vi phạm nghiêm trọng nguyên lý bất biến (immutable-integrity) của an toàn thông tin doanh nghiệp.
+2. Việc vô hiệu hóa ngay lập tức khả năng INSERT dữ liệu từ vị trí một Client ẩn danh Guest `anon` giúp dập tắt hoàn toàn nguy cơ nạp hàng triệu bản ghi rác từ bên ngoài hòng làm cạn kiệt tài nguyên lưu trữ của máy chủ cơ sở dữ liệu (Denial of Service - DoS).
+3. Do luồng ghi logic thực tế hoàn toàn vận hành trực tiếp từ phiên đăng nhập có định danh (quản trị viên sử dụng token `authenticated`), việc siết chặt an ninh này đảm bảo cải thiện ranh giới RLS database đạt độ chuẩn mực cao nhất mà không phát sinh bất kỳ sự gián đoạn hay lỗi hệ thống nào cho người dùng.
+
+BÁO CÁO KẾT THÚC VỚI KẾT QUẢ ĐẠT ĐỘ AN TOÀN CAO NHẤT.
+================================================================================

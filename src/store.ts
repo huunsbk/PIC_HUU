@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Tournament, Team, Group, Match, AuditLog, TournamentSettings, SeedType, GroupStanding, ThirdPlaceStanding, EventData, Account } from './types';
-import { generateRoundRobinMatches, calculateGroupStandings, calculateBestThirdPlaces, generateKnockoutMatchesSchema, balanceMatchesRestTime } from './utils/tournamentEngine';
+import { generateRoundRobinMatches, calculateGroupStandings, calculateBestThirdPlaces, generateKnockoutMatchesSchema, balanceMatchesRestTime, normalizeSlotKey } from './utils/tournamentEngine';
 import { supabase, checkSupabaseConnection } from './supabaseClient';
 
 interface AppState {
@@ -2214,8 +2214,8 @@ export const useTournamentStore = create<AppState>()(
             const updatedMatch: Match = {
               id: m.id,
               groupId: finalGroupId,
-              teamAId: m.team_a_id !== undefined ? m.team_a_id : (m.teamAId || null),
-              teamBId: m.team_b_id !== undefined ? m.team_b_id : (m.teamBId || null),
+              teamAId: normalizeSlotKey(m.team_a_id !== undefined ? m.team_a_id : (m.teamAId || null), state.events[eventId]?.groups),
+              teamBId: normalizeSlotKey(m.team_b_id !== undefined ? m.team_b_id : (m.teamBId || null), state.events[eventId]?.groups),
               scoreA: m.score_a !== undefined && m.score_a !== null ? m.score_a : (m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : null),
               scoreB: m.score_b !== undefined && m.score_b !== null ? m.score_b : (m.scoreB !== undefined && m.scoreB !== null ? m.scoreB : null),
               winnerId: m.winner_id !== undefined ? m.winner_id : (m.winnerId || null),
@@ -2224,7 +2224,9 @@ export const useTournamentStore = create<AppState>()(
               knockoutRoundName: m.knockout_round_name !== undefined ? m.knockout_round_name : (m.knockoutRoundName || null),
               knockoutMatchId: m.knockout_match_id !== undefined ? m.knockout_match_id : (m.knockoutMatchId || null),
               nextMatchId: m.next_match_id !== undefined ? m.next_match_id : (m.nextMatchId || null),
-              nextMatchSlot: m.next_match_slot !== undefined ? m.next_match_slot : (m.nextMatchSlot || null)
+              nextMatchSlot: m.next_match_slot !== undefined ? m.next_match_slot : (m.nextMatchSlot || null),
+              placeholderA: m.placeholder_a !== undefined ? m.placeholder_a : (m.placeholderA || null),
+              placeholderB: m.placeholder_b !== undefined ? m.placeholder_b : (m.placeholderB || null)
             };
 
             const nextEvents = { ...state.events };
@@ -2608,8 +2610,8 @@ export const useTournamentStore = create<AppState>()(
                 eventsRecord[eventId].matches.push({
                   id: m.id,
                   groupId: finalGroupId,
-                  teamAId: m.team_a_id !== undefined ? m.team_a_id : (m.teamAId || null),
-                  teamBId: m.team_b_id !== undefined ? m.team_b_id : (m.teamBId || null),
+                  teamAId: normalizeSlotKey(m.team_a_id !== undefined ? m.team_a_id : (m.teamAId || null), eventsRecord[eventId]?.groups),
+                  teamBId: normalizeSlotKey(m.team_b_id !== undefined ? m.team_b_id : (m.teamBId || null), eventsRecord[eventId]?.groups),
                   scoreA: m.score_a !== undefined && m.score_a !== null ? m.score_a : (m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : null),
                   scoreB: m.score_b !== undefined && m.score_b !== null ? m.score_b : (m.scoreB !== undefined && m.scoreB !== null ? m.scoreB : null),
                   winnerId: m.winner_id !== undefined ? m.winner_id : (m.winnerId || null),
