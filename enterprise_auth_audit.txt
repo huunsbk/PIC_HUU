@@ -1,0 +1,113 @@
+BÁO CÁO KIỂM TOÁN AUTHENTICATION & MULTI-TENANT ENTERPRISE (SECURITY SPRINT)
+
+==================================================
+1. EXECUTIVE SUMMARY
+==================================================
+Hệ thống Pickleball Pro đã hoàn thiện xuất sắc tiến trình chuẩn hóa cơ sở dữ liệu sang kiến trúc Đa cho thuê (Multi-tenant) dựa trên UUID. Dữ liệu giữa các doanh nghiệp được đánh dấu mã `tenant_id` đầy đủ. 
+Tuy nhiên, Tầng Xác thực (Authentication) và Phân quyền (Access Control) hiện tại TỒN TẠI RỦI RO do đang phó thác quá nhiều logic bảo mật cho Frontend (Client-side Zustand State & LocalStorage) thay vì Cấp độ Cơ sở dữ liệu (Database RLS & JWT Claims). Sự độc lập của Tenant đã có về mặt Data Structure, nhưng phần Access Control cần cải tạo sâu hơn vào Supabase Backend để đạt chuẩn Enterprise SaaS thực thụ.
+
+==================================================
+2. AUTHENTICATION FLOW DIAGRAM
+==================================================
+Tập tin liên quan: `src/components/AuthModal.tsx`, `src/store.ts`
+
+1. UI (AuthModal): Người dùng nhập username/password.
+2. Xác thực (Supabase Auth): Frontend gọi `supabase.auth.signInWithPassword()` (map `user@pic.com`).
+3. Account Mapping: Lấy thông tin Master Profile -> Truy vấn bảng `accounts` theo `authData.user.id` kèm JOIN sang `tenants` và `roles`.
+4. Permission Mapping: Truy vấn bảng `account_permissions`.
+5. Fallback Xử lý (Nhanh nhưng rủi ro): Nếu bảng trống, Frontend "tự" ráp permission mẫu theo level của role.
+6. Local Storage Save: Chuyển dữ liệu qua `setAuthStatus()` đưa vào Zustand State và lưu đè LocalStorage.
+7. Tracking Client-side: Thực hiện hai lệnh INSERT (với quyền Client) thẳng vào `active_sessions` và `login_logs`.
+8. Concurrency Polling: Chạy hàm setInterval() 5 giây kiểm tra `active_sessions` từ Frontend.
+
+==================================================
+3. TENANT FLOW DIAGRAM
+==================================================
+* `tenant_id` được lấy từ: Master Record `accounts.tenants.id` sau khi có phản hồi Login.
+* `tenant_id` được lưu ở: LocalStorage của browser thông qua Zustand (biến `activeTenantId`).
+* `tenant_id` truyền tới Supabase thế nào: 
+  Tất cả CRUD của Frontend tự giác gài thêm `.eq('tenant_id', activeTenantId)` hoặc đính kèm vào payload `{ tenant_id: activeTenantId }`.
+
+==================================================
+4. PERMISSION FLOW DIAGRAM
+==================================================
+* Dữ liệu Quyền hạn (Permissions) chuyển thành Mảng Chuỗi `['manage_teams', 'enter_score', ...]`.
+* Backend tải mảng chuỗi xuống, đưa cho `store.ts`. 
+* Hàm trợ năng `hasPermission(permissionName)` kiểm tra các phân hệ UI Router (`App.tsx` navigation buttons) và render Conditional Rendering (`ScoreEntry.tsx`, v.v..).
+* Hoạt động theo quy chuẩn Role-based truyền thống (RBAC -> UI).
+
+==================================================
+5. SECURITY RISKS
+==================================================
+[CRITICAL] Phụ thuộc Filter Client: 
+Supabase Queries hoàn toàn tin tưởng `activeTenantId` truyền từ Frontend. Nếu thiếu RLS Tenant-based, bất kì User nào cũng có thể gửi API `.eq('tenant_id', 'TENANT_KHAC')` và đọc 100% dữ liệu đối thủ.
+
+[HIGH] LocalStorage Tamper (Leo Thang Đặc Quyền):
+Toàn bộ `isAdmin`, `permissions`, `activeTenantId` lưu ở `pickleball-tournament-cache` (JSON). Attacker có thể tự sửa JSON, bơm phần tử `"*"` vào mục permissions để hiện toàn bộ Dashboard UI của Super Admin (mặc dù Backend cuối cùng có thể bắt lỗi khi save data, dữ liệu nhạy cảm vẫn bị hiển thị).
+
+[HIGH] Lỗ Hổng Single-Session Xử lý ở Client:
+Bảng `active_sessions` và `login_logs` mở toang cho Client tự gọi INSERT. User có thể xóa dòng mã `checkAdminSession()` trong console hoặc chặn request bằng BurpSuite, dẫn đến khả năng dùng chung 1 tài khoản cho 100 người.
+
+[MEDIUM] Fallback Roles sai kiến trúc:
+Code vẫn chứa logic "Cấp Quyền Ảo" ở AuthModal nếu DB trống. Client không nên cấp quyền cho chính nó.
+
+==================================================
+6. RLS READINESS REPORT (NẾU BẬT ENTERPRISE RLS BÂY GIỜ)
+==================================================
+CẢNH BÁO QUAN TRỌNG:
+Nếu bạn thực thi lệnh `ENABLE RLS` và chạy file policy `ENTERPRISE_RLS_FINAL.sql` TRONG NGAY HÔM NAY:
+
+* SẼ BỊ HỎNG (FAIL):
+1. Chế độ công khai / Anonymous Guest. Khán giả vào Web sẽ KHÔNG THẤY dữ liệu Đội bóng, Bảng xếp hạng, Trận thi đấu. Vì RLS SQL trước đó KHÔNG CÓ `CREATE POLICY "Public Select"`. Toàn bộ dữ liệu trống rỗng.
+
+* HOẠT ĐỘNG TỐT (PASS):
+1. Tenant Admin: Hoạt động trơn tru, Isolation hoàn hảo.
+2. Super Admin: Phê duyệt đúng wildcard truy cập mọi nơi.
+3. Luồng ghi đè `account_permissions`: Sự an toàn được bảo đảm, Cấm nhân viên Tenant A sửa quyền nhân viên Tenant B.
+
+==================================================
+7. LEGACY COMPONENTS
+==================================================
+Cần gỡ bỏ:
+* Field `parentTenantId` trong `/src/types.ts` không còn sử dụng.
+* Field `tournament_id` trong nhiều logic map tĩnh.
+* Đoạn code tự sinh Default Events (`event-default` fallback) đặt thẳng trong Frontend Store. Nên bỏ để dời về Backend Trigger.
+* Cấu trúc JSON Export/Import tĩnh thừa thải nhiều UUIDs sinh ngẫu nhiên gây lệch cấu trúc với ID cơ sở dữ liệu.
+
+==================================================
+8. ENTERPRISE MIGRATION RECOMMENDATIONS
+==================================================
+1. Dời Logic Khởi tạo Session và Audit/Log xuống Supabase RPC: Việc đăng nhập thành công phải do Server xử lý và tự ghi log DB. Frontend KHÔNG ĐƯỢC PHÉP có quyền INSERT vào bảng Logs hoặc bảng Active Sessions.
+2. Gắn `tenant_id` và Map `permissions` vào thẳng Supabase JWT Custom Claims. Điều kiện RLS sẽ tối ưu hiệu suất hơn (10ms so với 100ms khi Lookup Database Function).
+3. Đóng băng LocalStorage Cache (Persistence state): Chỉ lưu tạm Token, không cần lưu cả Array Permissions hoặc Biến Auth vào Disk để tránh Attacker thay đổi, mỗi lần load App đọc trực tiếp quyền từ Session DB.
+
+==================================================
+9. TOP 20 VIỆC CẦN LÀM THEO THỨ TỰ ƯU TIÊN
+==================================================
+[Mức độ CẤP BÁCH - RLS Fixing]
+1. Tạo Policy RLS "SELECT TO PUBLIC" (Hoặc ANON) cho các bảng cốt lõi (events, groups, teams, matches, tournament) để chức năng của Guest phục hồi trạng thái hoạt động.
+2. Kích hoạt RLS (Apply các file SQL lên Supabase).
+3. Gỡ bỏ quyền `INSERT / UPDATE / DELETE` đối với Role Anonymous (Public) khẩn cấp trên các bảng.
+
+[Mức độ CAO - Bảo mật API Flow]
+4. Di dời chức năng Audit Log (Nhật ký Hệ Thống) sang Database Trigger (VD: After Insert / Triggers for Teams, Matches). Không dùng hàm `supabase.from('audit_logs').insert(...)` tại client.
+5. Tạo RPC (Stored Function) tên `create_user_session` trên Supabase (Để Backend tự động Insert vào bảng active_sessions & log_login).
+6. Viết lại hàm `AuthModal.tsx` để xóa 2 lệnh insert `active_session` và `login_logs` truyền đi từ mạng rủi ro.
+7. Giới hạn `checkAdminSession` (Kiểm tra session trùng): Dời luồng Interval Timer về JWT Short-lived Token (VD: 30 phút hết hạn JWT) và dùng RPC Check.
+8. Áp dụng RLS vào Supabase Realtime Channels (public_db_changes) để chặn User của nhóm này "nghe trộm" Websocket cập nhật điểm của Tenant khác.
+
+[Mức độ TRUNG BÌNH - Dọn dẹp Code Cũ]
+9. Cắt bỏ quyền Override Roles/Permissions nằm tại dòng 102 (`AuthModal.tsx` - "Nếu db trống, fallback tạm permission theo mappedRole"). Xóa bỏ hoàn toàn Hardcode này.
+10. Xóa bỏ interface property `parentTenantId` trong file `/src/types.ts`.
+11. Bỏ thủ tục tự sinh Dữ Liệu Demo (`"event-default"`, `"Sự kiện mẫu"`) tại `src/store.ts`. Chuyển dời qua Supabase Trigger để khi Tenant tạo ra, tự khởi tạo mẫu tại DB.
+12. Giấu `selectedTab` logic khỏi LocalStorage để các Tab cấm kị không thể hiển thị qua Hack.
+13. Xem xét mã hóa (Hash) Token chuỗi 9 kí tự cấp ngẫu nhiên từ client-side cho `active_sessions`.
+14. Giới hạn (Rate Limit) Auth Modal tránh bị DDoS/Brute-force (Supabase đang có Rate Limit gốc nhưng API Login nên config cao).
+
+[Mức độ HOÀN THIỆN - Enterprise Optimization]
+15. Tái cấu trúc JSON Backup (Import/Export Module): Thiết lập luồng Export cho ra chuẩn hóa JSON tương thích với Supabase Database Dump thay vì Custom Type do Code Frontend tạo ra.
+16. Bổ sung Trigger tự huỷ `active_sessions` (Cron Job/pg_cron) đối với Session để lâu qua 24 tiếng.
+17. Áp dụng Check Sum dữ liệu để xác định người nhập điểm có đúng `account_id` trên DB hay không, không chỉ tin cậy ở User Session.
+18. Triển khai UUID thay thế các Numeric ID cũ bị kẹt.
+19. Gộp các Event Permission của `EVENT_ADMIN` thành một Chuỗi dạng GIN Index / Arrays Index ở Supabase tối ưu lệnh tìm kiếm Permissions.
+20. Re-Check Policy RLS `WITH CHECK` cho thao tác cập nhật (UPDATE) chống leo quyền đổi Owner tài liệu từ Tenant A sang Tenant B.
