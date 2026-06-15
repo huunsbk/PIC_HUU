@@ -742,7 +742,8 @@ export const useTournamentStore = create<AppState>()(
             console.warn('Error signing out during manual logout:', e);
           }
           
-          sessionStorage.removeItem('pickleball-tournament-cache');
+          localStorage.removeItem('pickleball-tournament-cache');
+          sessionStorage.removeItem('pickleball-tournament-cache'); // clean up any old sessionStorage cache too
           window.location.reload();
         },
         setTenantId: async (tenantId) => {
@@ -2609,8 +2610,8 @@ export const useTournamentStore = create<AppState>()(
       };
     },
     {
-      name: 'pickleball-tournament-cache', // Khóa lưu trữ SessionStorage
-      storage: createJSONStorage(() => sessionStorage),
+      name: 'pickleball-tournament-cache', // Khóa lưu trữ LocalStorage để đồng bộ giữa các tab
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );
