@@ -9,6 +9,13 @@ import { Tournament, Team, Group, Match, AuditLog, TournamentSettings, SeedType,
 import { generateRoundRobinMatches, calculateGroupStandings, calculateBestThirdPlaces, generateKnockoutMatchesSchema, balanceMatchesRestTime, normalizeSlotKey } from './utils/tournamentEngine';
 import { supabase, checkSupabaseConnection } from './supabaseClient';
 
+export async function getCurrentTenantId() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase.from('accounts').select('tenant_id').eq('user_id', user.id).single();
+  return data?.tenant_id || null;
+}
+
 interface AppState {
   tournament: Tournament;
   teams: Record<string, Team>;
@@ -117,7 +124,9 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
   const errors: string[] = [];
   try {
     const tournamentId = state.tournament.id || 't-1';
-    const activeTenantId = state.activeTenantId || 'default';
+    const realTenantId = await getCurrentTenantId();
+    const activeTenantId = realTenantId || state.activeTenantId || 'default';
+    const validTenantUUID = activeTenantId !== 'default' ? activeTenantId : null;
     const eventIds = Object.keys(state.events || {});
     
     // BẢO VỆ CHÉO: NGĂN CHẶN XÓA NHẦM DỮ LIỆU KHI CHUYỂN ĐỔI TENANT (RACE CONDITION CHECK)
@@ -238,8 +247,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
 
     // 1. Dọn dẹp Matches dư thừa
     try {
-      let mQuery = supabase.from('matches').delete();
-      mQuery = mQuery.eq('tenant_id', activeTenantId);
+      let mQuery = (supabase.from('matches').delete() as any);
+      if (validTenantUUID) mQuery = mQuery.eq('tenant_id', validTenantUUID);
       
       if (matchIdsInState.length > 0) {
         const { error: mDelErr } = await mQuery.not('id', 'in', `(${matchIdsInState.join(',')})`);
@@ -260,8 +269,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
 
     // 2. Dọn dẹp Teams dư thừa
     try {
-      let tQuery = supabase.from('teams').delete();
-      tQuery = tQuery.eq('tenant_id', activeTenantId);
+      let tQuery = (supabase.from('teams').delete() as any);
+      if (validTenantUUID) tQuery = tQuery.eq('tenant_id', validTenantUUID);
       
       if (teamIdsInState.length > 0) {
         const { error: tDelErr } = await tQuery.not('id', 'in', `(${teamIdsInState.join(',')})`);
@@ -282,8 +291,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
 
     // 3. Dọn dẹp Groups dư thừa
     try {
-      let gQuery = supabase.from('groups').delete();
-      gQuery = gQuery.eq('tenant_id', activeTenantId);
+      let gQuery = (supabase.from('groups').delete() as any);
+      if (validTenantUUID) gQuery = gQuery.eq('tenant_id', validTenantUUID);
 
       if (groupIdsInState.length > 0) {
         const { error: gDelErr } = await gQuery.not('id', 'in', `(${groupIdsInState.join(',')})`);
@@ -304,8 +313,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
 
     // 4. Dọn dẹp Events dư thừa
     try {
-      let eQuery = supabase.from('events').delete();
-      eQuery = eQuery.eq('tenant_id', activeTenantId);
+      let eQuery = (supabase.from('events').delete() as any);
+      if (validTenantUUID) eQuery = eQuery.eq('tenant_id', validTenantUUID);
 
       if (eventIds.length > 0) {
         const { error: eDelErr } = await eQuery.not('id', 'in', `(${eventIds.join(',')})`);
@@ -811,15 +820,14 @@ export const useTournamentStore = create<AppState>()(
           // 1. Xóa trên Supabase trước (theo thứ tự FK)
           // Đặt active_group_id thành null trước để gỡ bỏ ràng buộc khóa ngoại (nếu có)
           try {
-            const activeTenantId = get().activeTenantId;
-            await supabase.from('events').update({ active_group_id: null }).eq('id', id).eq('tenant_id', activeTenantId);
-            const { error: e1 } = await supabase.from('matches').delete().eq('event_id', id).eq('tenant_id', activeTenantId);
+            await supabase.from('events').update({ active_group_id: null }).eq('id', id);
+            const { error: e1 } = await supabase.from('matches').delete().eq('event_id', id);
             if (e1) throw e1;
-            const { error: e2 } = await supabase.from('teams').delete().eq('event_id', id).eq('tenant_id', activeTenantId);
+            const { error: e2 } = await supabase.from('teams').delete().eq('event_id', id);
             if (e2) throw e2;
-            const { error: e3 } = await supabase.from('groups').delete().eq('event_id', id).eq('tenant_id', activeTenantId);
+            const { error: e3 } = await supabase.from('groups').delete().eq('event_id', id);
             if (e3) throw e3;
-            const { error: e4 } = await supabase.from('events').delete().eq('id', id).eq('tenant_id', activeTenantId);
+            const { error: e4 } = await supabase.from('events').delete().eq('id', id);
             if (e4) throw e4;
           } catch (err) {
             console.error("Lỗi xóa dữ liệu liên quan trên Supabase:", err);
@@ -2119,8 +2127,12 @@ export const useTournamentStore = create<AppState>()(
           try {
             // Lấy trạng thái dữ liệu trong store cục bộ trước khi query (khôi phục từ localStorage)
             const localState = get();
-            const activeTenantId = localState.activeTenantId || 'default';
-            console.log(`Khởi tạo và đồng bộ dữ liệu cho CSDL phân rã: "${activeTenantId}" từ Supabase...`);
+            const realTenantId = await getCurrentTenantId();
+            const activeTenantId = realTenantId || localState.activeTenantId || 'default';
+            // Only add eq(tenant_id) if it is a real UUID! Default is invalid for UUID type.
+            const validTenantUUID = activeTenantId !== 'default' ? activeTenantId : null;
+            
+            console.log(`Khởi tạo và đồng bộ dữ liệu cho CSDL phân rã: "${validTenantUUID || 'default'}" từ Supabase...`);
             
             const hasLocalTeams = Object.keys(localState.teams || {}).length > 0;
             const hasLocalMatches = (localState.matches || []).length > 0;
@@ -2154,7 +2166,7 @@ export const useTournamentStore = create<AppState>()(
             let eData: any[] | null = null;
             try {
               let eQuery = supabase.from('events').select('*');
-              eQuery = eQuery.eq('tenant_id', activeTenantId);
+              if (validTenantUUID) eQuery = eQuery.eq('tenant_id', validTenantUUID);
               const res = await eQuery;
               if (res.error) throw res.error;
               eData = res.data;
@@ -2166,7 +2178,7 @@ export const useTournamentStore = create<AppState>()(
             let teamData: any[] | null = null;
             try {
               let tQuery = supabase.from('teams').select('*');
-              tQuery = tQuery.eq('tenant_id', activeTenantId);
+              if (validTenantUUID) tQuery = tQuery.eq('tenant_id', validTenantUUID);
               const res = await tQuery;
               if (res.error) throw res.error;
               teamData = res.data;
@@ -2178,7 +2190,7 @@ export const useTournamentStore = create<AppState>()(
             let groupData: any[] | null = null;
             try {
               let gQuery = supabase.from('groups').select('*');
-              gQuery = gQuery.eq('tenant_id', activeTenantId);
+              if (validTenantUUID) gQuery = gQuery.eq('tenant_id', validTenantUUID);
               const res = await gQuery;
               if (res.error) throw res.error;
               groupData = res.data;
@@ -2190,7 +2202,7 @@ export const useTournamentStore = create<AppState>()(
             let matchData: any[] | null = null;
             try {
               let mQuery = supabase.from('matches').select('*');
-              mQuery = mQuery.eq('tenant_id', activeTenantId);
+              if (validTenantUUID) mQuery = mQuery.eq('tenant_id', validTenantUUID);
               const res = await mQuery;
               if (res.error) throw res.error;
               matchData = res.data;
@@ -2201,7 +2213,9 @@ export const useTournamentStore = create<AppState>()(
             // 6. Đọc kết hoạt logs - TRUY VẤN LỌC TRỰC TIẾP Ở DB LEVEL (Có Defensive Fallback)
             let logData: any[] | null = null;
             try {
-              const res = await supabase.from('audit_logs').select('*').eq('tenant_id', activeTenantId).order('id', { ascending: false }).limit(200);
+              let logQuery = supabase.from('audit_logs').select('*');
+              if (validTenantUUID) logQuery = logQuery.eq('tenant_id', validTenantUUID);
+              const res = await logQuery.order('id', { ascending: false }).limit(200);
               if (res.error) {
                 // If column doesn't exist, ignore logs. But now tenant_id must exist.
                 logData = [];

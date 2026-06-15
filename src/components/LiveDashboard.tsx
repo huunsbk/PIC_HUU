@@ -356,25 +356,6 @@ export default function LiveDashboard() {
   const [selectedEventFilter, setSelectedEventFilter] = useState<string>('all');
   const [currentTime, setCurrentTime] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-  const [remoteStandings, setRemoteStandings] = useState<any[]>([]);
-
-  // Fetch standings using SQL View if guest
-  useEffect(() => {
-    if (!canManage) {
-      const fetchStandings = async () => {
-        const tenant = activeTenantId || 'default';
-        const { data, error } = await supabase.from('view_team_standings')
-          .select('*')
-          .eq('tenant_id', tenant)
-          .order('rank', { ascending: true });
-
-        if (data && !error) {
-          setRemoteStandings(data);
-        }
-      };
-      fetchStandings();
-    }
-  }, [canManage, activeTenantId, matches, events]);
 
   // Đếm giờ địa phương ticking liên tục
   useEffect(() => {
@@ -701,38 +682,19 @@ export default function LiveDashboard() {
       const stdRecord: Record<string, ReturnType<typeof calculateGroupStandings>> = {};
       const groupList = Object.values(evt.groups || {});
       groupList.forEach((g: any) => {
-        if (canManage) {
-          const groupMatches = (evt.matches || []).filter((m: any) => m.groupId === g.id);
-          stdRecord[g.id] = calculateGroupStandings(
-            g.id, 
-            g.teamIds, 
-            groupMatches, 
-            evt.teams || {}, 
-            evt.settings
-          );
-        } else {
-          const remoteGroupInfo = remoteStandings.filter(s => s.group_id === g.id && s.event_id === evt.id);
-          stdRecord[g.id] = remoteGroupInfo.map(s => ({
-             teamId: s.team_id,
-             teamName: s.team_name,
-             seed: s.seed,
-             matchesPlayed: s.matches_played,
-             matchesWon: s.matches_won,
-             matchesLost: s.matches_lost,
-             points: s.points,
-             setsWon: s.sets_won,
-             setsLost: s.sets_lost,
-             pointsWon: s.points_won,
-             pointsLost: s.points_lost,
-             pointDiff: s.point_diff,
-             rank: s.rank
-          }));
-        }
+        const groupMatches = (evt.matches || []).filter((m: any) => m.groupId === g.id);
+        stdRecord[g.id] = calculateGroupStandings(
+          g.id, 
+          g.teamIds, 
+          groupMatches, 
+          evt.teams || {}, 
+          evt.settings
+        );
       });
       record[evt.id] = stdRecord;
     });
     return record;
-  }, [eventList, canManage, remoteStandings]);
+  }, [eventList]);
 
   // Hàm helper để xuất Excel gọi lại
   const getEventStandings = React.useCallback((evt: typeof events[string]) => {

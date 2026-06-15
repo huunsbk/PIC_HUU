@@ -28,26 +28,6 @@ export default function Standings() {
   const groupList = React.useMemo(() => Object.values(groups), [groups]);
   const settings = tournament.settings;
 
-  const [remoteStandings, setRemoteStandings] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (!canManage) {
-      const fetchStandings = async () => {
-        const tenant = activeTenantId || 'default';
-        const { data, error } = await supabase.from('view_team_standings')
-          .select('*')
-          .eq('tenant_id', tenant)
-          .eq('event_id', currentEventId)
-          .order('rank', { ascending: true });
-
-        if (data && !error) {
-          setRemoteStandings(data);
-        }
-      };
-      fetchStandings();
-    }
-  }, [canManage, activeTenantId, currentEventId, matches]);
-
   // 1. Tính toán BXH toàn bộ các bảng ở trạng thái tức thì
   const { standingsByGroup, groupFinishedMap, allGroupsFinished } = React.useMemo(() => {
     const sbGroup: Record<string, ReturnType<typeof calculateGroupStandings>> = {};
@@ -56,36 +36,17 @@ export default function Standings() {
       const groupMatches = matches.filter((m) => m.groupId === group.id);
       gfMap[group.id] = groupMatches.length > 0 && groupMatches.every((m) => m.status === 'finished');
 
-      if (canManage) {
-        sbGroup[group.id] = calculateGroupStandings(
-          group.id,
-          group.teamIds,
-          groupMatches,
-          teams,
-          settings
-        );
-      } else {
-        const remoteGroupInfo = remoteStandings.filter(s => s.group_id === group.id);
-        sbGroup[group.id] = remoteGroupInfo.map(s => ({
-           teamId: s.team_id,
-           teamName: s.team_name,
-           seed: s.seed,
-           matchesPlayed: s.matches_played,
-           matchesWon: s.matches_won,
-           matchesLost: s.matches_lost,
-           points: s.points,
-           setsWon: s.sets_won,
-           setsLost: s.sets_lost,
-           pointsWon: s.points_won,
-           pointsLost: s.points_lost,
-           pointDiff: s.point_diff,
-           rank: s.rank
-        }));
-      }
+      sbGroup[group.id] = calculateGroupStandings(
+        group.id,
+        group.teamIds,
+        groupMatches,
+        teams,
+        settings
+      );
     });
     const allFinished = groupList.length > 0 && groupList.every(g => gfMap[g.id]);
     return { standingsByGroup: sbGroup, groupFinishedMap: gfMap, allGroupsFinished: allFinished };
-  }, [groupList, matches, canManage, teams, settings, remoteStandings]);
+  }, [groupList, matches, teams, settings]);
 
   // 2. Tính toán BXH Hạng 3 xuất sắc nhất (UEFA)
   const bestThirdPlaces = React.useMemo(() => {

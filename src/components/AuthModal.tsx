@@ -73,6 +73,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     // Since RPC returns row_to_json, data is the json object
     const accountData = typeof profileStr === 'string' ? JSON.parse(profileStr) : profileStr;
     console.log('[Auth Flow Debug] Parsed Account Data:', accountData);
+
+    console.log('TENANT_ID:', accountData.tenant_id);
+    console.log('ACCOUNT_ID:', accountData.account_id);
+    console.log('ROLE_ID:', accountData.role);
     
     // Check if expected attributes exist
     if (accountData.account_id && accountData.tenant_id && accountData.role && accountData.permissions) {
