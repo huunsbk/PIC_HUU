@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { KeyRound, ShieldAlert, X, Eye, EyeOff } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import { SUPABASE_URL } from '../supabaseClient';
 
 interface ResetPasswordModalProps {
   isOpen: boolean;
@@ -32,12 +33,7 @@ export default function ResetPasswordModal({ isOpen, onClose, targetUsername }: 
 
     try {
       // Create a temporary admin client
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-      if (!supabaseUrl) {
-        throw new Error('Không tìm thấy VITE_SUPABASE_URL.');
-      }
-
-      const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey.trim(), {
+      const supabaseAdmin = createClient(SUPABASE_URL, serviceRoleKey.trim(), {
         auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false }
       });
 
