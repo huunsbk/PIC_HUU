@@ -7,6 +7,12 @@ export default function ScoreEntry() {
   const { events, updateMatchScore, updateMatchStatus, currentEventId, setCurrentEvent, userRole, currentUser, accounts } = useTournamentStore();
 
   const [localScores, setLocalScores] = useState<Record<string, { a: string, b: string }>>({});
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const triggerError = (msg: string) => {
+    setErrorMsg(msg);
+    setTimeout(() => setErrorMsg(null), 4000);
+  };
 
   const eventList = Object.values(events);
   
@@ -81,7 +87,12 @@ export default function ScoreEntry() {
   const saveScore = (matchId: string) => {
     const scores = localScores[matchId];
     if (!scores || scores.a === '' || scores.b === '') {
-        alert('Vui lòng nhập đầy đủ điểm số cho cả hai đội!');
+        try {
+            alert('Vui lòng nhập đầy đủ điểm số cho cả hai đội!');
+        } catch (e) {
+            console.warn('Alert blocked by browser sandboxing:', e);
+        }
+        triggerError('Vui lòng nhập đầy đủ điểm số cho cả hai đội!');
         return;
     }
     updateMatchScore(matchId, parseInt(scores.a, 10), parseInt(scores.b, 10));
@@ -89,6 +100,11 @@ export default function ScoreEntry() {
 
   return (
     <div className="space-y-6">
+      {errorMsg && (
+        <div className="fixed top-5 right-5 z-50 bg-red-650 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 font-bold animate-pulse text-xs border border-red-500/30">
+          <span>⚠️ {errorMsg}</span>
+        </div>
+      )}
       <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 overflow-x-auto whitespace-nowrap hide-scrollbar">
         {eventList.map(evt => (
             <button

@@ -91,6 +91,253 @@ function AutoScrollList({ children, className = '', maxHeight = '350px' }: AutoS
   );
 }
 
+// ==========================================
+// OPTIMIZED MEMOIZED SUB-COMPONENTS TO PREVENT RENDER PROPS LEAKS & RE-CREATION HELL
+// ==========================================
+
+interface EventFilterButtonProps {
+  evtId: string;
+  name: string;
+  isSelected: boolean;
+  onClick: (id: string) => void;
+}
+
+const EventFilterButton = React.memo(({ 
+  evtId, 
+  name, 
+  isSelected, 
+  onClick 
+}: EventFilterButtonProps) => {
+  const handleClick = React.useCallback(() => {
+    onClick(evtId);
+  }, [onClick, evtId]);
+
+  return (
+    <button
+      onClick={handleClick}
+      className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all cursor-pointer select-none ${
+        isSelected
+          ? 'bg-blue-600 text-white shadow-xs'
+          : 'text-zinc-650 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-amber-200'
+      }`}
+    >
+      {name}
+    </button>
+  );
+});
+EventFilterButton.displayName = 'EventFilterButton';
+
+interface StandingGroupCardProps {
+  group: any;
+  std: any[];
+}
+
+const StandingGroupCard = React.memo(({ 
+  group, 
+  std 
+}: StandingGroupCardProps) => {
+  return (
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-805 overflow-hidden shadow-sm mb-4">
+      {/* Header Bar */}
+      <div className="bg-blue-600 text-white py-2 px-2 sm:px-3 flex items-center justify-between">
+        <span className="text-[10px] sm:text-[11px] font-extrabold flex items-center gap-1.5 tracking-tight uppercase">
+          <Award size={13} /> BẢNG XẾP HẠNG - {group.name}
+        </span>
+        <span className="text-[9px] font-bold bg-white/20 px-2 py-0.5 rounded-full border border-white/20 select-none hidden sm:inline-block">
+          Bảng {group.teamIds?.length || std.length} đội
+        </span>
+      </div>
+      {/* Table Data */}
+      <div className="overflow-x-auto overflow-y-hidden">
+        <table className="w-full text-left text-[9px] sm:text-[11px] table-fixed">
+          <thead>
+            <tr className="bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 font-bold text-[9px] sm:text-[10px] md:text-[11px] leading-tight">
+              <th className="py-1.5 px-0 text-center w-6 sm:w-8">Hạng</th>
+              <th className="py-1.5 px-0.5 text-center min-w-[50px] w-auto">Đội</th>
+              <th className="py-1.5 px-0 text-center w-6 sm:w-8">Trận</th>
+              <th className="py-1.5 px-0 text-center text-emerald-600 w-4 sm:w-6">T</th>
+              <th className="py-1.5 px-0 text-center text-red-500 w-4 sm:w-6">B</th>
+              <th className="py-1.5 px-0 text-center text-zinc-500 w-6 sm:w-8">H/S</th>
+              <th className="py-1.5 px-0.5 text-center text-blue-600 w-8 sm:w-10">Điểm</th>
+            </tr>
+          </thead>
+          <tbody>
+            {std.map((s, idx) => {
+              let rankBadge = null;
+              if (idx === 0) {
+                rankBadge = <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full inline-flex items-center justify-center font-bold text-[9px] sm:text-[10px] bg-amber-100 text-amber-800 border border-amber-200/40">1</span>;
+              } else if (idx === 1) {
+                rankBadge = <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full inline-flex items-center justify-center font-bold text-[9px] sm:text-[10px] bg-zinc-150 text-zinc-700 border border-zinc-200/40">2</span>;
+              } else {
+                rankBadge = <span className="text-zinc-400 font-bold block">{idx + 1}</span>;
+              }
+
+              return (
+                <tr key={s.teamId} className="border-b border-zinc-100 dark:border-zinc-850/60 hover:bg-zinc-50 dark:hover:bg-zinc-850/10">
+                  <td className="py-1.5 px-0 text-center font-bold text-[10px] sm:text-[11px]">
+                    <span className="flex justify-center items-center">{rankBadge}</span>
+                  </td>
+                  <td className="py-1.5 px-0.5 text-center font-extrabold text-zinc-700 dark:text-zinc-300 truncate text-[10px] sm:text-[12px]">{s.teamName}</td>
+                  <td className="py-1.5 px-0 text-center text-zinc-600 dark:text-zinc-400 font-medium">{s.matchesPlayed}</td>
+                  <td className="py-1.5 px-0 text-center text-emerald-600 font-bold">{s.matchesWon}</td>
+                  <td className="py-1.5 px-0 text-center text-red-500 font-bold">{s.matchesLost}</td>
+                  <td className="py-1.5 px-0 text-center text-zinc-500 font-medium tracking-tighter">{s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff === 0 ? 'Ø' : s.pointDiff}</td>
+                  <td className="py-1.5 px-0.5 text-center font-extrabold text-blue-600 text-[11px] sm:text-[13px]">{s.points}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+});
+StandingGroupCard.displayName = 'StandingGroupCard';
+
+interface LiveMatchRowProps {
+  m: any;
+  teams: any;
+  groups: any;
+  absoluteIndex: number;
+}
+
+const LiveMatchRow = React.memo(({
+  m,
+  teams,
+  groups,
+  absoluteIndex
+}: LiveMatchRowProps) => {
+  const teamA = teams[m.teamAId]?.name || m.placeholderA || getReadableTeamName(m.teamAId);
+  const teamB = teams[m.teamBId]?.name || m.placeholderB || getReadableTeamName(m.teamBId);
+  const group = groups[m.groupId];
+  const isFinished = m.status === 'finished';
+  const isPlaying = m.status === 'playing';
+
+  let roundClass = "border-zinc-200 dark:border-zinc-800";
+  let roundLabel = "";
+  if (group) {
+    roundClass = isFinished ? "border-emerald-300 dark:border-emerald-800" : isPlaying ? "border-blue-300 dark:border-blue-800" : "border-[#5b9e38] dark:border-[#4c842f]";
+    const groupNameUpper = group.name.toUpperCase();
+    roundLabel = groupNameUpper.startsWith('BẢNG') ? groupNameUpper : `BẢNG ${groupNameUpper}`;
+  } else {
+    const rName = (m.knockoutRoundName || "").toLowerCase();
+    if (rName.includes("32")) { roundClass = "border-[#20b2aa] dark:border-[#1a8e88]"; roundLabel = "VÒNG 32"; }
+    else if (rName.includes("16")) { roundClass = "border-[#3cb371] dark:border-[#308f5a]"; roundLabel = "VÒNG 16"; }
+    else if (rName.includes("tứ kết")) { roundClass = "border-[#9370db] dark:border-[#7559af]"; roundLabel = "TỨ KẾT"; }
+    else if (rName.includes("bán kết")) { roundClass = "border-[#ff8c00] dark:border-[#cc7000]"; roundLabel = "BÁN KẾT"; }
+    else if (rName.includes("chung kết")) { roundClass = "border-[#dc143c] dark:border-[#b01030]"; roundLabel = "CHUNG KẾT"; }
+    else { roundClass = "border-[#4169e1] dark:border-[#3454b4]"; roundLabel = rName ? rName.toUpperCase() : `VÒNG KO ${m.round}`; }
+    if (isFinished) {
+      roundClass = "border-emerald-300 dark:border-emerald-800";
+    } else if (isPlaying) {
+      roundClass = "border-blue-300 dark:border-blue-800";
+    }
+  }
+
+  const bgClass = isFinished ? "bg-emerald-50/40 dark:bg-emerald-950/20" : isPlaying ? "bg-blue-50/40 dark:bg-blue-950/20" : "bg-white dark:bg-zinc-950";
+
+  return (
+    <div className={`flex items-center gap-2 ${bgClass} py-1.5 px-2 rounded-lg border-[1.5px] ${roundClass} text-[11px]`}>
+      <div className={`w-[36px] h-[32px] rounded flex flex-col items-center justify-center font-bold shrink-0 shadow-sm border ${isFinished ? 'bg-emerald-600 text-white border-emerald-700' : isPlaying ? 'bg-blue-600 text-white border-blue-700' : 'bg-[#114666] text-white border-[#0d344d]'}`}>
+        <span className="text-[14px] leading-none">{absoluteIndex}</span>
+      </div>
+      <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
+        <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 flex flex-col gap-0.5">
+          <span className={`font-semibold truncate block ${isFinished && m.winnerId === m.teamAId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-800 dark:text-zinc-200'}`} style={{ fontSize: '13px' }}>{teamA}</span>
+          <span className={`font-semibold truncate block ${isFinished && m.winnerId === m.teamBId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-800 dark:text-zinc-200'}`} style={{ fontSize: '13px' }}>{teamB}</span>
+        </div>
+      </div>
+      <div className="flex flex-col items-end shrink-0">
+        <span className="text-[7.5px] font-bold text-zinc-500 uppercase pb-0.5">{roundLabel}</span>
+        {isFinished ? (
+          <span className="text-[12px] font-black tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded leading-none shrink-0 border border-emerald-200/50 dark:border-emerald-800 shadow-sm">
+            {m.scoreA} - {m.scoreB}
+          </span>
+        ) : isPlaying ? (
+          <span className="text-[9px] font-bold text-blue-100 bg-blue-600 dark:bg-blue-600 px-1.5 py-1 rounded leading-none shrink-0 border border-blue-700 shadow-sm">
+            ĐANG ĐẤU
+          </span>
+        ) : (
+          <span className="text-[9px] font-bold text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-1.5 py-1 rounded leading-none shrink-0 border border-zinc-200/50 dark:border-zinc-850 shadow-sm">
+            CHỜ
+          </span>
+        )}
+      </div>
+    </div>
+  );
+});
+LiveMatchRow.displayName = 'LiveMatchRow';
+
+interface KoRoundCardProps {
+  round: number;
+  roundMatches: any[];
+  teams: any;
+  roundName: string;
+}
+
+const KoRoundCard = React.memo(({
+  round,
+  roundMatches,
+  teams,
+  roundName
+}: KoRoundCardProps) => {
+  return (
+    <div className="space-y-1 bg-white dark:bg-zinc-950 py-1.5 px-2.5 rounded-xl border border-zinc-100 dark:border-zinc-850">
+      <h6 className="text-[9px] font-black text-zinc-400 border-b pb-1 mb-1.5 uppercase select-none" style={{ fontSize: '13px', color: '#c61a8b' }}>{roundName}</h6>
+      <div className="grid grid-cols-1 gap-1">
+        {roundMatches.map((m) => {
+          const teamAName = teams[m.teamAId]?.name || m.placeholderA || getReadableTeamName(m.teamAId);
+          const teamBName = teams[m.teamBId]?.name || m.placeholderB || getReadableTeamName(m.teamBId);
+          return (
+            <div key={m.id} className="text-[10px] space-y-1 p-1.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800 rounded-lg">
+              <div className="text-[8px] font-black text-zinc-450 border-b border-zinc-200/30 dark:border-zinc-805 pb-0.5 mb-1 select-none" style={{ fontSize: '13px', color: '#992371' }}>
+                {getReadableKoMatchName(m.knockoutMatchId || '')}
+              </div>
+              <div className="flex justify-between items-center">
+                <span className={`font-bold truncate max-w-[85%] ${m.winnerId === m.teamAId ? 'text-blue-600 font-extrabold' : 'text-zinc-500'}`} style={{ fontSize: '15px' }}>{teamAName}</span>
+                <strong className="font-mono text-zinc-650 dark:text-zinc-350 shrink-0">{m.status === 'finished' ? m.scoreA : '-'}</strong>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className={`font-bold truncate max-w-[85%] ${m.winnerId === m.teamBId ? 'text-blue-600 font-extrabold' : 'text-zinc-500'}`} style={{ fontSize: '15px' }}>{teamBName}</span>
+                <strong className="font-mono text-zinc-650 dark:text-zinc-350 shrink-0">{m.status === 'finished' ? m.scoreB : '-'}</strong>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+KoRoundCard.displayName = 'KoRoundCard';
+
+interface FullscreenButtonProps {
+  elementId: string;
+}
+
+const FullscreenButton = React.memo(({ elementId }: { elementId: string }) => {
+  const handleToggle = React.useCallback(() => {
+    const el = document.getElementById(elementId);
+    if (el) {
+      if (!document.fullscreenElement) {
+        el.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  }, [elementId]);
+
+  return (
+    <button
+      onClick={handleToggle}
+      className="flex items-center gap-2 px-3 py-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-sm border border-zinc-200 dark:border-zinc-700 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-sm transition-all pointer-events-auto"
+    >
+      <Maximize size={16} />
+      <span className="text-xs font-bold leading-none">Toàn màn hình</span>
+    </button>
+  );
+});
+FullscreenButton.displayName = 'FullscreenButton';
+
 export default function LiveDashboard() {
   const teams = useTournamentStore(state => state.teams);
   const groups = useTournamentStore(state => state.groups);
@@ -584,59 +831,11 @@ export default function LiveDashboard() {
                         {evtGroups.map((group) => {
                           const std = stdByGrp[group.id] || [];
                           return (
-                            <div key={group.id} className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-805 overflow-hidden shadow-sm mb-4">
-                              {/* Header Bar */}
-                              <div className="bg-blue-600 text-white py-2 px-2 sm:px-3 flex items-center justify-between">
-                                <span className="text-[10px] sm:text-[11px] font-extrabold flex items-center gap-1.5 tracking-tight uppercase">
-                                  <Award size={13} /> BẢNG XẾP HẠNG - {group.name}
-                                </span>
-                                <span className="text-[9px] font-bold bg-white/20 px-2 py-0.5 rounded-full border border-white/20 select-none hidden sm:inline-block">
-                                  Bảng {group.teamIds?.length || std.length} đội
-                                </span>
-                              </div>
-                              {/* Table Data */}
-                              <div className="overflow-x-auto overflow-y-hidden">
-                                <table className="w-full text-left text-[9px] sm:text-[11px] table-fixed">
-                                  <thead>
-                                    <tr className="bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 font-bold text-[9px] sm:text-[10px] md:text-[11px] leading-tight">
-                                      <th className="py-1.5 px-0 text-center w-6 sm:w-8">Hạng</th>
-                                      <th className="py-1.5 px-0.5 text-center min-w-[50px] w-auto">Đội</th>
-                                      <th className="py-1.5 px-0 text-center w-6 sm:w-8">Trận</th>
-                                      <th className="py-1.5 px-0 text-center text-emerald-600 w-4 sm:w-6">T</th>
-                                      <th className="py-1.5 px-0 text-center text-red-500 w-4 sm:w-6">B</th>
-                                      <th className="py-1.5 px-0 text-center text-zinc-500 w-6 sm:w-8">H/S</th>
-                                      <th className="py-1.5 px-0.5 text-center text-blue-600 w-8 sm:w-10">Điểm</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {std.map((s, idx) => {
-                                      let rankBadge = null;
-                                      if (idx === 0) {
-                                        rankBadge = <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full inline-flex items-center justify-center font-bold text-[9px] sm:text-[10px] bg-amber-100 text-amber-800 border border-amber-200/40">1</span>;
-                                      } else if (idx === 1) {
-                                        rankBadge = <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full inline-flex items-center justify-center font-bold text-[9px] sm:text-[10px] bg-zinc-150 text-zinc-700 border border-zinc-200/40">2</span>;
-                                      } else {
-                                        rankBadge = <span className="text-zinc-400 font-bold block">{idx + 1}</span>;
-                                      }
-
-                                      return (
-                                        <tr key={s.teamId} className="border-b border-zinc-100 dark:border-zinc-850/60 hover:bg-zinc-50 dark:hover:bg-zinc-850/10">
-                                          <td className="py-1.5 px-0 text-center font-bold text-[10px] sm:text-[11px]">
-                                            <span className="flex justify-center items-center">{rankBadge}</span>
-                                          </td>
-                                          <td className="py-1.5 px-0.5 text-center font-extrabold text-zinc-700 dark:text-zinc-300 truncate text-[10px] sm:text-[12px]">{s.teamName}</td>
-                                          <td className="py-1.5 px-0 text-center text-zinc-600 dark:text-zinc-400 font-medium">{s.matchesPlayed}</td>
-                                          <td className="py-1.5 px-0 text-center text-emerald-600 font-bold">{s.matchesWon}</td>
-                                          <td className="py-1.5 px-0 text-center text-red-500 font-bold">{s.matchesLost}</td>
-                                          <td className="py-1.5 px-0 text-center text-zinc-500 font-medium tracking-tighter">{s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff === 0 ? 'Ø' : s.pointDiff}</td>
-                                          <td className="py-1.5 px-0.5 text-center font-extrabold text-blue-600 text-[11px] sm:text-[13px]">{s.points}</td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
+                            <StandingGroupCard
+                              key={group.id}
+                              group={group}
+                              std={std}
+                            />
                           );
                         })}
                       </AutoScrollList>
@@ -655,67 +854,14 @@ export default function LiveDashboard() {
                       ) : (
                         <div className="space-y-1">
                           {balanceMatchesRestTime(evtMatches).map((m, idx) => {
-                            const teamA = evt.teams[m.teamAId]?.name || m.teamAId;
-                            const teamB = evt.teams[m.teamBId]?.name || m.teamBId;
-                            const group = evt.groups[m.groupId];
-                            const absoluteIndex = idx + 1;
-                            const isFinished = m.status === 'finished';
-                            const isPlaying = m.status === 'playing';
-                            
-                            let roundClass = "border-zinc-200 dark:border-zinc-800";
-                            let roundLabel = "";
-                            if (group) {
-                              roundClass = isFinished ? "border-emerald-300 dark:border-emerald-800" : isPlaying ? "border-blue-300 dark:border-blue-800" : "border-[#5b9e38] dark:border-[#4c842f]";
-                              const groupNameUpper = group.name.toUpperCase();
-                              roundLabel = groupNameUpper.startsWith('BẢNG') ? groupNameUpper : `BẢNG ${groupNameUpper}`;
-                            } else {
-                              const rName = (m.knockoutRoundName || "").toLowerCase();
-                              if (rName.includes("32")) { roundClass = "border-[#20b2aa] dark:border-[#1a8e88]"; roundLabel = "VÒNG 32"; }
-                              else if (rName.includes("16")) { roundClass = "border-[#3cb371] dark:border-[#308f5a]"; roundLabel = "VÒNG 16"; }
-                              else if (rName.includes("tứ kết")) { roundClass = "border-[#9370db] dark:border-[#7559af]"; roundLabel = "TỨ KẾT"; }
-                              else if (rName.includes("bán kết")) { roundClass = "border-[#ff8c00] dark:border-[#cc7000]"; roundLabel = "BÁN KẾT"; }
-                              else if (rName.includes("chung kết")) { roundClass = "border-[#dc143c] dark:border-[#b01030]"; roundLabel = "CHUNG KẾT"; }
-                              else { roundClass = "border-[#4169e1] dark:border-[#3454b4]"; roundLabel = rName ? rName.toUpperCase() : `VÒNG KO ${m.round}`; }
-                              if (isFinished) {
-                                roundClass = "border-emerald-300 dark:border-emerald-800";
-                              } else if (isPlaying) {
-                                roundClass = "border-blue-300 dark:border-blue-800";
-                              }
-                            }
-
-                            const bgClass = isFinished ? "bg-emerald-50/40 dark:bg-emerald-950/20" : isPlaying ? "bg-blue-50/40 dark:bg-blue-950/20" : "bg-white dark:bg-zinc-950";
-
                             return (
-                              <div key={m.id} className={`flex items-center gap-2 ${bgClass} py-1.5 px-2 rounded-lg border-[1.5px] ${roundClass} text-[11px]`}>
-                                <div className={`w-[36px] h-[32px] rounded flex flex-col items-center justify-center font-bold shrink-0 shadow-sm border ${isFinished ? 'bg-emerald-600 text-white border-emerald-700' : isPlaying ? 'bg-blue-600 text-white border-blue-700' : 'bg-[#114666] text-white border-[#0d344d]'}`}>
-                                  <span className="text-[14px] leading-none">{absoluteIndex}</span>
-                                </div>
-                                <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
-                                  <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700">
-                                    <span className={`font-semibold ${isFinished && m.winnerId === m.teamAId ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-800 dark:text-zinc-200'}`} style={{ fontSize: '13px' }}>{teamA}</span>
-                                  </div>
-                                  <div className="w-0.5 h-2.5 bg-orange-400 mx-2 my-0.5 shrink-0"></div>
-                                  <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700">
-                                    <span className={`font-semibold ${isFinished && m.winnerId === m.teamBId ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-800 dark:text-zinc-200'}`} style={{ fontSize: '13px' }}>{teamB}</span>
-                                  </div>
-                                </div>
-                                <div className="flex flex-col items-end shrink-0">
-                                  <span className="text-[7.5px] font-bold text-zinc-500 uppercase pb-0.5">{roundLabel}</span>
-                                  {isFinished ? (
-                                    <span className="text-[12px] font-black tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded leading-none shrink-0 border border-emerald-200/50 dark:border-emerald-800 shadow-sm">
-                                      {m.scoreA} - {m.scoreB}
-                                    </span>
-                                  ) : isPlaying ? (
-                                    <span className="text-[9px] font-bold text-blue-100 bg-blue-600 dark:bg-blue-600 px-1.5 py-1 rounded leading-none shrink-0 border border-blue-700 shadow-sm">
-                                      ĐANG ĐẤU
-                                    </span>
-                                  ) : (
-                                    <span className="text-[9px] font-bold text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-1.5 py-1 rounded leading-none shrink-0 border border-zinc-200/50 dark:border-zinc-850 shadow-sm">
-                                      CHỜ
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
+                              <LiveMatchRow
+                                key={m.id}
+                                m={m}
+                                teams={evt.teams || {}}
+                                groups={evt.groups || {}}
+                                absoluteIndex={idx + 1}
+                              />
                             );
                           })}
                         </div>
@@ -737,30 +883,13 @@ export default function LiveDashboard() {
                           const roundMatches = koMatches.filter((m) => m.round === round);
                           const roundName = roundMatches[0]?.knockoutRoundName || 'Vòng';
                           return (
-                            <div key={round} className="space-y-1 bg-white dark:bg-zinc-950 py-1.5 px-2.5 rounded-xl border border-zinc-100 dark:border-zinc-850">
-                              <h6 className="text-[9px] font-black text-zinc-400 border-b pb-1 mb-1.5 uppercase select-none" style={{ fontSize: '13px', color: '#c61a8b' }}>{roundName}</h6>
-                              <div className="grid grid-cols-1 gap-1">
-                                {roundMatches.map((m) => {
-                                  const teamAName = evt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
-                                  const teamBName = evt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
-                                  return (
-                                    <div key={m.id} className="text-[10px] space-y-1 p-1.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800 rounded-lg">
-                                      <div className="text-[8px] font-black text-zinc-450 border-b border-zinc-200/30 dark:border-zinc-805 pb-0.5 mb-1 select-none" style={{ fontSize: '13px', color: '#992371' }}>
-                                        {getReadableKoMatchName(m.knockoutMatchId || '')}
-                                      </div>
-                                      <div className="flex justify-between items-center">
-                                        <span className={`font-bold truncate max-w-[85%] ${m.winnerId === m.teamAId ? 'text-blue-600' : 'text-zinc-500'}`} style={{ fontSize: '15px', color: '#0f0fb1' }}>{teamAName}</span>
-                                        <strong className="font-mono text-zinc-650 dark:text-zinc-350 shrink-0">{m.status === 'finished' ? m.scoreA : '-'}</strong>
-                                      </div>
-                                      <div className="flex justify-between items-center">
-                                        <span className={`font-bold truncate max-w-[85%] ${m.winnerId === m.teamBId ? 'text-blue-600' : 'text-zinc-500'}`} style={{ fontSize: '15px', color: '#0f0fb1' }}>{teamBName}</span>
-                                        <strong className="font-mono text-zinc-650 dark:text-zinc-350 shrink-0">{m.status === 'finished' ? m.scoreB : '-'}</strong>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
+                            <KoRoundCard
+                              key={round}
+                              round={round}
+                              roundMatches={roundMatches}
+                              teams={evt.teams || {}}
+                              roundName={roundName}
+                            />
                           );
                         })}
                       </AutoScrollList>

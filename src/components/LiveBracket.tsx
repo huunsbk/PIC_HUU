@@ -9,33 +9,39 @@ interface LiveBracketProps {
   currentEvt: EventData;
 }
 
-const findFeedingMatches = (match: Match, roundsMap: Record<number, Match[]>): [Match | null, Match | null] => {
-  const prevRoundMatches = roundsMap[match.round - 1];
-  if (!prevRoundMatches) return [null, null];
+const findFeedingMatches = (match: Match, koMatches: Match[]): [Match | null, Match | null] => {
+  if (!match || !match.id) return [null, null];
   
-  const currentRoundMatches = roundsMap[match.round].filter(m => !m.knockoutRoundName?.includes('Hạng 3'));
-  
-  const idx = currentRoundMatches.findIndex(m => m.id === match.id);
-  if (idx === -1) {
-    return [null, null];
-  }
+  // Find matches where nextMatchId (or next_match_id) matches this node's ID
+  const feeding = koMatches.filter(m => {
+    const nextId = m.nextMatchId !== undefined ? m.nextMatchId : (m as any).next_match_id;
+    return nextId === match.id;
+  });
 
-  const child1 = prevRoundMatches[idx * 2] || null;
-  const child2 = prevRoundMatches[idx * 2 + 1] || null;
-  return [child1, child2];
+  const childA = feeding.find(m => {
+    const slot = m.nextMatchSlot !== undefined ? m.nextMatchSlot : (m as any).next_match_slot;
+    return slot === 'A' || slot === 'teamA';
+  }) || null;
+
+  const childB = feeding.find(m => {
+    const slot = m.nextMatchSlot !== undefined ? m.nextMatchSlot : (m as any).next_match_slot;
+    return slot === 'B' || slot === 'teamB';
+  }) || null;
+
+  return [childA, childB];
 }
 
 interface MatchNodeProps {
   match: Match;
-  roundsMap: Record<number, Match[]>;
+  koMatches: Match[];
   currentEvt: EventData;
   isBronze?: boolean;
 }
 
-const MatchNode: React.FC<MatchNodeProps> = ({ match, roundsMap, currentEvt, isBronze }) => {
+const MatchNode: React.FC<MatchNodeProps> = ({ match, koMatches, currentEvt, isBronze }) => {
   if (!match) return null;
 
-  const [childA, childB] = isBronze ? [null, null] : findFeedingMatches(match, roundsMap);
+  const [childA, childB] = isBronze ? [null, null] : findFeedingMatches(match, koMatches);
   const hasChildren = childA !== null || childB !== null;
 
   const tA_str = match.teamAId || match.placeholderA || null;
@@ -49,11 +55,11 @@ const MatchNode: React.FC<MatchNodeProps> = ({ match, roundsMap, currentEvt, isB
       {hasChildren && (
         <div className="flex flex-col justify-around">
           <div className="relative flex flex-row items-center justify-end flex-1">
-             <MatchNode match={childA as Match} roundsMap={roundsMap} currentEvt={currentEvt} />
+             <MatchNode match={childA as Match} koMatches={koMatches} currentEvt={currentEvt} />
              <div className="absolute right-0 top-1/2 w-6 h-[calc(50%_+_1px)] border-t-[2px] border-r-[2px] border-zinc-300 dark:border-zinc-700 rounded-tr-lg pointer-events-none translate-x-[100%] z-0"></div>
           </div>
           <div className="relative flex flex-row items-center justify-end flex-1">
-             <MatchNode match={childB as Match} roundsMap={roundsMap} currentEvt={currentEvt} />
+             <MatchNode match={childB as Match} koMatches={koMatches} currentEvt={currentEvt} />
              <div className="absolute right-0 bottom-1/2 w-6 h-[calc(50%_+_1px)] border-b-[2px] border-r-[2px] border-zinc-300 dark:border-zinc-700 rounded-br-lg pointer-events-none translate-x-[100%] z-0"></div>
           </div>
         </div>
@@ -68,11 +74,11 @@ const MatchNode: React.FC<MatchNodeProps> = ({ match, roundsMap, currentEvt, isB
              {match.knockoutRoundName} - {getReadableKoMatchName(match.knockoutMatchId || '')}
           </div>
           <div className="flex justify-between items-center rounded-md px-1.5 py-1 bg-zinc-50 dark:bg-zinc-900">
-             <span className={`text-[11px] font-bold truncate max-w-[120px] ${match.winnerId === match.teamAId ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-700 dark:text-zinc-300'}`}>{teamAName}</span>
+             <span className={`text-[11px] font-bold truncate max-w-[120px] ${match.winnerId === match.teamAId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-750 dark:text-zinc-300'}`}>{teamAName}</span>
              <span className="font-mono text-[11px] font-black">{match.status === 'finished' ? match.scoreA : '-'}</span>
           </div>
           <div className="flex justify-between items-center rounded-md px-1.5 py-1 bg-zinc-50 dark:bg-zinc-900">
-             <span className={`text-[11px] font-bold truncate max-w-[120px] ${match.winnerId === match.teamBId ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-700 dark:text-zinc-300'}`}>{teamBName}</span>
+             <span className={`text-[11px] font-bold truncate max-w-[120px] ${match.winnerId === match.teamBId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-750 dark:text-zinc-300'}`}>{teamBName}</span>
              <span className="font-mono text-[11px] font-black">{match.status === 'finished' ? match.scoreB : '-'}</span>
           </div>
         </div>
@@ -86,20 +92,17 @@ export const LiveBracket: React.FC<LiveBracketProps> = ({ koMatches, currentEvt 
     return <div className="py-20 text-center text-zinc-500 border border-dashed border-zinc-200 rounded-3xl bg-zinc-50/50">Chưa lập sơ đồ Knockout cho nội dung này.</div>;
   }
 
-  const roundsMap: Record<number, Match[]> = {};
-  koMatches.forEach((m) => {
-    if (!roundsMap[m.round]) {
-      roundsMap[m.round] = [];
-    }
-    roundsMap[m.round].push(m);
-  });
+  // Find final match (no next match and not a bronze match)
+  const finalMatch = koMatches.find(m => {
+    const nextId = m.nextMatchId !== undefined ? m.nextMatchId : (m as any).next_match_id;
+    const isBronze = m.knockoutRoundName?.includes('3') || m.knockoutRoundName?.includes('Hạng 3') || false;
+    return !nextId && !isBronze;
+  }) || koMatches[koMatches.length - 1];
 
-  const roundsKeys = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
-  const finalRoundIndex = roundsKeys[roundsKeys.length - 1];
-  const finalRoundMatches = roundsMap[finalRoundIndex] || [];
-  
-  const finalMatch = finalRoundMatches.find(m => !m.knockoutRoundName?.includes('Hạng 3')) || finalRoundMatches[0];
-  const bronzeMatch = finalRoundMatches.find(m => m.knockoutRoundName?.includes('Hạng 3'));
+  // Find bronze match
+  const bronzeMatch = koMatches.find(m => {
+    return m.knockoutRoundName?.includes('3') || m.knockoutRoundName?.includes('Hạng 3') || false;
+  });
 
   return (
     <div className="bg-[#f8f9fa] dark:bg-zinc-900/50 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden relative w-full h-full min-h-[600px]" style={{ width: '100%', height: '100%' }}>
@@ -134,13 +137,13 @@ export const LiveBracket: React.FC<LiveBracketProps> = ({ koMatches, currentEvt 
             <TransformComponent wrapperClass="w-full h-full" wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '3840px', height: '2160px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div className="p-12 flex flex-col items-center justify-center w-full h-full">
                 <div className="flex gap-12 items-center scale-150 transform origin-center">
-                  <MatchNode match={finalMatch} roundsMap={roundsMap} currentEvt={currentEvt} />
+                  <MatchNode match={finalMatch} koMatches={koMatches} currentEvt={currentEvt} />
                   
                   {bronzeMatch && (
                     <div className="flex flex-col justify-end">
                       <div className="pl-8 relative opacity-85 mt-20">
                          <div className="text-[10px] font-black text-amber-600/80 uppercase mb-2 absolute -top-4 left-10">Tranh Hạng 3</div>
-                         <MatchNode match={bronzeMatch} roundsMap={roundsMap} currentEvt={currentEvt} isBronze={true} />
+                         <MatchNode match={bronzeMatch} koMatches={koMatches} currentEvt={currentEvt} isBronze={true} />
                       </div>
                     </div>
                   )}
