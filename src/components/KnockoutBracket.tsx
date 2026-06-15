@@ -469,7 +469,7 @@ export default function KnockoutBracket() {
                                         }}
                                         className="font-black flex items-center justify-between rounded-lg border-2 border-dashed border-zinc-400 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs min-w-[200px]"
                                       >
-                                        <span className="px-2 py-1.5">{m.teamAId ? teams[m.teamAId]?.name : (m.placeholderA || 'Thả đội vào đây')}</span>
+                                        <span className="px-2 py-1.5">{m.teamAId ? (teams[m.teamAId]?.name || m.placeholderA || m.teamAId) : (m.placeholderA || 'Thả đội vào đây')}</span>
                                         {m.teamAId && (
                                           <button 
                                             title="Xoá khỏi nhánh"
@@ -490,7 +490,7 @@ export default function KnockoutBracket() {
                                       >
                                         {/* Thêm option placeholder nếu chưa nằm trong list đội giải */}
                                         {!m.teamAId && (
-                                          <option value={m.teamAId || ''}>{(m.teamAId ? teams[m.teamAId]?.name : (m.placeholderA || 'Chờ...'))}</option>
+                                          <option value={m.teamAId || ''}>{(m.teamAId ? (teams[m.teamAId]?.name || m.placeholderA || m.teamAId) : (m.placeholderA || 'Chờ...'))}</option>
                                         )}
                                         {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamAId === t.id).map((t) => (
                                           <option key={t.id} value={t.id}>
@@ -506,9 +506,9 @@ export default function KnockoutBracket() {
                                           ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
                                           : 'text-zinc-800 dark:text-zinc-200'
                                       }`}
-                                      title={(m.teamAId ? teams[m.teamAId]?.name : (m.placeholderA || 'Chờ...'))}
+                                      title={(m.teamAId ? (teams[m.teamAId]?.name || m.placeholderA || m.teamAId) : (m.placeholderA || 'Chờ...'))}
                                     >
-                                      {(m.teamAId ? teams[m.teamAId]?.name : (m.placeholderA || 'Chờ...'))}
+                                      {(m.teamAId ? (teams[m.teamAId]?.name || m.placeholderA || m.teamAId) : (m.placeholderA || 'Chờ...'))}
                                     </span>
                                   )}
                                 </div>
@@ -540,7 +540,7 @@ export default function KnockoutBracket() {
                                         }}
                                         className="font-black flex items-center justify-between rounded-lg border-2 border-dashed border-zinc-400 bg-white dark:bg-zinc-900 text-[#111c30] dark:text-zinc-105 text-xs min-w-[200px]"
                                       >
-                                        <span className="px-2 py-1.5">{m.teamBId ? teams[m.teamBId]?.name : (m.placeholderB || 'Thả đội vào đây')}</span>
+                                        <span className="px-2 py-1.5">{m.teamBId ? (teams[m.teamBId]?.name || m.placeholderB || m.teamBId) : (m.placeholderB || 'Thả đội vào đây')}</span>
                                         {m.teamBId && (
                                           <button 
                                             title="Xoá khỏi nhánh"
@@ -560,7 +560,7 @@ export default function KnockoutBracket() {
                                         style={m.id === 'ko-QF1-ww7imxn' ? { width: '300px', maxWidth: 'none' } : undefined}
                                       >
                                         {!m.teamBId && (
-                                          <option value={m.teamBId || ''}>{(m.teamBId ? teams[m.teamBId]?.name : (m.placeholderB || 'Chờ...'))}</option>
+                                          <option value={m.teamBId || ''}>{(m.teamBId ? (teams[m.teamBId]?.name || m.placeholderB || m.teamBId) : (m.placeholderB || 'Chờ...'))}</option>
                                         )}
                                         {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamBId === t.id).map((t) => (
                                           <option key={t.id} value={t.id}>
@@ -576,9 +576,9 @@ export default function KnockoutBracket() {
                                           ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
                                           : 'text-zinc-800 dark:text-zinc-200'
                                       }`}
-                                      title={(m.teamBId ? teams[m.teamBId]?.name : (m.placeholderB || 'Chờ...'))}
+                                      title={(m.teamBId ? (teams[m.teamBId]?.name || m.placeholderB || m.teamBId) : (m.placeholderB || 'Chờ...'))}
                                     >
-                                      {(m.teamBId ? teams[m.teamBId]?.name : (m.placeholderB || 'Chờ...'))}
+                                      {(m.teamBId ? (teams[m.teamBId]?.name || m.placeholderB || m.teamBId) : (m.placeholderB || 'Chờ...'))}
                                     </span>
                                   )}
                                 </div>

@@ -15,7 +15,22 @@ DO $$ BEGIN
 END $$;
 ALTER TABLE matches ADD CONSTRAINT chk_next_match_slot CHECK (next_match_slot IN ('A', 'B'));
 
--- 2. XOÁ CÁC KHÓA NGOẠI HIỆN TẠI TRONG BẢNG MATCHES (nếu có)
+-- 2. DỌN DẸP / CHUẨN HOÁ DỮ LIỆU CŨ LỖI (MIGRATION)
+-- Nếu DB đang có dữ liệu lỗi ở team_a_id và team_b_id (chứa text thay vì team id do bản cũ),
+-- ta cần chuyển chúng sang placeholder và gán lại team_id = NULL
+UPDATE matches 
+SET 
+  placeholder_a = team_a_id, 
+  team_a_id = NULL 
+WHERE team_a_id IS NOT NULL AND team_a_id NOT IN (SELECT id FROM teams);
+
+UPDATE matches 
+SET 
+  placeholder_b = team_b_id, 
+  team_b_id = NULL 
+WHERE team_b_id IS NOT NULL AND team_b_id NOT IN (SELECT id FROM teams);
+
+-- 3. XOÁ CÁC KHÓA NGOẠI HIỆN TẠI TRONG BẢNG MATCHES (nếu có)
 DO $$ 
 DECLARE 
     r RECORD;
