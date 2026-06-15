@@ -38,8 +38,8 @@ export interface Group {
 export interface Match {
   id: string;
   groupId: string; // ID bảng đấu, hoặc "knockout" nếu ở vòng đấu loại trực tiếp
-  teamAId: string;
-  teamBId: string;
+  teamAId: string | null;
+  teamBId: string | null;
   scoreA: number | null; // Điểm đội A (null nếu chưa đấu)
   scoreB: number | null; // Điểm đội B (null nếu chưa đấu)
   winnerId: string | null; // ID đội thắng (null nếu chưa đấu hoặc hòa)
@@ -49,6 +49,8 @@ export interface Match {
   knockoutMatchId?: string; // Định danh trận trong nhánh loại trực tiếp (VD: "QF1", "SF1", "F")
   nextMatchId?: string; // Trận tiếp theo mà đội thắng sẽ chuyển tới
   nextMatchSlot?: 'A' | 'B'; // Đội thắng sẽ vào slot A hay slot B trong trận tiếp theo
+  placeholderA?: string;
+  placeholderB?: string;
 }
 
 export interface AuditLog {

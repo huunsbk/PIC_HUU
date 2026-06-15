@@ -72,6 +72,7 @@ interface AppState {
   updateMatchStatus: (matchId: string, status: 'pending' | 'playing' | 'finished') => void;
   resetMatchScore: (matchId: string) => void;
   generateAllSchedules: () => void;
+  advanceWinner: (matchId: string, winnerTeamId: string) => Promise<void>;
 
   // Knockout Actions
   generateKnockoutBracket: (size: 4 | 8 | 16 | 32) => void;
@@ -1457,8 +1458,55 @@ export const useTournamentStore = create<AppState>()(
           });
         },
 
+        advanceWinner: async (matchId, winnerTeamId) => {
+          if (!get().isAdmin) return;
+          const state = get();
+          const targetMatch = state.matches.find(m => m.id === matchId);
+          if (!targetMatch || !targetMatch.nextMatchId) return;
+
+          const nextMatchId = targetMatch.nextMatchId;
+          const slot = targetMatch.nextMatchSlot;
+
+          // 1. Cập nhật Supabase
+          const updateData = slot === 'A' 
+            ? { team_a_id: winnerTeamId } 
+            : { team_b_id: winnerTeamId };
+
+          const { error } = await supabase
+            .from('matches')
+            .update(updateData)
+            .eq('id', nextMatchId);
+
+          if (error) {
+            console.error('Lỗi đẩy đội vào nhánh Knockout:', error);
+            return;
+          }
+
+          // 2. Cập nhật Store (Memory)
+          set((s) => {
+            const nextMatches = s.matches.map(m => {
+              if (m.id !== nextMatchId) return m;
+              const nextM = { ...m };
+              if (slot === 'A') nextM.teamAId = winnerTeamId;
+              else nextM.teamBId = winnerTeamId;
+              
+              // Xóa điểm / reset trạng thái nếu đối thủ thay đổi
+              nextM.scoreA = null;
+              nextM.scoreB = null;
+              nextM.winnerId = null;
+              nextM.status = 'pending';
+              return nextM;
+            });
+            return { matches: nextMatches };
+          });
+
+          logToStore('Hệ thống Knockout', `Đội ${winnerTeamId} đã được tự động tiến vào vòng trong (Trận ${nextMatchId}).`);
+        },
+
         updateMatchScore: (matchId, scoreA, scoreB) => {
           if (!get().isAdmin) return;
+          let winnerObj = null;
+
           set((state) => {
             const matchesCopy = state.matches.map((m) => {
               if (m.id !== matchId) return m;
@@ -1475,6 +1523,8 @@ export const useTournamentStore = create<AppState>()(
                 winnerId = m.teamBId;
               }
 
+              if (winnerId) winnerObj = { matchId: m.id, winnerId };
+
               return {
                 ...m,
                 scoreA,
@@ -1487,10 +1537,14 @@ export const useTournamentStore = create<AppState>()(
             return { matches: matchesCopy };
           });
 
+          if (winnerObj && winnerObj.winnerId) {
+            get().advanceWinner(winnerObj.matchId, winnerObj.winnerId);
+          }
+
           const m = get().matches.find((x) => x.id === matchId);
           if (m && scoreA !== null && scoreB !== null) {
-            const tA = get().teams[m.teamAId]?.name || 'Đội A';
-            const tB = get().teams[m.teamBId]?.name || 'Đội B';
+            const tA = m.teamAId ? get().teams[m.teamAId]?.name : 'Đội A';
+            const tB = m.teamBId ? get().teams[m.teamBId]?.name : 'Đội B';
             logToStore('Cập Nhật Điểm', `Cập nhật kết quả trận đấu: [${tA}] ${scoreA} - ${scoreB} [${tB}].`);
           }
         },
@@ -1747,6 +1801,7 @@ export const useTournamentStore = create<AppState>()(
 
         updateKnockoutScore: (matchId, scoreA, scoreB) => {
           if (!get().isAdmin) return;
+          let winnerObj: { matchId: string, winnerId: string } | null = null;
           set((state) => {
             // Tìm trận đấu và cập nhật kết quả
             const updatedMatches = state.matches.map((m) => {
@@ -1757,6 +1812,7 @@ export const useTournamentStore = create<AppState>()(
               }
 
               const winner = scoreA > scoreB ? m.teamAId : m.teamBId;
+              if (winner) winnerObj = { matchId: m.id, winnerId: winner };
 
               return {
                 ...m,
@@ -1767,42 +1823,22 @@ export const useTournamentStore = create<AppState>()(
               };
             });
 
-            // Tiến hành đẩy Đội thắng vào vòng trong (Auto-progression)
-            const targetMatch = updatedMatches.find((m) => m.id === matchId);
-            if (targetMatch && targetMatch.status === 'finished' && targetMatch.winnerId) {
-              const winnerName = targetMatch.winnerId; // Có thể là tên đội hoặc ID
-
-              if (targetMatch.nextMatchId) {
-                const slot = targetMatch.nextMatchSlot;
-                
-                // Cập nhật trận đấu tiếp theo
-                for (let i = 0; i < updatedMatches.length; i++) {
-                  if (updatedMatches[i].id === targetMatch.nextMatchId) {
-                    if (slot === 'A') {
-                      updatedMatches[i].teamAId = winnerName;
-                    } else {
-                      updatedMatches[i].teamBId = winnerName;
-                    }
-                    // Nếu trận đấy đã đấu, phải reset điểm vì đối thủ thay đổi (Bảo toàn đồng bộ dữ liệu)
-                    updatedMatches[i].scoreA = null;
-                    updatedMatches[i].scoreB = null;
-                    updatedMatches[i].winnerId = null;
-                    updatedMatches[i].status = 'pending';
-                    break;
-                  }
-                }
-              }
-            }
-
             return { matches: updatedMatches };
           });
+
+          if (winnerObj && winnerObj.winnerId) {
+            get().advanceWinner(winnerObj.matchId, winnerObj.winnerId);
+          }
 
           // Log
           const updatedTarget = get().matches.find((x) => x.id === matchId);
           if (updatedTarget && scoreA !== null && scoreB !== null) {
+            const tA = updatedTarget.teamAId ? get().teams[updatedTarget.teamAId]?.name : 'Đội A';
+            const tB = updatedTarget.teamBId ? get().teams[updatedTarget.teamBId]?.name : 'Đội B';
+
             logToStore(
               'Điểm Loại Trực Tiếp',
-              `Trận [${updatedTarget.knockoutRoundName} - ${updatedTarget.knockoutMatchId}]: ${updatedTarget.teamAId} ${scoreA} - ${scoreB} ${updatedTarget.teamBId}.`
+              `Trận [${updatedTarget.knockoutRoundName} - ${updatedTarget.knockoutMatchId}]: ${tA} ${scoreA} - ${scoreB} ${tB}.`
             );
           }
         },

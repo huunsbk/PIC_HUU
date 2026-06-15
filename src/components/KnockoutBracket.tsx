@@ -469,7 +469,7 @@ export default function KnockoutBracket() {
                                         }}
                                         className="font-black flex items-center justify-between rounded-lg border-2 border-dashed border-zinc-400 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs min-w-[200px]"
                                       >
-                                        <span className="px-2 py-1.5">{m.teamAId ? resolveSlotName(m.teamAId) : 'Thả đội vào đây'}</span>
+                                        <span className="px-2 py-1.5">{m.teamAId ? teams[m.teamAId]?.name : (m.placeholderA || 'Thả đội vào đây')}</span>
                                         {m.teamAId && (
                                           <button 
                                             title="Xoá khỏi nhánh"
@@ -489,11 +489,11 @@ export default function KnockoutBracket() {
                                         style={m.id === 'ko-QF1-ww7imxn' ? { width: '300px', maxWidth: 'none' } : undefined}
                                       >
                                         {/* Thêm option placeholder nếu chưa nằm trong list đội giải */}
-                                        {!teamNames.includes(m.teamAId) && (
-                                          <option value={m.teamAId || ''}>{resolveSlotName(m.teamAId)}</option>
+                                        {!m.teamAId && (
+                                          <option value={m.teamAId || ''}>{(m.teamAId ? teams[m.teamAId]?.name : (m.placeholderA || 'Chờ...'))}</option>
                                         )}
-                                        {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamAId === t.name).map((t) => (
-                                          <option key={t.id} value={t.name}>
+                                        {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamAId === t.id).map((t) => (
+                                          <option key={t.id} value={t.id}>
                                             {t.name}
                                           </option>
                                         ))}
@@ -506,9 +506,9 @@ export default function KnockoutBracket() {
                                           ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
                                           : 'text-zinc-800 dark:text-zinc-200'
                                       }`}
-                                      title={resolveSlotName(m.teamAId)}
+                                      title={(m.teamAId ? teams[m.teamAId]?.name : (m.placeholderA || 'Chờ...'))}
                                     >
-                                      {resolveSlotName(m.teamAId)}
+                                      {(m.teamAId ? teams[m.teamAId]?.name : (m.placeholderA || 'Chờ...'))}
                                     </span>
                                   )}
                                 </div>
@@ -540,7 +540,7 @@ export default function KnockoutBracket() {
                                         }}
                                         className="font-black flex items-center justify-between rounded-lg border-2 border-dashed border-zinc-400 bg-white dark:bg-zinc-900 text-[#111c30] dark:text-zinc-105 text-xs min-w-[200px]"
                                       >
-                                        <span className="px-2 py-1.5">{m.teamBId ? resolveSlotName(m.teamBId) : 'Thả đội vào đây'}</span>
+                                        <span className="px-2 py-1.5">{m.teamBId ? teams[m.teamBId]?.name : (m.placeholderB || 'Thả đội vào đây')}</span>
                                         {m.teamBId && (
                                           <button 
                                             title="Xoá khỏi nhánh"
@@ -559,11 +559,11 @@ export default function KnockoutBracket() {
                                         className="px-2 py-1.5 font-black rounded-lg border border-zinc-250 bg-white dark:bg-zinc-900 text-[#111c30] dark:text-zinc-105 text-xs focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-[230px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                         style={m.id === 'ko-QF1-ww7imxn' ? { width: '300px', maxWidth: 'none' } : undefined}
                                       >
-                                        {!teamNames.includes(m.teamBId) && (
-                                          <option value={m.teamBId || ''}>{resolveSlotName(m.teamBId)}</option>
+                                        {!m.teamBId && (
+                                          <option value={m.teamBId || ''}>{(m.teamBId ? teams[m.teamBId]?.name : (m.placeholderB || 'Chờ...'))}</option>
                                         )}
-                                        {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamBId === t.name).map((t) => (
-                                          <option key={t.id} value={t.name}>
+                                        {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamBId === t.id).map((t) => (
+                                          <option key={t.id} value={t.id}>
                                             {t.name}
                                           </option>
                                         ))}
@@ -576,9 +576,9 @@ export default function KnockoutBracket() {
                                           ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
                                           : 'text-zinc-800 dark:text-zinc-200'
                                       }`}
-                                      title={resolveSlotName(m.teamBId)}
+                                      title={(m.teamBId ? teams[m.teamBId]?.name : (m.placeholderB || 'Chờ...'))}
                                     >
-                                      {resolveSlotName(m.teamBId)}
+                                      {(m.teamBId ? teams[m.teamBId]?.name : (m.placeholderB || 'Chờ...'))}
                                     </span>
                                   )}
                                 </div>

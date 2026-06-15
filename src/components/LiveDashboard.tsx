@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useTournamentStore } from '../store';
+import { supabase } from '../supabaseClient';
 import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime } from '../utils/tournamentEngine';
 import { 
   Monitor, 
@@ -91,18 +92,37 @@ function AutoScrollList({ children, className = '', maxHeight = '350px' }: AutoS
 }
 
 export default function LiveDashboard() {
-  const {
-    teams,
-    groups,
-    matches,
-    tournament,
-    events,
-    addLog,
-  } = useTournamentStore();
+  const teams = useTournamentStore(state => state.teams);
+  const groups = useTournamentStore(state => state.groups);
+  const matches = useTournamentStore(state => state.matches);
+  const tournament = useTournamentStore(state => state.tournament);
+  const events = useTournamentStore(state => state.events);
+  const activeTenantId = useTournamentStore(state => state.activeTenantId);
+  const isAdmin = useTournamentStore(state => state.isAdmin);
+  const addLog = useTournamentStore(state => state.addLog);
 
   const [selectedEventFilter, setSelectedEventFilter] = useState<string>('all');
   const [currentTime, setCurrentTime] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [remoteStandings, setRemoteStandings] = useState<any[]>([]);
+
+  // Fetch standings using SQL View if guest
+  useEffect(() => {
+    if (!isAdmin) {
+      const fetchStandings = async () => {
+        const tenant = activeTenantId || 'default';
+        const { data, error } = await supabase.from('view_team_standings')
+          .select('*')
+          .eq('tenant_id', tenant)
+          .order('rank', { ascending: true });
+
+        if (data && !error) {
+          setRemoteStandings(data);
+        }
+      };
+      fetchStandings();
+    }
+  }, [isAdmin, activeTenantId, matches, events]);
 
   // Đếm giờ địa phương ticking liên tục
   useEffect(() => {
@@ -420,24 +440,52 @@ export default function LiveDashboard() {
     }
   };
 
-  const eventList = Object.values(events || {});
+  const eventList = React.useMemo(() => Object.values(events || {}), [events]);
 
-  // Hàm tính Standing cho một Event bất kỳ
-  const getEventStandings = (evt: typeof events[string]) => {
-    const stdRecord: Record<string, ReturnType<typeof calculateGroupStandings>> = {};
-    const groupList = Object.values(evt.groups || {});
-    groupList.forEach((g) => {
-      const groupMatches = (evt.matches || []).filter((m) => m.groupId === g.id);
-      stdRecord[g.id] = calculateGroupStandings(
-        g.id, 
-        g.teamIds, 
-        groupMatches, 
-        evt.teams || {}, 
-        evt.settings
-      );
+  // Pre-calculate standings for all events to avoid recounting on every 1-second clock tick
+  const standingsByEvent = React.useMemo(() => {
+    const record: Record<string, Record<string, ReturnType<typeof calculateGroupStandings>>> = {};
+    eventList.forEach(evt => {
+      const stdRecord: Record<string, ReturnType<typeof calculateGroupStandings>> = {};
+      const groupList = Object.values(evt.groups || {});
+      groupList.forEach((g) => {
+        if (isAdmin) {
+          const groupMatches = (evt.matches || []).filter((m) => m.groupId === g.id);
+          stdRecord[g.id] = calculateGroupStandings(
+            g.id, 
+            g.teamIds, 
+            groupMatches, 
+            evt.teams || {}, 
+            evt.settings
+          );
+        } else {
+          const remoteGroupInfo = remoteStandings.filter(s => s.group_id === g.id && s.event_id === evt.id);
+          stdRecord[g.id] = remoteGroupInfo.map(s => ({
+             teamId: s.team_id,
+             teamName: s.team_name,
+             seed: s.seed,
+             matchesPlayed: s.matches_played,
+             matchesWon: s.matches_won,
+             matchesLost: s.matches_lost,
+             points: s.points,
+             setsWon: s.sets_won,
+             setsLost: s.sets_lost,
+             pointsWon: s.points_won,
+             pointsLost: s.points_lost,
+             pointDiff: s.point_diff,
+             rank: s.rank
+          }));
+        }
+      });
+      record[evt.id] = stdRecord;
     });
-    return stdRecord;
-  };
+    return record;
+  }, [eventList, isAdmin, remoteStandings]);
+
+  // Hàm helper để xuất Excel gọi lại
+  const getEventStandings = React.useCallback((evt: typeof events[string]) => {
+    return standingsByEvent[evt.id] || {};
+  }, [standingsByEvent]);
 
   return (
     <div
@@ -489,11 +537,15 @@ export default function LiveDashboard() {
         <div className="space-y-8" id="tv-all-events-view">
           {eventList.map((evt) => {
             const stdByGrp = getEventStandings(evt);
-            const evtGroups = Object.values(evt.groups || {});
-            const evtMatches = evt.matches || [];
-            const koMatches = evtMatches.filter((m) => m.groupId === 'knockout');
-            const pendingMatches = balanceMatchesRestTime(evtMatches.filter((m) => m.status === 'pending'));
-            const finishedMatches = evtMatches.filter((m) => m.status === 'finished').slice(-4);
+            
+            const { evtGroups, evtMatches, koMatches, pendingMatches, finishedMatches } = React.useMemo(() => {
+              const groups = Object.values(evt.groups || {});
+              const matches = evt.matches || [];
+              const ko = matches.filter((m) => m.groupId === 'knockout');
+              const pending = balanceMatchesRestTime(matches.filter((m) => m.status === 'pending'));
+              const finished = matches.filter((m) => m.status === 'finished').slice(-4);
+              return { evtGroups: groups, evtMatches: matches, koMatches: ko, pendingMatches: pending, finishedMatches: finished };
+            }, [evt]);
 
             return (
               <div 
@@ -728,11 +780,14 @@ export default function LiveDashboard() {
             if (!currentEvt) return <div className="py-20 text-center text-zinc-550">Lỗi: Nội dung trống.</div>;
 
             const stdByGrp = getEventStandings(currentEvt);
-            const evtGroups = Object.values(currentEvt.groups || {});
-            const evtMatches = currentEvt.matches || [];
-            const koMatches = evtMatches.filter((m) => m.groupId === 'knockout');
-            const pendingMatches = balanceMatchesRestTime(evtMatches.filter((m) => m.status === 'pending'));
-            const finishedMatches = evtMatches.filter((m) => m.status === 'finished').slice(-10);
+            const { evtGroups, evtMatches, koMatches, pendingMatches, finishedMatches } = React.useMemo(() => {
+              const groups = Object.values(currentEvt.groups || {});
+              const matches = currentEvt.matches || [];
+              const ko = matches.filter((m) => m.groupId === 'knockout');
+              const pending = balanceMatchesRestTime(matches.filter((m) => m.status === 'pending'));
+              const finished = matches.filter((m) => m.status === 'finished').slice(-10);
+              return { evtGroups: groups, evtMatches: matches, koMatches: ko, pendingMatches: pending, finishedMatches: finished };
+            }, [currentEvt]);
 
             return (
               <>

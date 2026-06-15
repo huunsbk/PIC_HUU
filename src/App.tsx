@@ -44,23 +44,21 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  const {
-    tournament,
-    darkMode,
-    setDarkMode,
-    selectedTab,
-    setSelectedTab,
-    isAdmin,
-    setAdminStatus,
-    initSupabase,
-    supabaseConnected,
-    currentUser,
-    userRole,
-    activeTenantId,
-    setAuthStatus,
-    setTenantId,
-    accounts
-  } = useTournamentStore();
+  const tournament = useTournamentStore((state) => state.tournament);
+  const darkMode = useTournamentStore((state) => state.darkMode);
+  const setDarkMode = useTournamentStore((state) => state.setDarkMode);
+  const selectedTab = useTournamentStore((state) => state.selectedTab);
+  const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
+  const isAdmin = useTournamentStore((state) => state.isAdmin);
+  const setAdminStatus = useTournamentStore((state) => state.setAdminStatus);
+  const initSupabase = useTournamentStore((state) => state.initSupabase);
+  const supabaseConnected = useTournamentStore((state) => state.supabaseConnected);
+  const currentUser = useTournamentStore((state) => state.currentUser);
+  const userRole = useTournamentStore((state) => state.userRole);
+  const activeTenantId = useTournamentStore((state) => state.activeTenantId);
+  const setAuthStatus = useTournamentStore((state) => state.setAuthStatus);
+  const setTenantId = useTournamentStore((state) => state.setTenantId);
+  const accounts = useTournamentStore((state) => state.accounts);
 
   const [isLoginOpen, setIsLoginOpen] = React.useState(false);
   const [isDbChanging, setIsDbChanging] = React.useState(false);

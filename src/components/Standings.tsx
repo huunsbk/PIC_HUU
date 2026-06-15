@@ -3,55 +3,103 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTournamentStore } from '../store';
+import { supabase } from '../supabaseClient';
 import { calculateGroupStandings, calculateBestThirdPlaces } from '../utils/tournamentEngine';
 import { BarChart3, Star, Download, Printer, ShieldAlert, Award } from 'lucide-react';
 
 export default function Standings() {
-  const {
-    teams,
-    groups,
-    matches,
-    tournament,
-    addLog,
-    advanceSelectionMode,
-    setAdvanceSelectionMode,
-    manualQualifiedTeamIds,
-    toggleManualQualifiedTeam,
-    clearManualQualifiedTeams,
-  } = useTournamentStore();
+  const matches = useTournamentStore(state => state.matches);
+  const teams = useTournamentStore(state => state.teams);
+  const groups = useTournamentStore(state => state.groups);
+  const tournament = useTournamentStore(state => state.tournament);
+  const advanceSelectionMode = useTournamentStore(state => state.advanceSelectionMode);
+  const manualQualifiedTeamIds = useTournamentStore(state => state.manualQualifiedTeamIds);
+  const isAdmin = useTournamentStore(state => state.isAdmin);
+  const activeTenantId = useTournamentStore(state => state.activeTenantId);
+  const currentEventId = useTournamentStore(state => state.currentEventId);
 
-  const groupList = Object.values(groups);
+  const addLog = useTournamentStore(state => state.addLog);
+  const setAdvanceSelectionMode = useTournamentStore(state => state.setAdvanceSelectionMode);
+  const toggleManualQualifiedTeam = useTournamentStore(state => state.toggleManualQualifiedTeam);
+  const clearManualQualifiedTeams = useTournamentStore(state => state.clearManualQualifiedTeams);
+
+  const groupList = React.useMemo(() => Object.values(groups), [groups]);
   const settings = tournament.settings;
 
+  const [remoteStandings, setRemoteStandings] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      const fetchStandings = async () => {
+        const tenant = activeTenantId || 'default';
+        const { data, error } = await supabase.from('view_team_standings')
+          .select('*')
+          .eq('tenant_id', tenant)
+          .eq('event_id', currentEventId)
+          .order('rank', { ascending: true });
+
+        if (data && !error) {
+          setRemoteStandings(data);
+        }
+      };
+      fetchStandings();
+    }
+  }, [isAdmin, activeTenantId, currentEventId, matches]);
+
   // 1. Tính toán BXH toàn bộ các bảng ở trạng thái tức thì
-  const standingsByGroup: Record<string, ReturnType<typeof calculateGroupStandings>> = {};
-  const groupFinishedMap: Record<string, boolean> = {};
-  groupList.forEach((group) => {
-    const groupMatches = matches.filter((m) => m.groupId === group.id);
-    groupFinishedMap[group.id] = groupMatches.length > 0 && groupMatches.every((m) => m.status === 'finished');
-    standingsByGroup[group.id] = calculateGroupStandings(
-      group.id,
-      group.teamIds,
-      groupMatches,
-      teams,
-      settings
-    );
-  });
-  const allGroupsFinished = groupList.length > 0 && groupList.every(g => groupFinishedMap[g.id]);
+  const { standingsByGroup, groupFinishedMap, allGroupsFinished } = React.useMemo(() => {
+    const sbGroup: Record<string, ReturnType<typeof calculateGroupStandings>> = {};
+    const gfMap: Record<string, boolean> = {};
+    groupList.forEach((group) => {
+      const groupMatches = matches.filter((m) => m.groupId === group.id);
+      gfMap[group.id] = groupMatches.length > 0 && groupMatches.every((m) => m.status === 'finished');
+
+      if (isAdmin) {
+        sbGroup[group.id] = calculateGroupStandings(
+          group.id,
+          group.teamIds,
+          groupMatches,
+          teams,
+          settings
+        );
+      } else {
+        const remoteGroupInfo = remoteStandings.filter(s => s.group_id === group.id);
+        sbGroup[group.id] = remoteGroupInfo.map(s => ({
+           teamId: s.team_id,
+           teamName: s.team_name,
+           seed: s.seed,
+           matchesPlayed: s.matches_played,
+           matchesWon: s.matches_won,
+           matchesLost: s.matches_lost,
+           points: s.points,
+           setsWon: s.sets_won,
+           setsLost: s.sets_lost,
+           pointsWon: s.points_won,
+           pointsLost: s.points_lost,
+           pointDiff: s.point_diff,
+           rank: s.rank
+        }));
+      }
+    });
+    const allFinished = groupList.length > 0 && groupList.every(g => gfMap[g.id]);
+    return { standingsByGroup: sbGroup, groupFinishedMap: gfMap, allGroupsFinished: allFinished };
+  }, [groupList, matches, isAdmin, teams, settings, remoteStandings]);
 
   // 2. Tính toán BXH Hạng 3 xuất sắc nhất (UEFA)
-  const groupNamesMap: Record<string, string> = {};
-  groupList.forEach((g) => {
-    groupNamesMap[g.id] = g.name;
-  });
-  const bestThirdPlaces = calculateBestThirdPlaces(
-    standingsByGroup,
-    matches,
-    settings,
-    groupNamesMap
-  );
+  const bestThirdPlaces = React.useMemo(() => {
+    const groupNamesMap: Record<string, string> = {};
+    groupList.forEach((g) => {
+      groupNamesMap[g.id] = g.name;
+    });
+    return calculateBestThirdPlaces(
+      standingsByGroup,
+      matches,
+      settings,
+      groupNamesMap
+    );
+  }, [groupList, standingsByGroup, matches, settings]);
 
   // Xuất bảng điểm Copy-pasteable CSV cho Tổ chức mang về Excel
   const handleExportCSV = () => {

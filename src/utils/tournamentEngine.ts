@@ -321,8 +321,10 @@ export function generateKnockoutMatchesSchema(
     const bronzeMatch: Match = {
       id: bronzeMatchId,
       groupId: 'knockout',
-      teamAId: 'Thua Bán Kết 1',
-      teamBId: 'Thua Bán Kết 2',
+      teamAId: null,
+      teamBId: null,
+      placeholderA: 'Thua Bán Kết 1',
+      placeholderB: 'Thua Bán Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -335,8 +337,10 @@ export function generateKnockoutMatchesSchema(
     const finalMatch: Match = {
       id: finalMatchId,
       groupId: 'knockout',
-      teamAId: 'Thắng Bán Kết 1',
-      teamBId: 'Thắng Bán Kết 2',
+      teamAId: null,
+      teamBId: null,
+      placeholderA: 'Thắng Bán Kết 1',
+      placeholderB: 'Thắng Bán Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -349,8 +353,10 @@ export function generateKnockoutMatchesSchema(
     const sf1: Match = {
       id: `ko-SF1-${randomId()}`,
       groupId: 'knockout',
-      teamAId: advancingTeams[0] ? advancingTeams[0].placeholder : 'Nhất Bảng A',
-      teamBId: advancingTeams[1] ? advancingTeams[1].placeholder : 'Nhì Bảng B',
+      teamAId: null,
+      teamBId: null,
+      placeholderA: advancingTeams[0] ? advancingTeams[0].placeholder : 'Nhất Bảng A',
+      placeholderB: advancingTeams[1] ? advancingTeams[1].placeholder : 'Nhì Bảng B',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -365,8 +371,10 @@ export function generateKnockoutMatchesSchema(
     const sf2: Match = {
       id: `ko-SF2-${randomId()}`,
       groupId: 'knockout',
-      teamAId: advancingTeams[2] ? advancingTeams[2].placeholder : 'Nhất Bảng B',
-      teamBId: advancingTeams[3] ? advancingTeams[3].placeholder : 'Nhì Bảng A',
+      teamAId: null,
+      teamBId: null,
+      placeholderA: advancingTeams[2] ? advancingTeams[2].placeholder : 'Nhất Bảng B',
+      placeholderB: advancingTeams[3] ? advancingTeams[3].placeholder : 'Nhì Bảng A',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -401,8 +409,8 @@ export function generateKnockoutMatchesSchema(
     const bronzeMatch: Match = {
       id: `ko-${bronzeId}-${randomId()}`,
       groupId: 'knockout',
-      teamAId: 'L-SF1', // Nhãn giữ chỗ cho đội thua SF1
-      teamBId: 'L-SF2', // Thua SF2
+      teamAId: null, placeholderA: 'L-SF1', // Nhãn giữ chỗ cho đội thua SF1
+      teamBId: null, placeholderB: 'L-SF2', // Thua SF2
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -415,8 +423,8 @@ export function generateKnockoutMatchesSchema(
     const finalMatch: Match = {
       id: `ko-${finalId}-${randomId()}`,
       groupId: 'knockout',
-      teamAId: 'W-SF1', // Thắng SF1
-      teamBId: 'W-SF2', // Thắng SF2
+      teamAId: null, placeholderA: 'W-SF1', // Thắng SF1
+      teamBId: null, placeholderB: 'W-SF2', // Thắng SF2
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -430,8 +438,8 @@ export function generateKnockoutMatchesSchema(
     const sf1: Match = {
       id: `ko-${sfIds[0]}-${randomId()}`,
       groupId: 'knockout',
-      teamAId: 'W-QF1',
-      teamBId: 'W-QF2',
+      teamAId: null, placeholderA: 'W-QF1',
+      teamBId: null, placeholderB: 'W-QF2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -446,8 +454,8 @@ export function generateKnockoutMatchesSchema(
     const sf2: Match = {
       id: `ko-${sfIds[1]}-${randomId()}`,
       groupId: 'knockout',
-      teamAId: 'W-QF3',
-      teamBId: 'W-QF4',
+      teamAId: null, placeholderA: 'W-QF3',
+      teamBId: null, placeholderB: 'W-QF4',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -472,8 +480,8 @@ export function generateKnockoutMatchesSchema(
       qfMatches.push({
         id: `ko-${qfIds[i]}-${randomId()}`,
         groupId: 'knockout',
-        teamAId: tA,
-        teamBId: tB,
+        teamAId: null, placeholderA: tA,
+        teamBId: null, placeholderB: tB,
         scoreA: null,
         scoreB: null,
         winnerId: null,
@@ -502,8 +510,8 @@ export function generateKnockoutMatchesSchema(
     const bronzeMatch: Match = {
       id: bronzeMatchId,
       groupId: 'knockout',
-      teamAId: 'Thua Bán Kết 1',
-      teamBId: 'Thua Bán Kết 2',
+      teamAId: null, placeholderA: 'Thua Bán Kết 1',
+      teamBId: null, placeholderB: 'Thua Bán Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -516,8 +524,8 @@ export function generateKnockoutMatchesSchema(
     const finalMatch: Match = {
       id: finalMatchId,
       groupId: 'knockout',
-      teamAId: 'Thắng Bán Kết 1',
-      teamBId: 'Thắng Bán Kết 2',
+      teamAId: null, placeholderA: 'Thắng Bán Kết 1',
+      teamBId: null, placeholderB: 'Thắng Bán Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -533,8 +541,8 @@ export function generateKnockoutMatchesSchema(
     const sf1: Match = {
       id: sf1Id,
       groupId: 'knockout',
-      teamAId: 'Thắng Tứ Kết 1',
-      teamBId: 'Thắng Tứ Kết 2',
+      teamAId: null, placeholderA: 'Thắng Tứ Kết 1',
+      teamBId: null, placeholderB: 'Thắng Tứ Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -549,8 +557,8 @@ export function generateKnockoutMatchesSchema(
     const sf2: Match = {
       id: sf2Id,
       groupId: 'knockout',
-      teamAId: 'Thắng Tứ Kết 3',
-      teamBId: 'Thắng Tứ Kết 4',
+      teamAId: null, placeholderA: 'Thắng Tứ Kết 3',
+      teamBId: null, placeholderB: 'Thắng Tứ Kết 4',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -574,8 +582,8 @@ export function generateKnockoutMatchesSchema(
       qfMatches.push({
         id: qfIdStr,
         groupId: 'knockout',
-        teamAId: `Thắng Vòng 1/8 (Trận ${i * 2 + 1})`,
-        teamBId: `Thắng Vòng 1/8 (Trận ${i * 2 + 2})`,
+        teamAId: null, placeholderA: `Thắng Vòng 1/8 (Trận ${i * 2 + 1})`,
+        teamBId: null, placeholderB: `Thắng Vòng 1/8 (Trận ${i * 2 + 2})`,
         scoreA: null,
         scoreB: null,
         winnerId: null,
@@ -600,8 +608,8 @@ export function generateKnockoutMatchesSchema(
       r16Matches.push({
         id: r16IdStr,
         groupId: 'knockout',
-        teamAId: `Thắng Vòng 32 (Trận ${i * 2 + 1})`,
-        teamBId: `Thắng Vòng 32 (Trận ${i * 2 + 2})`,
+        teamAId: null, placeholderA: `Thắng Vòng 32 (Trận ${i * 2 + 1})`,
+        teamBId: null, placeholderB: `Thắng Vòng 32 (Trận ${i * 2 + 2})`,
         scoreA: null,
         scoreB: null,
         winnerId: null,
@@ -626,8 +634,8 @@ export function generateKnockoutMatchesSchema(
       r32Matches.push({
         id: `ko-R32-${i + 1}-${randomId()}`,
         groupId: 'knockout',
-        teamAId: tA,
-        teamBId: tB,
+        teamAId: null, placeholderA: tA,
+        teamBId: null, placeholderB: tB,
         scoreA: null,
         scoreB: null,
         winnerId: null,
@@ -657,8 +665,8 @@ export function generateKnockoutMatchesSchema(
     const bronzeMatch: Match = {
       id: bronzeMatchId,
       groupId: 'knockout',
-      teamAId: 'Thua Bán Kết 1',
-      teamBId: 'Thua Bán Kết 2',
+      teamAId: null, placeholderA: 'Thua Bán Kết 1',
+      teamBId: null, placeholderB: 'Thua Bán Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -671,8 +679,8 @@ export function generateKnockoutMatchesSchema(
     const finalMatch: Match = {
       id: finalMatchId,
       groupId: 'knockout',
-      teamAId: 'Thắng Bán Kết 1',
-      teamBId: 'Thắng Bán Kết 2',
+      teamAId: null, placeholderA: 'Thắng Bán Kết 1',
+      teamBId: null, placeholderB: 'Thắng Bán Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -688,8 +696,8 @@ export function generateKnockoutMatchesSchema(
     const sf1: Match = {
       id: sf1Id,
       groupId: 'knockout',
-      teamAId: 'Thắng Tứ Kết 1',
-      teamBId: 'Thắng Tứ Kết 2',
+      teamAId: null, placeholderA: 'Thắng Tứ Kết 1',
+      teamBId: null, placeholderB: 'Thắng Tứ Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -704,8 +712,8 @@ export function generateKnockoutMatchesSchema(
     const sf2: Match = {
       id: sf2Id,
       groupId: 'knockout',
-      teamAId: 'Thắng Tứ Kết 3',
-      teamBId: 'Thắng Tứ Kết 4',
+      teamAId: null, placeholderA: 'Thắng Tứ Kết 3',
+      teamBId: null, placeholderB: 'Thắng Tứ Kết 4',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -729,8 +737,8 @@ export function generateKnockoutMatchesSchema(
       qfMatches.push({
         id: qfIdStr,
         groupId: 'knockout',
-        teamAId: `Thắng Vòng 16 (Trận ${i * 2 + 1})`,
-        teamBId: `Thắng Vòng 16 (Trận ${i * 2 + 2})`,
+        teamAId: null, placeholderA: `Thắng Vòng 16 (Trận ${i * 2 + 1})`,
+        teamBId: null, placeholderB: `Thắng Vòng 16 (Trận ${i * 2 + 2})`,
         scoreA: null,
         scoreB: null,
         winnerId: null,
@@ -755,8 +763,8 @@ export function generateKnockoutMatchesSchema(
       r16Matches.push({
         id: `ko-R16-${i + 1}-${randomId()}`,
         groupId: 'knockout',
-        teamAId: tA,
-        teamBId: tB,
+        teamAId: null, placeholderA: tA,
+        teamBId: null, placeholderB: tB,
         scoreA: null,
         scoreB: null,
         winnerId: null,
