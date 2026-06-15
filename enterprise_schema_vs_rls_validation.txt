@@ -1,0 +1,58 @@
+BÁO CÁO ĐỐI CHIẾU SCHEMA THỰC TẾ VÀ ĐIỀU KIỆN RLS
+(Dựa trên phân tích Metadata, Type Definitions và PostgREST Restrictions)
+
+==================================================
+TỔNG QUAN
+==================================================
+Tiến hành phân tích sự tương thích giữa Cấu trúc Database hiện tại (Core Legacy Tables + Enterprise Multi-tenant Tables) so với hệ thống Policy trong `ENTERPRISE_RLS_FINAL.sql`.
+
+==================================================
+1. CẤU TRÚC CỘT & KHÓA NGOẠI (HIỆN TRẠNG)
+==================================================
+- KHỐI GIẢI ĐẤU CŨ (`tournament`, `events`, `groups`, `teams`, `matches`, `audit_logs`):
+  + PK: `id TEXT` (VD: 't-1', 'event-default').
+  + FK/Isolator: `tenant_id TEXT DEFAULT 'default'`.
+
+- KHỐI ENTERPRISE MỚI (`tenants`, `roles`, `permissions`, `account_permissions`, `active_sessions`):
+  + PK: `id UUID`.
+  + `tenant_id` trong hệ thống mới: `UUID`.
+  
+- KHỐI TÀI KHOẢN (`accounts`):
+  + TỒN TẠI XUNG ĐỘT: Bảng `accounts` gốc được tạo bằng `TEXT` (username TEXT PK). DB Script mới dùng `CREATE TABLE IF NOT EXISTS public.accounts`. Nếu bảng cũ chưa bị DROP, lệnh mới bị bỏ qua -> Accounts kẹt lại ở schema cũ (Thiếu UUID).
+
+==================================================
+KẾT QUẢ PHÂN TÍCH THEO CÁC MỤC (A - E)
+==================================================
+
+A. CHÍNH XÁC (TRÙNG KHỚP RLS)
+- Bảng `tenants`, `active_sessions`, `login_logs`, `account_permissions` được khai báo mới bằng UUID. Các policy RLS liên kết `account_id` và `get_auth_account_id()` đều trùng khớp kiểu biến (`UUID = UUID`).
+
+B. KHÔNG KHỚP (MISMATCH TOÀN HỆ THỐNG)
+- Lỗi Type Mismatch trầm trọng giữa Khối Giải Đấu và Khối Tài Khoản:
+  Policy RLS yêu cầu: `tenant_id = get_auth_account_tenant_id()`
+  Bản chất: `TEXT = UUID` -> PostgreSQL sẽ ném lỗi `operator does not exist: text = uuid` và chặn toàn bộ Load dữ liệu của UI làm trang web trắng toàn tập.
+
+C. THIẾU CỘT (MISSING COLUMNS)
+- Do bảng `accounts` cũ tồn tại, việc chạy script tạo bảng `accounts` Enterprise bị Block. Bảng thực tế trên Supabase đang THIẾU các cột:
+  + `user_id UUID`
+  + `tenant_id UUID`
+  + `role_id UUID`
+- Hệ quả: Các hàm helper (`get_auth_account_tenant_id`, `get_auth_account_role`) select các cột không tồn tại, gây lỗi sập hàm Security Definer.
+
+D. SAI CỘT (INCORRECT DATA TYPES)
+- `groups.tenant_id`: Kiểu TEXT (Cần UUID hoặc đổi Policy ép kiểu `tenant_id::TEXT = get_auth_account_tenant_id()::TEXT`).
+- `teams.tenant_id`: Kiểu TEXT.
+- `matches.tenant_id`: Kiểu TEXT.
+- `events.tenant_id`: Kiểu TEXT.
+- `tournament.tenant_id`: Kiểu TEXT.
+
+E. SAI GIẢ ĐỊNH AUTH (AUTH ASSUMPTIONS FAILURES)
+- RLS giả định: Người dùng đang sử dụng JWT của Supabase Authentication (`auth.uid() = user_id`) để xác thực Policy thông qua biến cố định cấp DB.
+- Thực tế Client: React Frontend đang xác thực dựa trên local state (LocalStorage) và ghi Session ID tự chế. Có nguy cơ `auth.uid()` bị trả về `NULL` trên mỗi Single Request truyền lên Supabase nếu Header của PostgREST chỉ mang thẻ Anon Key thay vì JWT Token của Session hợp lệ. Khi `auth.uid() IS NULL`, toàn bộ truy vấn `get_auth_account_id()` sẽ rỗng, và RLS sẽ chặn mọi kết nối (Guest hay Admin đều bị văng).
+
+==================================================
+KẾT LUẬN CUỐI CÙNG
+==================================================
+Xếp loại: KHÔNG TƯƠNG THÍCH NGHIÊM TRỌNG (CRITICAL FAILURE).
+
+Không thể áp dụng bảng ENTERPRISE_RLS_FINAL.sql lên Supabase ở tình trạng này. SQL sẽ báo lỗi Type Casting (UUID vs TEXT) ở hàng loạt lệnh DML & DQL. Bắt buộc phải thực hiện Migration đổi Data Type (TEXT -> UUID) cho mọi trường `tenant_id` của khối giải đấu và dọn dẹp bảng `accounts` cũ để kích hoạt Schema Enterprise thực thụ.

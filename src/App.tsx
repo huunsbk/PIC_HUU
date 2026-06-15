@@ -58,18 +58,7 @@ export default function App() {
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const setAuthStatus = useTournamentStore((state) => state.setAuthStatus);
   const setTenantId = useTournamentStore((state) => state.setTenantId);
-  const checkAdminSession = useTournamentStore((state) => state.checkAdminSession);
   const currentSessionId = useTournamentStore((state) => state.currentSessionId);
-
-  // Kiểm tra Single-Login song song 1 thiết bị/1 tài khoản
-  useEffect(() => {
-    if (currentEnterpriseUser && currentSessionId) {
-      const interval = setInterval(() => {
-        checkAdminSession();
-      }, 5000); // Check every 5 seconds
-      return () => clearInterval(interval);
-    }
-  }, [currentEnterpriseUser, currentSessionId, checkAdminSession]);
 
   const [isLoginOpen, setIsLoginOpen] = React.useState(false);
   const [isDbChanging, setIsDbChanging] = React.useState(false);
@@ -152,18 +141,17 @@ export default function App() {
 
   useEffect(() => {
     // Lắng nghe sự kiện Auth từ Supabase
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const store = useTournamentStore.getState();
+      
       if (event === 'SIGNED_OUT') {
-        const store = useTournamentStore.getState();
-        // Bỏ qua cho các tài khoản quản trị Enterprise để tránh false-positives khi nạp lại trang
-        if (!store.currentEnterpriseUser) {
-          if (store.isAdmin) {
-            console.log('[Auth Listener] Phát hiện đăng xuất từ hệ thống/thiết bị khác cho tài khoản standard.');
-            store.logout();
-          }
-        } else {
-          console.log(`[Auth Listener] Bỏ qua sự kiện SIGNED_OUT của quản trị viên ảo "${store.userRole}" để bảo toàn trạng thái LocalStorage.`);
+        console.log('[Auth Listener] Phát hiện đăng xuất (SIGNED_OUT).');
+        if (store.userRole !== 'guest' || store.currentUser !== null) {
+          store.logout();
         }
+      } else if (event === 'SIGNED_IN' && session?.user && store.userRole === 'guest') {
+        // Option to handle reload or auto-login on new tab if needed.
+        // For now, let AuthModal handle the sign in when user submits.
       }
     });
 

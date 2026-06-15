@@ -1,0 +1,80 @@
+BÁO CÁO KẾ HOẠCH TÁI CẤU TRÚC FRONTEND ENTERPRISE THUẦN DB LÀM TRUNG TÂM
+
+================================================================================
+1. CURRENT LOGIN FLOW (LUỒNG ĐĂNG NHẬP HIỆN TẠI)
+================================================================================
+- Vị trí xử lý chính: `src/components/AuthModal.tsx` và `src/store.ts`.
+- Hành vi sai lệch:
+  1. Frontend gọi `supabase.auth.signInWithPassword()`.
+  2. Frontend tự gọi tiếp DB qua bảng `accounts`, `roles`, `account_permissions` để lấy thông tin.
+  3. Frontend tự có logic "cấp quyền tự động" (Fallback) nếu bảng permission trên DB rỗng.
+  4. Sau khi tự tính toán tất cả, Frontend mới đưa vào Zustand `setAuthStatus()`. 
+  Làm như vậy phó thác hoàn toàn bảo mật cho Client.
+
+================================================================================
+2. CURRENT TENANT FLOW (LUỒNG TENANT HIỆN TẠI)
+================================================================================
+- Khởi tạo: Sau khi `AuthModal` truy vấn tài khoản, lấy `tenant_id` và đưa xuống `setAuthStatus`.
+- Lưu trữ: `activeTenantId` được duy trì trong Zustand (Persisted lên `localStorage` tại key `pickleball-tournament-cache`).
+- Cách sử dụng: Frontend tự chèn `.eq('tenant_id', activeTenantId)` vào tất cả các lệnh call Supabase ở `src/store.ts`. 
+- Cảnh báo bảo mật: LocalStorage có thể bị giả mạo.
+
+================================================================================
+3. CURRENT SESSION FLOW (LUỒNG PHIÊN HIỆN TẠI)
+================================================================================
+- Tạo mới: Frontend `store.ts` (dòng 650) tự randomize một chuỗi text `sessionId` ngẫu nhiên.
+- Ghi log: Frontend tự gọi INSERT trực tiếp vào bảng `active_sessions` và `login_logs` qua API.
+- Theo dõi: `App.tsx` thiết lập `setInterval()` chạy ngầm mỗi 5 giây gọi xuống hàm `checkAdminSession()` của `store.ts` để kiểm tra có trùng session_token không.
+- Hạn chế: Kém an toàn, spam request lên Supabase quá nhiều. Người dùng có thể xóa lệnh Interval trong DevTools.
+
+================================================================================
+4. LEGACY COMPONENTS (CẦN LOẠI BỎ)
+================================================================================
+- Thuộc tính `parentTenantId` trong interface `src/types.ts`.
+- Local fallback Hard-code cấp quyền (những dòng `['view_dashboard', 'manage_teams',...]`) dựa vào mappedRole ở `AuthModal.tsx`.
+- Ghi đè LocalStorage cache (Không lưu cache Authentication lên LocalStorage, vì Token auth tự lưu ở Supabase Gotrue).
+- Đoạn query loại bỏ `accounts_config` ID giả tại `store.ts`.
+
+================================================================================
+5. NEW ENTERPRISE FLOW (KIẾN TRÚC MỚI)
+================================================================================
+[Bước 1] Supabase Auth: Đăng nhập bằng `signInWithPassword`.
+[Bước 2] Dữ liệu Master được gọi thông qua một hàm RPC/View trên Supabase hoặc Hook `onAuthStateChange`. 
+[Bước 3] RPC/Trigger DB đảm nhận trách nhiệm TỰ ĐỘNG INSERT log vào `active_sessions` & `login_logs` (Frontend không còn gọi INSERT). 
+[Bước 4] Role, Permissions, Tenant_id được Backend trả về chính xác cho Frontend, cất vào State (Bộ nhớ Tạm) của Zustand và KHÔNG persit lên `localStorage` nữa.
+[Bước 5] Nếu DB session_token hoặc JWT hết hạn -> Kích hoạt `supabase.auth.signOut()` và đưa về chế độ Guest.
+
+================================================================================
+6. DANH SÁCH FILE PHẢI SỬA
+================================================================================
+- `src/components/AuthModal.tsx`: Gọt bỏ 80% logic lookup quyền hạn và fallback mapping đi.
+- `src/store.ts`: Loại bỏ lưu Cache Persist state liên quan tới user, gỡ API chèn log database, viết lại hàm `setAuthStatus`.
+- `src/App.tsx`: Refactor hoặc xóa bỏ vòng lặp 5s setInterval `checkAdminSession`.
+- `src/types.ts`: Xóa `parentTenantId` và các types legacy của accountConfig.
+
+================================================================================
+7. DANH SÁCH HÀM PHẢI SỬA
+================================================================================
+* Trong `AuthModal.tsx`: `handleLogin()` (Chỉ gọi signInWithPassword và gọi hàm fetch account profile thuần túy, cấm cấp quyền mẫu).
+* Trong `store.ts`:
+  - `setAuthStatus()`: Xóa insert `active_sessions` và `login_logs`.
+  - `checkAdminSession()`: Xóa hoặc chuyển hình thức sang hook Websocket RealTime bắt sự thay đổi bảng `active_sessions` thay vì gọi polling REST API 5 giây 1 lần rác rưởi.
+  - `logout()`: Xóa rác xoá LocalStorage cache thủ công, dùng Supabase auth.signOut().
+
+================================================================================
+8. THỨ TỰ REFACTOR (ĐỀ XUẤT THỰC HIỆN ĐỂ TRÁNH LỖI OVERLAP)
+================================================================================
+Giai đoạn 1: Sửa Backend (Supabase):
+1. Tạo 2 Trigger (After Insert và After Logon) hoặc 1 hàm RPC (login_and_sync) tại Supabase để giải quyêt luồng Active Session.
+Giai đoạn 2: Sửa Types và Zustand Store Frontend:
+2. Bỏ persist authentication local cho `store.ts`, gỡ bỏ `checkAdminSession` thủ công.
+Giai đoạn 3: Ráp mạch UI:
+3. Viết lại `AuthModal.tsx`, dẹp block mã if/else "Nếu db trống, fallback tạm permission" tự cấp quyền.
+4. Sửa `App.tsx` xóa hook `setInterval` 5 giây.
+
+================================================================================
+9. ƯỚC LƯỢNG RỦI RO
+================================================================================
+- Mức độ rủi ro: CAO.
+- Ảnh hưởng: Quá trình chuyển đổi từ Session Frontend sang JWT/Session DB có nguy cơ gây đứt gãy luồng đăng nhập của tất cả Client đang active hiện tại, bắt buộc người dùng đăng nhập lại từ đầu.
+- Rủi ro Frontend: Mất luồng Single-Login Polling 5s cũ. Việc dùng Websocket (Supabase Realtime) lên bảng active_sessions sẽ tiết kiệm tài nguyên Server hơn 90% nhưng đòi hỏi phải cấp Public Read channel cho bảng đó (Hoặc RLS phù hợp) thì Client mới Subscribe được.

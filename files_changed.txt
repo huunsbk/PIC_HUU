@@ -1,0 +1,5 @@
+src/types.ts
+src/store.ts
+src/App.tsx
+src/components/AuthModal.tsx
+migration.sql

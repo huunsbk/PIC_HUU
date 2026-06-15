@@ -1,0 +1,14 @@
+BƯỚC 1: TRIỂN KHAI DATABASE MIGRATION TRÊN SUPABASE
+1. Đăng nhập Supabase Dashboard -> Truy cập SQL Editor.
+2. Dán và `RUN` nội dung file `migration.sql` để tạo hàm RPC `get_current_profile()`.
+3. Kiểm tra bằng cách chạy thử `SELECT get_current_profile()`.
+
+BƯỚC 2: BUILD VÀ DEPLOY FRONTEND
+1. Frontend Local test build: `npm run build`
+2. Đẩy các commit liên quan đến Refractor của AuthModal, App.tsx, store.ts, types.ts.
+3. Chờ CI/CD triển khai (Vercel/Netlify hoặc hạ tầng đang host UI).
+
+BƯỚC 3: KIỂM TOÁN VÀ NGHIỆM THU
+1. Đăng nhập bằng tài khoản Quản trị.
+2. Dùng Supabase SQL Editor xoá token JWT hoặc logout trên các thiết bị khác, để cho DB session thay đổi. Supabase Realtime/Gotrue sẽ thay đổi.
+3. Quan sát browser có nhận trigger thay đổi và đăng xuất chính xác hay không.

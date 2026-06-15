@@ -31,10 +31,9 @@ interface AppState {
   // Multi-tier accounts configuration
   currentUser: string | null;
   currentEnterpriseUser: any | null; // Will store full EnterpriseAccount details
-  currentSessionId: string | null;
   userRole: 'guest' | 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EVENT_ADMIN';
   activeTenantId: string; // 'default' or UUID of tenant
-  setAuthStatus: (role: 'guest' | 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EVENT_ADMIN', username: string | null, tenantId: string, sessionId?: string, enterpriseUser?: any) => Promise<void>;
+  setAuthStatus: (role: 'guest' | 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EVENT_ADMIN', username: string | null, tenantId: string, enterpriseUser?: any) => Promise<void>;
   logout: () => Promise<void>;
   setTenantId: (tenantId: string) => Promise<void>;
 
@@ -43,7 +42,6 @@ interface AppState {
 
   // Actions
   checkConnection: () => Promise<boolean>;
-  checkAdminSession: () => Promise<void>;
   updateTournament: (t: Partial<Tournament>) => void;
   updateSettings: (s: Partial<TournamentSettings>) => void;
   
@@ -641,20 +639,17 @@ export const useTournamentStore = create<AppState>()(
         currentEventId: 'event-default',
         currentUser: null,
         currentEnterpriseUser: null,
-        currentSessionId: null,
         userRole: 'guest',
         activeTenantId: 'default',
         permissions: [],
         isLoadingSupabase: false,
-        setAuthStatus: async (role, username, tenantId, providedSessionId, enterpriseUser) => {
-          const sessionId = providedSessionId || Date.now().toString() + Math.random().toString(36).substring(2, 9);
-          console.log(`[Session Setup] Bắt đầu thiết lập Auth cho "${username}". Khởi tạo Session ID mới: "${sessionId}".`);
+        setAuthStatus: async (role, username, tenantId, enterpriseUser) => {
+          console.log(`[Auth Setup] Bắt đầu thiết lập Auth cho "${username}".`);
           
           originalSet({
             userRole: role,
             currentUser: username,
             currentEnterpriseUser: enterpriseUser || null,
-            currentSessionId: sessionId,
             activeTenantId: tenantId,
             permissions: enterpriseUser?.permissions || (role === 'SUPER_ADMIN' ? ['*'] : []),
             isAdmin: role === 'SUPER_ADMIN' || role === 'TENANT_ADMIN' || role === 'EVENT_ADMIN',
@@ -663,37 +658,6 @@ export const useTournamentStore = create<AppState>()(
           });
 
           if (enterpriseUser && enterpriseUser.id) {
-            try {
-              console.log(`[Session Setup] Đang thiết lập active_session cho ${enterpriseUser.id}`);
-              
-              // First delete old active sessions
-              await supabase.from('active_sessions').delete().eq('account_id', enterpriseUser.id);
-              
-              // Insert new session
-              const { error } = await supabase.from('active_sessions').insert({
-                account_id: enterpriseUser.id,
-                session_token: sessionId,
-                ip_address: 'unknown',
-                user_agent: navigator.userAgent
-              });
-              
-              if (error) {
-                console.error('[Session Setup] Ghi Session ID thất bại:', error);
-              } else {
-                console.log(`[Session Setup] Lưu Session ID "${sessionId}" lên DB thành công.`);
-              }
-              
-              // Log login success
-              await supabase.from('login_logs').insert({
-                account_id: enterpriseUser.id,
-                status: 'success',
-                reason: 'Login via Enterprise Auth'
-              });
-              
-            } catch (e) {
-              console.error('[Session Setup] Lỗi trong quá trình kết nối lưu Session ID:', e);
-            }
-              
             // Đảm bảo URL trên trình duyệt đồng bộ với tenant được cấp quyền, tránh nhầm lẫn
             requestAnimationFrame(() => {
               const expectedHash = '/' + tenantId.replace(/_/g, '-');
@@ -703,7 +667,7 @@ export const useTournamentStore = create<AppState>()(
             });
           }
           
-          console.log('[Session Setup] Đã đồng bộ cấu hình tài khoản. Đang khởi chạy tải lại cơ sở dữ liệu initSupabase()...');
+          console.log('[Auth Setup] Đã đồng bộ cấu hình tài khoản. Đang khởi chạy tải lại cơ sở dữ liệu initSupabase()...');
           await get().initSupabase();
         },
         logout: async () => {
@@ -713,19 +677,11 @@ export const useTournamentStore = create<AppState>()(
             return;
           }
           
-          if (state.currentEnterpriseUser?.id) {
-             try {
-                await supabase.from('active_sessions').delete().eq('account_id', state.currentEnterpriseUser.id);
-                // Also optionally log logout event to login_logs (out of scope for now or just log it simply)
-             } catch(e) {}
-          }
-          
           // Clear credentials synchronously first to avoid race conditions with auth listeners
           originalSet({
             userRole: 'guest',
             currentUser: null,
             currentEnterpriseUser: null,
-            currentSessionId: null,
             activeTenantId: 'default',
             permissions: [],
             isAdmin: false,
@@ -739,7 +695,7 @@ export const useTournamentStore = create<AppState>()(
           try {
             await supabase.auth.signOut();
           } catch (e) {
-            console.warn('Error signing out during manual logout:', e);
+            console.warn('Error signing out:', e);
           }
           
           localStorage.removeItem('pickleball-tournament-cache');
@@ -788,44 +744,6 @@ export const useTournamentStore = create<AppState>()(
           const connected = await checkSupabaseConnection();
           set({ supabaseConnected: connected });
           return connected;
-        },
-        checkAdminSession: async () => {
-          const state = get();
-          if (state.currentEnterpriseUser && state.currentSessionId) {
-            try {
-              let latestDbSessionId = null;
-              
-              const { data: sessionData, error } = await supabase
-                .from('active_sessions')
-                .select('session_token')
-                .eq('account_id', state.currentEnterpriseUser.id)
-                .single();
-                
-              if (!error && sessionData) {
-                latestDbSessionId = sessionData.session_token;
-              }
-
-              console.log(`[SingleSession Audit - checkAdminSession] Polling check:`, {
-                username: state.currentUser,
-                localSessionId: state.currentSessionId,
-                dbSessionId: latestDbSessionId,
-                status: latestDbSessionId === state.currentSessionId ? 'MATCH (Valid)' : (latestDbSessionId ? 'MISMATCH (Invalid)' : 'NO_SESSION_IN_DB')
-              });
-
-              if (latestDbSessionId && latestDbSessionId !== state.currentSessionId) {
-                console.warn(`[SingleSession Audit] Phát hiện đăng nhập song song qua polling:`, {
-                  username: state.currentUser,
-                  localSessionId: state.currentSessionId,
-                  dbSessionId: latestDbSessionId,
-                  reason: 'Mismatch between memory session state and database session config.'
-                });
-                alert(`CẢNH BÁO: KẾT NỐI BỊ NGẮT\n\nTài khoản "${state.currentUser}" vừa được đăng nhập thành công ở thiết bị hoặc trình duyệt khác.\n\nNhằm bảo vệ tính toàn vẹn dữ liệu lúc nhập điểm, hệ thống chỉ cho phép 1 tài khoản hoạt động trên 1 thiết bị/1 trình duyệt ở cùng một thời điểm.\n\nPhiên làm việc này sẽ được đăng xuất tự động.`);
-                get().logout();
-              }
-            } catch(e) {
-              console.warn('[SingleSession Audit - checkAdminSession] Gặp lỗi kiểm tra phiên đăng nhập:', e);
-            }
-          }
         },
 
         updateTournament: (t) => {
@@ -2216,50 +2134,15 @@ export const useTournamentStore = create<AppState>()(
             // Khởi tạo trạng thái Enterprise Auth session check
             let forceLogout = false;
             
-            if (localState.currentEnterpriseUser) {
-               try {
-                  const { data: sessionData, error } = await supabase
-                    .from('active_sessions')
-                    .select('session_token')
-                    .eq('account_id', localState.currentEnterpriseUser.id)
-                    .single();
-                  
-                  if (!error && sessionData) {
-                    const dbSessionId = sessionData.session_token;
-                    const localSessionId = localState.currentSessionId;
-                    
-                    console.log(`[SingleSession Audit - initSupabase] Trạng thái kiểm tra:`, {
-                      username: localState.currentUser,
-                      role: localState.userRole,
-                      localSessionId,
-                      dbSessionId,
-                      status: dbSessionId === localSessionId ? 'MATCH (Valid)' : (dbSessionId ? 'MISMATCH (Invalid)' : 'NO_SESSION_IN_DB')
-                    });
-                    
-                    if (dbSessionId && dbSessionId !== localSessionId) {
-                      console.warn(`[SingleSession Audit] Phát hiện xung đột phiên cho "${localState.currentUser}": CSDL là "${dbSessionId}" nhưng cục bộ là "${localSessionId}".`);
-                      forceLogout = true;
-                    }
-                  } else if (error) {
-                    // if it's because there's no session, it's fine, it could have been cleared.
-                    // But if they have a local token and DB has NO token, should they be logged out?
-                    // Better log them out if DB session is completely gone.
-                    forceLogout = true;
-                  }
-               } catch(e) {
-                 console.warn("Lỗi kiểm tra session Enterprise:", e);
-               }
-            }
-            
             if (forceLogout) {
               console.warn('Phát hiện đăng nhập song song hoặc mất phiên kết nối. Tự động đăng xuất phiên làm việc cũ.');
-              alert(`CẢNH BÁO: KẾT NỐI BỊ NGẮT\n\nTài khoản "${localState.currentUser}" vừa được đăng nhập thành công ở thiết bị hoặc trình duyệt khác.\n\nNhằm bảo vệ tính toàn vẹn dữ liệu lúc nhập điểm, hệ thống chỉ cho phép 1 tài khoản hoạt động trên 1 thiết bị/1 tab trình duyệt ở cùng một thời điểm.\n\nPhiên làm việc này sẽ được đăng xuất tự động.`);
+              alert(`CẢNH BÁO: KẾT NỐI BỊ NGẮT\n\nTài khoản "${localState.currentUser}" \n\nPhiên làm việc này sẽ được đăng xuất tự động.`);
               get().logout();
               return; // Ngừng quá trình initSupabase
             }
 
-            // Lọc ra các giải đấu thông thường (bỏ qua bản ghi cấu hình tài khoản)
-            const regularTournaments = (tData || []).filter((row: any) => row.id !== 'accounts_config');
+            // Lọc ra các giải đấu thông thường
+            const regularTournaments = tData || [];
 
             // 2. Đọc danh sách sự kiện - TRUY VẤN LỌC TRỰC TIẾP Ở DB LEVEL ĐỂ TỐI ƯU HÓA QUY MÔ LỚN
             let eData: any[] | null = null;
@@ -2590,6 +2473,9 @@ export const useTournamentStore = create<AppState>()(
     {
       name: 'pickleball-tournament-cache', // Khóa lưu trữ LocalStorage để đồng bộ giữa các tab
       storage: createJSONStorage(() => localStorage),
+      partialize: (state) => Object.fromEntries(
+        Object.entries(state).filter(([key]) => !['currentUser', 'currentEnterpriseUser', 'userRole', 'activeTenantId', 'permissions', 'isAdmin'].includes(key))
+      ),
     }
   )
 );

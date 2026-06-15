@@ -178,9 +178,7 @@ export interface Account {
   password?: string;
   displayName?: string;
   tournamentName?: string;
-  session_id?: string;
   role?: 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EVENT_ADMIN' | 'guest'; // adjusted to capture all states
-  parentTenantId?: string;
   permittedEventIds?: string[];
   tenant_id?: string;
   role_id?: string;

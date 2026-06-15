@@ -1,0 +1,21 @@
+BÁO CÁO REFACTOR FRONTEND (ENTERPRISE AUTH)
+=====================================
+
+1. HỦY BỎ SESSION POLLING CŨ
+- Đã Xóa bỏ hàm `checkAdminSession` thủ công.
+- Đã Xóa `setInterval()` 5 giây thực hiện gọi Rest API thừa thãi tại `App.tsx`.
+- Chuyển quyền xử lý đăng xuất về đúng chuẩn của thư viện Supabase GoTrue qua `supabase.auth.onAuthStateChange`.
+- Xóa việc FrontEnd tự sinh random token session\_id qua JS Math.random, vốn không bảo mật.
+
+2. LOGIC LẤY THÔNG TIN TENANT & PERMISSIONS MỚI TẠI LOGIN
+- Thay vì React query từng bảng Accounts, Roles, Account\_permissions và có nhiều logic If/Else dự phòng rủi ro.
+- UI hiện tại chỉ gọi `supabase.auth.signInWithPassword()` để lấy auth instance.
+- Sau đó sử dụng SQL View ẩn sau một hàm bảo mật: `await supabase.rpc('get_current_profile')`. Hàm này định tuyến Database giải quyết toàn bộ Join Bảng (Role, Account, Permission array) và trả về duy nhất 1 JSON object chuẩn, chặn mọi sửa chữa từ phía trình duyệt.
+
+3. DỌN DẸP STORE VÀ BẢO MẬT STATE LOCALSTORAGE
+- Interface `src/types.ts` đã được dọn khỏi những tàn dư của `accounts_config`, `parentTenantId`, `session_id`.
+- Chức năng lưu trữ Persistent Cache qua LocalStorage bằng zustand middleware đã được filter/partialize: TUYỆT ĐỐI NGĂN CHẶN Persist các trường `currentEnterpriseUser`, `userRole`, `permissions`, `isAdmin`.
+- Việc này giúp vô hiệu hóa toàn bộ khả năng User chủ ý sửa LocalStorage để Fake Role Admin. Mỗi lần F5 trang web sẽ bắt buộc check lại JWT.
+
+=====================================
+Trạng thái: Hoàn thành refactor trực tiếp trên mã nguồn.

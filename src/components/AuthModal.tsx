@@ -51,81 +51,47 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       return;
     }
 
-    // Load Enterprise Account details
-    const { data: accountData, error: accountError } = await supabase
-      .from('accounts')
-      .select(`
-        id, 
-        username, 
-        display_name, 
-        status,
-        tenants ( id, name, slug ),
-        roles ( id, name, level )
-      `)
-      .eq('id', authData.user.id)
-      .single();
+    // Load Enterprise Account details using unified RPC
+    const { data: profileStr, error: accountError } = await supabase.rpc('get_current_profile');
+    
+    console.log('[Auth Flow Debug] RPC Response:', { profileStr, accountError });
 
-    if (accountError || !accountData || accountData.status !== 'active') {
+    if (accountError || !profileStr) {
+      console.error('[Auth Flow Error] Stack trace / Error details:', accountError);
       setErrorMsg('Tài khoản không tồn tại trên hệ thống hoặc đã bị khóa.');
       await supabase.auth.signOut();
       return;
     }
 
-    // Resolve Role Mapping (Super Admin = SUPER_ADMIN, Tenant Admin = TENANT_ADMIN, Event Admin = EVENT_ADMIN)
-    let mappedRole: 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EVENT_ADMIN' = 'EVENT_ADMIN';
-    const roleLevel = accountData.roles?.level || 3;
+    // Since RPC returns row_to_json, data is the json object
+    const accountData = typeof profileStr === 'string' ? JSON.parse(profileStr) : profileStr;
+    console.log('[Auth Flow Debug] Parsed Account Data:', accountData);
     
-    if (roleLevel === 1) mappedRole = 'SUPER_ADMIN';
-    else if (roleLevel === 2) mappedRole = 'TENANT_ADMIN';
-    else mappedRole = 'EVENT_ADMIN';
+    // Check if expected attributes exist
+    if (accountData.account_id && accountData.tenant_id && accountData.role && accountData.permissions) {
+       console.log('[Auth Flow Debug] AUTH FLOW PASSED');
+    } else {
+       console.warn('[Auth Flow Debug] Missing some expected attributes in payload');
+    }
 
-    const tenantIdStr = accountData.tenants?.id || 'default';
-    
-    // FETCH PERMISSIONS: account_permissions JOIN permissions
-    let fetchedPermissions: string[] = [];
-    try {
-      const { data: permData } = await supabase
-        .from('account_permissions')
-        .select(`
-          permissions ( name )
-        `)
-        .eq('account_id', accountData.id);
-        
-      if (permData && Array.isArray(permData)) {
-        fetchedPermissions = permData.map((p: any) => p.permissions?.name).filter(Boolean);
-      }
-    } catch(e) {
-      console.warn("Lỗi fetch account_permissions", e);
-    }
-    
-    // Nếu db trống, fallback tạm permission theo mappedRole
-    if (fetchedPermissions.length === 0) {
-      if (mappedRole === 'SUPER_ADMIN') {
-        fetchedPermissions = ['*'];
-      } else if (mappedRole === 'TENANT_ADMIN') {
-        fetchedPermissions = ['view_dashboard', 'manage_teams', 'manage_groups', 'enter_score', 'manage_matches', 'view_standings', 'manage_knockout', 'view_live', 'export_data', 'view_logs', 'switch_tenant', 'manage_tournaments', 'manage_events'];
-      } else if (mappedRole === 'EVENT_ADMIN') {
-        fetchedPermissions = ['enter_score', 'view_live'];
-      }
-    }
+    const mappedRole = accountData.role || 'EVENT_ADMIN';
+    const tenantIdStr = accountData.tenant_id || 'default';
+    const fetchedPermissions = accountData.permissions || [];
 
     // Construct currentEnterpriseUser payload
     const enterpriseUser = {
-      id: accountData.id,
+      id: accountData.account_id,
       username: accountData.username,
       display_name: accountData.display_name,
-      tenant_id: accountData.tenants?.id,
-      role_id: accountData.roles?.id,
-      status: accountData.status,
-      tenant: accountData.tenants,
-      role: accountData.roles,
+      tenant_id: tenantIdStr,
+      role_name: mappedRole,
       permissions: fetchedPermissions
     };
 
     setSuccessMsg(`Đăng nhập thành công! Chào mừng đại diện ${accountData.display_name}.`);
     
     setTimeout(() => {
-      setAuthStatus(mappedRole, accountData.username, tenantIdStr, undefined, enterpriseUser);
+      setAuthStatus(mappedRole, accountData.username, tenantIdStr, enterpriseUser);
       onClose();
     }, 800);
   };

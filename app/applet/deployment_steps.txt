@@ -1,0 +1,16 @@
+BƯỚC 1: TRIỂN KHAI DATABASE MIGRATION TRÊN SUPABASE (DATABASE DEPLOYMENT)
+1. Đăng nhập Supabase Dashboard -> Truy cập SQL Editor.
+2. Dán và `RUN` nội dung file `migration.sql` để tạo hàm RPC `get_current_profile()`.
+3. Kiểm tra bằng cách chạy thử `SELECT get_current_profile()`.
+4. Viết Trigger tự động ghi Log `login_logs` và update `active_sessions` trên auth.users.on_login() (Phần này sẽ triển khai riêng biệt trên Supabase ở Phase Migration Backend, Frontend sẽ không cần chèn mã nữa).
+
+BƯỚC 2: BUILD VÀ DEPLOY FRONTEND
+1. Frontend Local test build: `npm run build`
+2. Đẩy các commit liên quan đến Refractor của AuthModal, App.tsx, store.ts, types.ts.
+3. Chờ CI/CD triển khai (Vercel/Netlify hoặc hạ tầng đang host UI).
+
+BƯỚC 3: KIỂM TOÁN VÀ NGHIỆM THU
+1. Đăng nhập bằng tài khoản Quản trị.
+2. Dùng Supabase SQL Editor xoá token JWT trên bảng `active_sessions`, để cho DB session bị reject -> Supabase Realtime và RLS bắt buộc phải reject Gotrue -> Browser trigger hook `SIGNED_OUT`.
+3. Quan sát giao diện có bị đá về Logged Out không.
+4. Refresh trang F5 để xác nhận LocalStorage không tái tạo quyền mạo danh do `persist` config đã gỡ state liên đới.

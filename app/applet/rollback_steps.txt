@@ -1,0 +1,13 @@
+BƯỚC 1: XÓA BACKEND VIEW
+1. Đăng nhập Supabase Dashboard -> Truy cập SQL Editor.
+2. Chạy lệnh: `DROP FUNCTION IF EXISTS get_current_profile();`
+3. Vô hiệu hóa Trigger Ghi log.
+
+BƯỚC 2: ROLLBACK FRONTEND
+1. Checkout lại branch / tag chứa giao diện trước khi refactor.
+2. Mở `src/App.tsx` và `src/store.ts` để lấy lại vòng lặp setInterval, checkAdminSession 5 giây.
+3. Mở `persist` trong store.ts để bỏ `partialize` filter, cho phép Auth metadata ăn xuống LocalStorage.
+4. Mở `src/components/AuthModal.tsx` lấy lại logic if(mappedRole == 'SUPER_ADMIN') -> fetchedPermission = ['*'].
+
+BƯỚC 3: DỌN DẸP CACHE
+1. Báo người dùng trên App xóa Cache Storage thủ công: Mở DevTools -> Application -> Chặn Key `pickleball-tournament-cache` để nạp cờ cũ vào nếu cần thiết.
