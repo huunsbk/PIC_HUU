@@ -140,13 +140,18 @@ export default function App() {
   }, [initSupabase, activeTenantId, setTenantId]);
 
   useEffect(() => {
-    // Lắng nghe sự kiện Auth từ Supabase (Ví dụ: bị đăng xuất từ thiết bị khác)
+    // Lắng nghe sự kiện Auth từ Supabase
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         const store = useTournamentStore.getState();
-        if (store.isAdmin) {
-          console.log('Phát hiện đăng xuất từ hệ thống/thiết bị khác. Đang làm sạch phiên làm việc...');
-          store.logout();
+        // Bỏ qua cho các tài khoản quản trị ảo (admin1, admin2, admin3) để tránh false-positives khi nạp lại trang
+        if (store.userRole !== 'admin1' && store.userRole !== 'admin2' && store.userRole !== 'admin3') {
+          if (store.isAdmin) {
+            console.log('[Auth Listener] Phát hiện đăng xuất từ hệ thống/thiết bị khác cho tài khoản standard.');
+            store.logout();
+          }
+        } else {
+          console.log(`[Auth Listener] Bỏ qua sự kiện SIGNED_OUT của quản trị viên ảo "${store.userRole}" để bảo toàn trạng thái LocalStorage.`);
         }
       }
     });

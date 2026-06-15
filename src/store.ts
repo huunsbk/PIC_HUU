@@ -34,7 +34,7 @@ interface AppState {
   currentSessionId: string | null;
   userRole: 'guest' | 'admin1' | 'admin2' | 'admin3'; // guest = viewer, admin1 = root, admin2 = level 2, admin3 = level 3
   activeTenantId: string; // 'default' or username of level 2 account
-  setAuthStatus: (role: 'guest' | 'admin1' | 'admin2' | 'admin3', username: string | null, tenantId: string, sessionId?: string) => void;
+  setAuthStatus: (role: 'guest' | 'admin1' | 'admin2' | 'admin3', username: string | null, tenantId: string, sessionId?: string) => Promise<void>;
   logout: () => Promise<void>;
   setTenantId: (tenantId: string) => Promise<void>;
   addAccount2: (acc: Account) => Promise<boolean>;
@@ -654,8 +654,9 @@ export const useTournamentStore = create<AppState>()(
         userRole: 'guest',
         activeTenantId: 'default',
         isLoadingSupabase: false,
-        setAuthStatus: (role, username, tenantId, providedSessionId) => {
+        setAuthStatus: async (role, username, tenantId, providedSessionId) => {
           const sessionId = providedSessionId || Date.now().toString() + Math.random().toString(36).substring(2, 9);
+          console.log(`[Session Setup] Bắt đầu thiết lập Auth cho "${username}". Khởi tạo Session ID mới: "${sessionId}".`);
           
           originalSet({
             userRole: role,
@@ -668,41 +669,51 @@ export const useTournamentStore = create<AppState>()(
           });
 
           if (username && (role === 'admin2' || role === 'admin3')) {
-            // Cập nhật session_id lên bảng tournament JSON (nguồn cấu hình tài khoản duy nhất)
-            supabase.from('tournament')
-              .select('settings')
-              .eq('id', 'accounts_config')
-              .single()
-              .then(({ data }) => {
-                if (data && data.settings) {
-                  let arr: any[] = [];
-                  let wrapsInObj = false;
-                  
-                  if (Array.isArray(data.settings)) {
-                    arr = data.settings;
-                  } else if (data.settings.accounts && Array.isArray(data.settings.accounts)) {
-                    arr = data.settings.accounts;
-                    wrapsInObj = true;
-                  }
-                  
-                  const updatedAccounts = arr.map((a: any) => 
-                    a.username === username ? { ...a, session_id: sessionId } : a
-                  );
-                  
-                  supabase.from('tournament')
-                    .upsert({
-                      id: 'accounts_config',
-                      name: 'Cấu hình tài khoản cấp 2',
-                      organization: 'Hệ thống',
-                      location: '',
-                      date: '',
-                      settings: wrapsInObj ? { accounts: updatedAccounts } : updatedAccounts
-                    })
-                    .then(() => {})
-                    .catch(e => console.warn('Lỗi ghi json session:', e));
+            try {
+              // Cập nhật session_id lên bảng tournament JSON (nguồn cấu hình tài khoản duy nhất) - Cần await đồng bộ để tránh race condition!
+              console.log(`[Session Setup] Đang truy vấn accounts_config để thiết lập Session ID...`);
+              const { data } = await supabase.from('tournament')
+                .select('settings')
+                .eq('id', 'accounts_config')
+                .single();
+              
+              if (data && data.settings) {
+                let arr: any[] = [];
+                let wrapsInObj = false;
+                
+                if (Array.isArray(data.settings)) {
+                  arr = data.settings;
+                } else if (data.settings.accounts && Array.isArray(data.settings.accounts)) {
+                  arr = data.settings.accounts;
+                  wrapsInObj = true;
                 }
-              })
-              .catch(e => console.warn('Lỗi đọc json session:', e));
+                
+                const updatedAccounts = arr.map((a: any) => 
+                  a.username === username ? { ...a, session_id: sessionId } : a
+                );
+                
+                console.log(`[Session Setup] Đang thực hiện ghi đồng bộ Session ID "${sessionId}" của "${username}" lên cơ sở dữ liệu...`);
+                const { error: upsertErr } = await supabase.from('tournament')
+                  .upsert({
+                    id: 'accounts_config',
+                    name: 'Cấu hình tài khoản cấp 2',
+                    organization: 'Hệ thống',
+                    location: '',
+                    date: '',
+                    settings: wrapsInObj ? { accounts: updatedAccounts } : updatedAccounts
+                  });
+                
+                if (upsertErr) {
+                  console.error('[Session Setup] Ghi Session ID thất bại:', upsertErr);
+                } else {
+                  console.log(`[Session Setup] Lưu Session ID "${sessionId}" lên DB thành công.`);
+                }
+              } else {
+                console.warn('[Session Setup] Không tìm thấy dữ liệu accounts_config trong CSDL để cập nhật.');
+              }
+            } catch (e) {
+              console.error('[Session Setup] Lỗi trong quá trình kết nối lưu Session ID:', e);
+            }
               
             // Đảm bảo URL trên trình duyệt đồng bộ với tenant được cấp quyền, tránh nhầm lẫn
             requestAnimationFrame(() => {
@@ -713,7 +724,8 @@ export const useTournamentStore = create<AppState>()(
             });
           }
           
-          get().initSupabase();
+          console.log('[Session Setup] Đã đồng bộ cấu hình tài khoản. Đang khởi chạy tải lại cơ sở dữ liệu initSupabase()...');
+          await get().initSupabase();
         },
         logout: async () => {
           // Guard to avoid recursive logout calls if already guest
@@ -872,13 +884,25 @@ export const useTournamentStore = create<AppState>()(
                 }
               }
 
+              console.log(`[SingleSession Audit - checkAdminSession] Polling check:`, {
+                username: state.currentUser,
+                localSessionId: state.currentSessionId,
+                dbSessionId: latestDbSessionId,
+                status: latestDbSessionId === state.currentSessionId ? 'MATCH (Valid)' : (latestDbSessionId ? 'MISMATCH (Invalid)' : 'NO_SESSION_IN_DB')
+              });
+
               if (latestDbSessionId && latestDbSessionId !== state.currentSessionId) {
-                console.warn('Phát hiện đăng nhập song song qua polling. Đăng xuất...');
-                alert(`CẢNH BÁO: KẾT NỐI BỊ NGẮT\n\nTài khoản "${state.currentUser}" vừa được đăng nhập thành công ở thiết bị hoặc trình duyệt khác.\n\nNhằm bảo vệ tính toàn vẹn dữ liệu lúc nhập điểm, hệ thống chỉ cho phép 1 tài khoản hoạt động trên 1 thiết bị/1 tab trình duyệt ở cùng một thời điểm.\n\nPhiên làm việc này sẽ được đăng xuất tự động.`);
+                console.warn(`[SingleSession Audit] Phát hiện đăng nhập song song qua polling:`, {
+                  username: state.currentUser,
+                  localSessionId: state.currentSessionId,
+                  dbSessionId: latestDbSessionId,
+                  reason: 'Mismatch between memory session state and database session config.'
+                });
+                alert(`CẢNH BÁO: KẾT NỐI BỊ NGẮT\n\nTài khoản "${state.currentUser}" vừa được đăng nhập thành công ở thiết bị hoặc trình duyệt khác.\n\nNhằm bảo vệ tính toàn vẹn dữ liệu lúc nhập điểm, hệ thống chỉ cho phép 1 tài khoản hoạt động trên 1 thiết bị/1 trình duyệt ở cùng một thời điểm.\n\nPhiên làm việc này sẽ được đăng xuất tự động.`);
                 get().logout();
               }
             } catch(e) {
-              // Ignore network errors
+              console.warn('[SingleSession Audit - checkAdminSession] Gặp lỗi kiểm tra phiên đăng nhập:', e);
             }
           }
         },
@@ -2196,9 +2220,14 @@ export const useTournamentStore = create<AppState>()(
             supabase.auth.onAuthStateChange((event) => {
               if (event === 'SIGNED_OUT') {
                 const cur = get();
-                // Only trigger reload/logout cleanups if the current local state has administrative privileges
-                if (cur.isAdmin || cur.userRole !== 'guest' || cur.currentUser !== null) {
-                  cur.logout();
+                // Bỏ qua cho các tài khoản quản trị ảo (admin1, admin2, admin3) để tránh false-positives khi nạp lại trang
+                if (cur.userRole !== 'admin1' && cur.userRole !== 'admin2' && cur.userRole !== 'admin3') {
+                  if (cur.isAdmin || cur.userRole !== 'guest' || cur.currentUser !== null) {
+                    console.log('[AuthState] Nhận sự kiện SIGNED_OUT cho tài khoản standard. Đang đăng xuất...');
+                    cur.logout();
+                  }
+                } else {
+                  console.log(`[AuthState] Bỏ qua sự kiện SIGNED_OUT của quản trị viên ảo "${cur.userRole}" để bảo toàn trạng thái LocalStorage.`);
                 }
               }
             });
@@ -2254,7 +2283,19 @@ export const useTournamentStore = create<AppState>()(
               // Kiểm tra bảo mật phiên đăng nhập (chỉ áp dụng cho admin2 và admin3)
               if ((localState.userRole === 'admin2' || localState.userRole === 'admin3') && localState.currentUser) {
                 const myLatestDbAccount = loadedAccounts.find(a => a.username === localState.currentUser);
-                if (myLatestDbAccount && myLatestDbAccount.session_id && myLatestDbAccount.session_id !== localState.currentSessionId) {
+                const dbSessionId = myLatestDbAccount?.session_id;
+                const localSessionId = localState.currentSessionId;
+                
+                console.log(`[SingleSession Audit - initSupabase] Trạng thái kiểm tra:`, {
+                  username: localState.currentUser,
+                  role: localState.userRole,
+                  localSessionId,
+                  dbSessionId,
+                  status: dbSessionId === localSessionId ? 'MATCH (Valid)' : (dbSessionId ? 'MISMATCH (Invalid)' : 'NO_SESSION_IN_DB')
+                });
+
+                if (dbSessionId && dbSessionId !== localSessionId) {
+                  console.warn(`[SingleSession Audit] Phát hiện xung đột phiên cho "${localState.currentUser}": CSDL là "${dbSessionId}" nhưng cục bộ là "${localSessionId}".`);
                   forceLogout = true;
                 }
               }
