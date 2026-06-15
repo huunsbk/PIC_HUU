@@ -80,6 +80,7 @@ interface AppState {
   updateKnockoutParticipant: (matchId: string, slot: 'A' | 'B', teamNameOrId: string) => void;
   propagateKnockoutResets: (changedMatchIds: string[]) => void;
   clearKnockout: () => void;
+  updateKnockoutManualBracket: (updatedKoMatches: Match[], numBestThirds?: number) => void;
 
   // UI Actions
   setDarkMode: (dark: boolean) => void;
@@ -2082,6 +2083,40 @@ export const useTournamentStore = create<AppState>()(
             };
           });
           logToStore('Xóa Nhánh', 'Đã xóa bỏ toàn bộ sơ đồ đấu loại trực tiếp (Knockout).');
+        },
+
+        updateKnockoutManualBracket: (updatedKoMatches, numBestThirds) => {
+          if (!get().isAdmin) return;
+          set((state) => {
+            const nonKoMatches = state.matches.filter((m) => m.groupId !== 'knockout');
+            const mergedMatches = [...nonKoMatches, ...updatedKoMatches];
+            
+            const settings = {
+              ...state.tournament.settings,
+              ...(numBestThirds !== undefined ? { numBestThirds } : {})
+            };
+
+            const updatedTournament = {
+              ...state.tournament,
+              settings
+            };
+
+            const curEvtId = state.currentEventId;
+            const updatedEvents = { ...state.events };
+            if (updatedEvents[curEvtId]) {
+              updatedEvents[curEvtId] = {
+                ...updatedEvents[curEvtId],
+                matches: mergedMatches,
+              };
+            }
+
+            return {
+              matches: mergedMatches,
+              tournament: updatedTournament,
+              events: updatedEvents,
+            };
+          });
+          logToStore('Sơ Đồ Thủ Công', 'Đã lưu lại sơ đồ phân nhánh KO được hiệu chỉnh thủ công.');
         },
 
         setDarkMode: (dark) => set({ darkMode: dark }),

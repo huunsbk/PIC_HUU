@@ -785,6 +785,272 @@ export function generateKnockoutMatchesSchema(
 }
 
 /**
+ * Trả về tên suất thi đấu định dạng đẹp mắt dành riêng cho Sơ đồ nhánh.
+ * Triệt tiêu hoàn toàn bất kỳ biến kỹ thuật, event ID hay group ID nào.
+ */
+export function getBracketDisplayName(slotKey: string | null | undefined, groups?: Record<string, any>): string {
+  if (!slotKey) return 'Chờ phân nhánh';
+  
+  let clean = slotKey.trim();
+  
+  // Dọn dẹp các ký tự/chuỗi technical do hệ thống ghép mã phòng
+  clean = clean.replace(/__e$/, '');
+  clean = clean.replace(/__event-[a-z0-9]+$/i, '');
+
+  if (clean.startsWith('__1st_')) {
+    const gid = clean.replace('__1st_', '').replace(/__$/, '');
+    if (groups && groups[gid]) {
+      return `Nhất ${groups[gid].name}`;
+    }
+    if (groups) {
+      const found = Object.values(groups).find(
+        (g: any) => g.id === gid || g.id === gid.replace(/__e$/, '') || g.id.startsWith(gid + '-') || gid.startsWith(g.id + '-') || g.id.split('__')[0] === gid.split('__')[0]
+      );
+      if (found) return `Nhất ${found.name}`;
+    }
+    const letter = parseGroupLetter(gid);
+    return `Nhất bảng ${letter}`;
+  }
+
+  if (clean.startsWith('__2nd_')) {
+    const gid = clean.replace('__2nd_', '').replace(/__$/, '');
+    if (groups && groups[gid]) {
+      return `Nhì ${groups[gid].name}`;
+    }
+    if (groups) {
+      const found = Object.values(groups).find(
+        (g: any) => g.id === gid || g.id === gid.replace(/__e$/, '') || g.id.startsWith(gid + '-') || gid.startsWith(g.id + '-') || g.id.split('__')[0] === gid.split('__')[0]
+      );
+      if (found) return `Nhì ${found.name}`;
+    }
+    const letter = parseGroupLetter(gid);
+    return `Nhì bảng ${letter}`;
+  }
+
+  if (clean.startsWith('__3rd_')) {
+    const gid = clean.replace('__3rd_', '').replace(/__$/, '');
+    if (groups && groups[gid]) {
+      return `Ba ${groups[gid].name}`;
+    }
+    if (groups) {
+      const found = Object.values(groups).find(
+        (g: any) => g.id === gid || g.id === gid.replace(/__e$/, '') || g.id.startsWith(gid + '-') || gid.startsWith(g.id + '-') || g.id.split('__')[0] === gid.split('__')[0]
+      );
+      if (found) return `Ba ${found.name}`;
+    }
+    const numOnly = gid.match(/^\d+$/);
+    if (numOnly) {
+      return `Hạng ba xuất sắc ${numOnly[0]}`;
+    }
+    const letter = parseGroupLetter(gid);
+    return `Hạng ba xuất sắc ${letter}`;
+  }
+
+  const upper = clean.toUpperCase();
+
+  // Chuyển đổi mã kỹ thuật của các trận/vòng trước thành mô tả thuần Việt
+  if (upper === 'W-QF1' || upper === 'W_QF1' || upper === 'THẮNG TỨ KẾT 1') return 'Thắng Tứ Kết 1';
+  if (upper === 'W-QF2' || upper === 'W_QF2' || upper === 'THẮNG TỨ KẾT 2') return 'Thắng Tứ Kết 2';
+  if (upper === 'W-QF3' || upper === 'W_QF3' || upper === 'THẮNG TỨ KẾT 3') return 'Thắng Tứ Kết 3';
+  if (upper === 'W-QF4' || upper === 'W_QF4' || upper === 'THẮNG TỨ KẾT 4') return 'Thắng Tứ Kết 4';
+
+  if (upper === 'W-SF1' || upper === 'W_SF1' || upper === 'THẮNG BÁN KẾT 1') return 'Thắng Bán Kết 1';
+  if (upper === 'W-SF2' || upper === 'W_SF2' || upper === 'THẮNG BÁN KẾT 2') return 'Thắng Bán Kết 2';
+
+  if (upper === 'L-SF1' || upper === 'L_SF1' || upper === 'THUA BÁN KẾT 1') return 'Thua Bán Kết 1';
+  if (upper === 'L-SF2' || upper === 'L_SF2' || upper === 'THUA BÁN KẾT 2') return 'Thua Bán Kết 2';
+
+  const qfWinnerMatch = upper.match(/THẮNG TỨ KẾT (\d+)/) || upper.match(/W-QF(\d+)/) || upper.match(/W_QF(\d+)/);
+  if (qfWinnerMatch) {
+    return `Thắng Tứ Kết ${qfWinnerMatch[1]}`;
+  }
+
+  const sfWinnerMatch = upper.match(/THẮNG BÁN KẾT (\d+)/) || upper.match(/W-SF(\d+)/) || upper.match(/W_SF(\d+)/);
+  if (sfWinnerMatch) {
+    return `Thắng Bán Kết ${sfWinnerMatch[1]}`;
+  }
+
+  const sfLoserMatch = upper.match(/THUA BÁN KẾT (\d+)/) || upper.match(/L-SF(\d+)/) || upper.match(/L_SF(\d+)/);
+  if (sfLoserMatch) {
+    return `Thua Bán Kết ${sfLoserMatch[1]}`;
+  }
+
+  const r16WinnerMatch = upper.match(/THẮNG VÒNG 16 \(TRẬN (\d+)\)/) || upper.match(/THANG VONG 16 \(TRAN (\d+)\)/) || clean.match(/Thắng Vòng 1\/8 \(Trận (\d+)\)/i) || clean.match(/Thắng Vòng 16 \(Trận (\d+)\)/i) || upper.match(/W16 \(TRẬN (\d+)\)/);
+  if (r16WinnerMatch) {
+    return `Thắng Trận ${r16WinnerMatch[1]}`;
+  }
+
+  const r32WinnerMatch = upper.match(/THẮNG VÒNG 32 \(TRẬN (\d+)\)/) || upper.match(/THANG VONG 32 \(TRAN (\d+)\)/) || clean.match(/Thắng Vòng 32 \(Trận (\d+)\)/i) || upper.match(/W32 \(TRẬN (\d+)\)/);
+  if (r32WinnerMatch) {
+    return `Thắng Trận ${r32WinnerMatch[1]}`;
+  }
+
+  if (clean === 'null' || clean === 'undefined' || clean === '') {
+    return 'Chờ phân nhánh';
+  }
+
+  return clean;
+}
+
+/**
+ * Helper trích xuất chữ cái tên bảng hoặc tự phát sinh từ thứ tự
+ */
+function parseGroupLetter(gid: string): string {
+  const mLetter = gid.match(/group-\d+-([a-zA-Z])/i);
+  if (mLetter) return mLetter[1].toUpperCase();
+
+  const mLetter2 = gid.match(/group-([a-zA-Z])/i);
+  if (mLetter2) return mLetter2[1].toUpperCase();
+
+  const mNum = gid.match(/group-(\d+)/i) || gid.match(/-(\d+)/) || gid.match(/group(\d+)/i);
+  if (mNum) {
+    const idx = parseInt(mNum[1], 10);
+    if (idx >= 1 && idx <= 26) {
+      return String.fromCharCode(64 + idx);
+    }
+  }
+  return gid.split('__')[0].replace('group-', '').toUpperCase();
+}
+
+/**
+ * Trả về tên phân giải đẹp mắt cho Lịch Thi Đấu (ưu tiên đội thực tế, nếu chưa có thì hiển thị suất đấu).
+ */
+export function getMatchDisplayName(
+  teamIdOrSlot: string | null | undefined,
+  placeholder: string | null | undefined,
+  teams: Record<string, any>,
+  groups: Record<string, any>,
+  matches: any[],
+  settings: any
+): string {
+  // 1. Trả về tên thực nếu ID chính là một ID đội hợp lệ trong object teams
+  if (teamIdOrSlot && teams[teamIdOrSlot]) {
+    return teams[teamIdOrSlot].name;
+  }
+
+  // 2. Kiểm tra chuỗi thô để tránh hiển thị null/undefined hoặc các placeholder kỹ thuật khác 
+  const keyToCheck = teamIdOrSlot || placeholder || '';
+  if (!keyToCheck || keyToCheck === 'null' || keyToCheck === 'undefined') {
+    return 'Chờ phân nhánh';
+  }
+
+  // 3. Nếu ID khớp trực tiếp với tên của một đội trong hệ thống (phòng khi được gán trực tiếp bằng chuỗi tên)
+  const matchedRealTeam = Object.values(teams).find(
+    (t) => t.name.trim().toLowerCase() === keyToCheck.trim().toLowerCase() || t.id === keyToCheck
+  );
+  if (matchedRealTeam) {
+    return matchedRealTeam.name;
+  }
+
+  // 4. Nếu là slot đấu bảng hoặc slot hạng 3 xuất sắc hoặc mã trận trước đó
+  const resolvedRealTeam = resolveSlotToRealTeam(keyToCheck, teams, groups, matches, settings);
+  if (resolvedRealTeam) {
+    return resolvedRealTeam;
+  }
+
+  // 5. Nếu không phân giải được đội thực, hiển thị nhãn suất đấu dạng rút gọn đẹp mắt (VD "Nhất bảng A")
+  return getBracketDisplayName(keyToCheck, groups);
+}
+
+/**
+ * Phân giải slot key hoặc nhãn suất đấu thành tên đại diện đội thực tế nếu vòng bảng/vòng trước đã có kết quả
+ */
+function resolveSlotToRealTeam(
+  slotText: string,
+  teams: Record<string, any>,
+  groups: Record<string, any>,
+  matches: any[],
+  settings: any
+): string | null {
+  let clean = slotText.trim().replace(/__e$/, '').replace(/__event-[a-z0-9]+$/i, '');
+
+  if (clean.startsWith('__1st_') || clean.startsWith('__2nd_') || clean.startsWith('__3rd_')) {
+    const isFirst = clean.startsWith('__1st_');
+    const isSecond = clean.startsWith('__2nd_');
+    const isThird = clean.startsWith('__3rd_');
+    
+    const gid = clean.replace('__1st_', '').replace('__2nd_', '').replace('__3rd_', '');
+
+    const group = groups[gid] || Object.values(groups).find(
+      (g) => g.id === gid || g.id.split('__')[0] === gid.split('__')[0]
+    );
+
+    if (group) {
+      const groupMatches = matches.filter((m) => m.groupId === group.id);
+      const isFinished = groupMatches.length > 0 && groupMatches.every((m) => m.status === 'finished');
+      
+      if (isFinished) {
+        const standings = calculateGroupStandings(group.id, group.teamIds, groupMatches, teams, settings);
+        if (isFirst && standings[0]) {
+          return teams[standings[0].teamId]?.name || standings[0].teamName;
+        }
+        if (isSecond && standings[1]) {
+          return teams[standings[1].teamId]?.name || standings[1].teamName;
+        }
+      }
+
+      if (isThird) {
+        const groupMatchesAll = matches.filter((m) => m.groupId !== 'knockout');
+        const allGroupsFinished = groupMatchesAll.length > 0 && groupMatchesAll.every((m) => m.status === 'finished');
+        
+        if (allGroupsFinished) {
+          const standingsByGroup: Record<string, any[]> = {};
+          Object.keys(groups).forEach((gId) => {
+            const g = groups[gId];
+            const gMatches = matches.filter((m) => m.groupId === gId);
+            standingsByGroup[gId] = calculateGroupStandings(gId, g.teamIds, gMatches, teams, settings);
+          });
+          const groupNamesMap: Record<string, string> = {};
+          Object.keys(groups).forEach((gId) => {
+            groupNamesMap[gId] = groups[gId].name;
+          });
+          const bestThirds = calculateBestThirdPlaces(standingsByGroup, matches, settings, groupNamesMap);
+          const rank = parseInt(gid, 10);
+          if (bestThirds[rank - 1]) {
+            return teams[bestThirds[rank - 1].teamId]?.name || bestThirds[rank - 1].teamName;
+          }
+        }
+      }
+    }
+  }
+
+  // Tự động phân giải các trận loại trực tiếp trước: VD W-SF1, SF-1, SF1
+  const matchCode = clean.toUpperCase().replace('-', '').replace('_', '');
+  const prevMatchNode = matches.find(
+    (m) =>
+      m.groupId === 'knockout' &&
+      m.knockoutMatchId &&
+      m.knockoutMatchId.toUpperCase().replace('-', '').replace('_', '') === matchCode
+  );
+  if (prevMatchNode && prevMatchNode.status === 'finished' && prevMatchNode.winnerId) {
+    return teams[prevMatchNode.winnerId]?.name || prevMatchNode.winnerId;
+  }
+
+  // Hoặc fallback kiểm định nếu clean khớp với nhãn tiếng Việt thô (VD "Nhất bảng A")
+  for (const g of Object.values(groups)) {
+    const gNameClean = g.name.replace(/^Bảng\s+/i, '').trim().toLowerCase();
+    const isFirstLabel = clean.toLowerCase() === `nhất bảng ${gNameClean}` || clean.toLowerCase() === `nhất ${gNameClean}`;
+    const isSecondLabel = clean.toLowerCase() === `nhì bảng ${gNameClean}` || clean.toLowerCase() === `nhì ${gNameClean}`;
+
+    if (isFirstLabel || isSecondLabel) {
+      const gMatches = matches.filter((m) => m.groupId === g.id);
+      const isFinished = gMatches.length > 0 && gMatches.every((m) => m.status === 'finished');
+      if (isFinished) {
+        const standings = calculateGroupStandings(g.id, g.teamIds, gMatches, teams, settings);
+        if (isFirstLabel && standings[0]) {
+          return teams[standings[0].teamId]?.name || standings[0].teamName;
+        }
+        if (isSecondLabel && standings[1]) {
+          return teams[standings[1].teamId]?.name || standings[1].teamName;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Chuyển đổi tên đội giữ chỗ / mã vòng đấu loại trực tiếp sang tiếng Việt rõ nghĩa theo yêu cầu của BTC.
  */
 export function getReadableTeamName(teamName: string, groups?: Record<string, any>): string {

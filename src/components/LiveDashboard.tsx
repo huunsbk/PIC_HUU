@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTournamentStore } from '../store';
 import { supabase } from '../supabaseClient';
-import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime } from '../utils/tournamentEngine';
+import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
 import { 
   Monitor, 
   Play, 
@@ -207,8 +207,9 @@ const LiveMatchRow = React.memo(({
   groups,
   absoluteIndex
 }: LiveMatchRowProps) => {
-  const teamA = teams[m.teamAId]?.name || m.placeholderA || getReadableTeamName(m.teamAId, groups);
-  const teamB = teams[m.teamBId]?.name || m.placeholderB || getReadableTeamName(m.teamBId, groups);
+  const { matches, tournament } = useTournamentStore();
+  const teamA = getMatchDisplayName(m.teamAId, m.placeholderA, teams, groups, matches, tournament?.settings || {});
+  const teamB = getMatchDisplayName(m.teamBId, m.placeholderB, teams, groups, matches, tournament?.settings || {});
   const group = groups[m.groupId];
   const isFinished = m.status === 'finished';
   const isPlaying = m.status === 'playing';
@@ -283,13 +284,14 @@ const KoRoundCard = React.memo(({
   groups,
   roundName
 }: KoRoundCardProps) => {
+  const { matches, tournament } = useTournamentStore();
   return (
     <div className="space-y-1 bg-white dark:bg-zinc-950 py-1.5 px-2.5 rounded-xl border border-zinc-100 dark:border-zinc-850">
       <h6 className="text-[9px] font-black text-zinc-400 border-b pb-1 mb-1.5 uppercase select-none" style={{ fontSize: '13px', color: '#c61a8b' }}>{roundName}</h6>
       <div className="grid grid-cols-1 gap-1">
         {roundMatches.map((m) => {
-          const teamAName = teams[m.teamAId]?.name || m.placeholderA || getReadableTeamName(m.teamAId, groups);
-          const teamBName = teams[m.teamBId]?.name || m.placeholderB || getReadableTeamName(m.teamBId, groups);
+          const teamAName = getMatchDisplayName(m.teamAId, m.placeholderA, teams, groups, matches, tournament?.settings || {});
+          const teamBName = getMatchDisplayName(m.teamBId, m.placeholderB, teams, groups, matches, tournament?.settings || {});
           return (
             <div key={m.id} className="text-[10px] space-y-1 p-1.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800 rounded-lg">
               <div className="text-[8px] font-black text-zinc-450 border-b border-zinc-200/30 dark:border-zinc-805 pb-0.5 mb-1 select-none" style={{ fontSize: '13px', color: '#992371' }}>
@@ -618,8 +620,8 @@ export default function LiveDashboard() {
           const sortedAllList = [...balancedGroupMatches, ...koMtch];
 
           sortedAllList.forEach((m: any, mIdx: number) => {
-            const tAName = evt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId, evt.groups);
-            const tBName = evt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId, evt.groups);
+            const tAName = getMatchDisplayName(m.teamAId, m.placeholderA, evt.teams, evt.groups, evt.matches, evt.settings || {});
+            const tBName = getMatchDisplayName(m.teamBId, m.placeholderB, evt.teams, evt.groups, evt.matches, evt.settings || {});
 
             let gLabel = 'Vòng loại trực tiếp';
             if (m.groupId !== 'knockout') {

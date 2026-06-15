@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import ExcelJS from 'exceljs';
 import { useTournamentStore } from '../store';
-import { calculateGroupStandings, balanceMatchesRestTime } from '../utils/tournamentEngine';
+import { calculateGroupStandings, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
 import { supabase } from '../supabaseClient';
 import { 
   Printer, 
@@ -247,8 +247,8 @@ export default function SchedulerAndScoreKeeper() {
         worksheet.getRow(5).height = 30;
       } else {
         exportList.forEach((m, idx) => {
-          const teamAName = teams[m.teamAId]?.name || m.teamAId || 'Trống';
-          const teamBName = teams[m.teamBId]?.name || m.teamBId || 'Trống';
+          const teamAName = getMatchDisplayName(m.teamAId, m.placeholderA, teams, groups, matches, tournament?.settings || {});
+          const teamBName = getMatchDisplayName(m.teamBId, m.placeholderB, teams, groups, matches, tournament?.settings || {});
           
           let boardName = 'Vòng loại trực tiếp';
           if (m.groupId !== 'knockout') {
@@ -498,8 +498,8 @@ export default function SchedulerAndScoreKeeper() {
 
                       <div className="space-y-1.5">
                         {roundMatches.map((match) => {
-                          const teamA = teams[match.teamAId];
-                          const teamB = teams[match.teamBId];
+                          const displayedTeamAName = getMatchDisplayName(match.teamAId, match.placeholderA, teams, groups, matches, tournament?.settings || {});
+                          const displayedTeamBName = getMatchDisplayName(match.teamBId, match.placeholderB, teams, groups, matches, tournament?.settings || {});
 
                           const scoreAVal = localScores[match.id]?.scoreA ?? '';
                           const scoreBVal = localScores[match.id]?.scoreB ?? '';
@@ -532,9 +532,9 @@ export default function SchedulerAndScoreKeeper() {
                                         : 'text-zinc-700 dark:text-zinc-200'
                                     }`}
                                     style={{ color: '#0b22ff' }}
-                                    title={teamA ? teamA.name : `Đội đã xóa (${match.teamAId})`}
+                                    title={displayedTeamAName}
                                   >
-                                    {teamA ? teamA.name : `Đội đã xóa`}
+                                    {displayedTeamAName}
                                   </span>
                                 </div>
 
@@ -577,9 +577,9 @@ export default function SchedulerAndScoreKeeper() {
                                         ? 'text-blue-600 dark:text-blue-400 font-bold'
                                         : 'text-zinc-700 dark:text-zinc-200'
                                     }`}
-                                    title={teamB ? teamB.name : `Đội đã xóa (${match.teamBId})`}
+                                    title={displayedTeamBName}
                                   >
-                                    {teamB ? teamB.name : `Đội đã xóa`}
+                                    {displayedTeamBName}
                                   </span>
                                 </div>
 
