@@ -19,7 +19,7 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const { accounts, setAuthStatus } = useTournamentStore();
+  const { setAuthStatus } = useTournamentStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -41,43 +41,93 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       return;
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: trimmedUser + '@pic.com',
       password: trimmedPass
     });
 
-    if (error) {
+    if (authError || !authData.user) {
       setErrorMsg('Tên đăng nhập hoặc mật khẩu không chính xác.');
       return;
     }
 
-    if (trimmedUser === 'huunsbk') {
-      setSuccessMsg('Đăng nhập thành công với vai trò Quản Trị Viên Cấp 1!');
-      setTimeout(() => {
-        setAuthStatus('admin1', 'huunsbk', 'default');
-        onClose();
-      }, 800);
+    // Load Enterprise Account details
+    const { data: accountData, error: accountError } = await supabase
+      .from('accounts')
+      .select(`
+        id, 
+        username, 
+        display_name, 
+        status,
+        tenants ( id, name, slug ),
+        roles ( id, name, level )
+      `)
+      .eq('id', authData.user.id)
+      .single();
+
+    if (accountError || !accountData || accountData.status !== 'active') {
+      setErrorMsg('Tài khoản không tồn tại trên hệ thống hoặc đã bị khóa.');
+      await supabase.auth.signOut();
       return;
     }
 
-    const targetAccount = accounts.find(
-      acc => acc.username.toLowerCase() === trimmedUser
-    );
+    // Resolve Role Mapping (Super Admin = SUPER_ADMIN, Tenant Admin = TENANT_ADMIN, Event Admin = EVENT_ADMIN)
+    let mappedRole: 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EVENT_ADMIN' = 'EVENT_ADMIN';
+    const roleLevel = accountData.roles?.level || 3;
+    
+    if (roleLevel === 1) mappedRole = 'SUPER_ADMIN';
+    else if (roleLevel === 2) mappedRole = 'TENANT_ADMIN';
+    else mappedRole = 'EVENT_ADMIN';
 
-    if (targetAccount) {
-      setSuccessMsg(`Đăng nhập thành công! Chào mừng đại diện ${targetAccount.displayName}.`);
-      setTimeout(() => {
-        // Gắn tài khoản này với cơ sở dữ liệu (tenantId của admin2)
-        const role = targetAccount.role === 'admin3' ? 'admin3' : 'admin2';
-        const rawTenantId = targetAccount.role === 'admin3' ? (targetAccount.parentTenantId || 'default') : targetAccount.username;
-        const tenantId = rawTenantId.replace(/-/g, '_');
-        setAuthStatus(role, targetAccount.username, tenantId);
-        onClose();
-      }, 800);
-      return;
+    const tenantIdStr = accountData.tenants?.id || 'default';
+    
+    // FETCH PERMISSIONS: account_permissions JOIN permissions
+    let fetchedPermissions: string[] = [];
+    try {
+      const { data: permData } = await supabase
+        .from('account_permissions')
+        .select(`
+          permissions ( name )
+        `)
+        .eq('account_id', accountData.id);
+        
+      if (permData && Array.isArray(permData)) {
+        fetchedPermissions = permData.map((p: any) => p.permissions?.name).filter(Boolean);
+      }
+    } catch(e) {
+      console.warn("Lỗi fetch account_permissions", e);
+    }
+    
+    // Nếu db trống, fallback tạm permission theo mappedRole
+    if (fetchedPermissions.length === 0) {
+      if (mappedRole === 'SUPER_ADMIN') {
+        fetchedPermissions = ['*'];
+      } else if (mappedRole === 'TENANT_ADMIN') {
+        fetchedPermissions = ['view_dashboard', 'manage_teams', 'manage_groups', 'enter_score', 'manage_matches', 'view_standings', 'manage_knockout', 'view_live', 'export_data', 'view_logs', 'switch_tenant', 'manage_tournaments', 'manage_events'];
+      } else if (mappedRole === 'EVENT_ADMIN') {
+        fetchedPermissions = ['enter_score', 'view_live'];
+      }
     }
 
-    setErrorMsg('Tên đăng nhập không tồn tại trên hệ thống dữ liệu.');
+    // Construct currentEnterpriseUser payload
+    const enterpriseUser = {
+      id: accountData.id,
+      username: accountData.username,
+      display_name: accountData.display_name,
+      tenant_id: accountData.tenants?.id,
+      role_id: accountData.roles?.id,
+      status: accountData.status,
+      tenant: accountData.tenants,
+      role: accountData.roles,
+      permissions: fetchedPermissions
+    };
+
+    setSuccessMsg(`Đăng nhập thành công! Chào mừng đại diện ${accountData.display_name}.`);
+    
+    setTimeout(() => {
+      setAuthStatus(mappedRole, accountData.username, tenantIdStr, undefined, enterpriseUser);
+      onClose();
+    }, 800);
   };
 
   return (

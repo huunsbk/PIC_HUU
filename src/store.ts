@@ -29,17 +29,17 @@ interface AppState {
   isLoadingSupabase?: boolean;
 
   // Multi-tier accounts configuration
-  accounts: Account[];
   currentUser: string | null;
+  currentEnterpriseUser: any | null; // Will store full EnterpriseAccount details
   currentSessionId: string | null;
-  userRole: 'guest' | 'admin1' | 'admin2' | 'admin3'; // guest = viewer, admin1 = root, admin2 = level 2, admin3 = level 3
-  activeTenantId: string; // 'default' or username of level 2 account
-  setAuthStatus: (role: 'guest' | 'admin1' | 'admin2' | 'admin3', username: string | null, tenantId: string, sessionId?: string) => Promise<void>;
+  userRole: 'guest' | 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EVENT_ADMIN';
+  activeTenantId: string; // 'default' or UUID of tenant
+  setAuthStatus: (role: 'guest' | 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EVENT_ADMIN', username: string | null, tenantId: string, sessionId?: string, enterpriseUser?: any) => Promise<void>;
   logout: () => Promise<void>;
   setTenantId: (tenantId: string) => Promise<void>;
-  addAccount2: (acc: Account) => Promise<boolean>;
-  updateAccount2: (acc: Account) => Promise<boolean>;
-  deleteAccount2: (username: string) => Promise<boolean>;
+
+  permissions: string[];
+  hasPermission: (permissionName: string) => boolean;
 
   // Actions
   checkConnection: () => Promise<boolean>;
@@ -238,14 +238,10 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
     // THÌ 1: PRUNING PHASE (REVERSE DEPENDENCY ORDER)
     // ==========================================
 
-    // 1. Dọn dẹp Matches dư thừa trước vì nó trỏ FK tới Teams, Groups, và Events (chỉ dọn dẹp thuộc tenant hiện tại)
+    // 1. Dọn dẹp Matches dư thừa
     try {
       let mQuery = supabase.from('matches').delete();
-      if (activeTenantId === 'default') {
-        mQuery = mQuery.not('event_id', 'like', '%__%');
-      } else {
-        mQuery = mQuery.like('event_id', `${activeTenantId}__%`);
-      }
+      mQuery = mQuery.eq('tenant_id', activeTenantId);
       
       if (matchIdsInState.length > 0) {
         const { error: mDelErr } = await mQuery.not('id', 'in', `(${matchIdsInState.join(',')})`);
@@ -264,14 +260,10 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
       console.error("Lỗi tại bước dọn dẹp MATCHES (Ngoại lệ):", exc);
     }
 
-    // 2. Dọn dẹp Teams dư thừa vì nó trỏ FK tới Groups và Events (chỉ dọn dẹp thuộc tenant hiện tại)
+    // 2. Dọn dẹp Teams dư thừa
     try {
       let tQuery = supabase.from('teams').delete();
-      if (activeTenantId === 'default') {
-        tQuery = tQuery.not('event_id', 'like', '%__%');
-      } else {
-        tQuery = tQuery.like('event_id', `${activeTenantId}__%`);
-      }
+      tQuery = tQuery.eq('tenant_id', activeTenantId);
       
       if (teamIdsInState.length > 0) {
         const { error: tDelErr } = await tQuery.not('id', 'in', `(${teamIdsInState.join(',')})`);
@@ -290,14 +282,10 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
       console.error("Lỗi tại bước dọn dẹp TEAMS (Ngoại lệ):", exc);
     }
 
-    // 3. Dọn dẹp Groups dư thừa vì nó trỏ FK tới Events (chỉ dọn dẹp thuộc tenant hiện tại)
+    // 3. Dọn dẹp Groups dư thừa
     try {
       let gQuery = supabase.from('groups').delete();
-      if (activeTenantId === 'default') {
-        gQuery = gQuery.not('event_id', 'like', '%__%');
-      } else {
-        gQuery = gQuery.like('event_id', `${activeTenantId}__%`);
-      }
+      gQuery = gQuery.eq('tenant_id', activeTenantId);
 
       if (groupIdsInState.length > 0) {
         const { error: gDelErr } = await gQuery.not('id', 'in', `(${groupIdsInState.join(',')})`);
@@ -316,14 +304,10 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
       console.error("Lỗi tại bước dọn dẹp GROUPS (Ngoại lệ):", exc);
     }
 
-    // 4. Dọn dẹp Events dư thừa (chỉ dọn dẹp thuộc tenant hiện tại)
+    // 4. Dọn dẹp Events dư thừa
     try {
       let eQuery = supabase.from('events').delete();
-      if (activeTenantId === 'default') {
-        eQuery = eQuery.not('id', 'like', '%__%');
-      } else {
-        eQuery = eQuery.like('id', `${activeTenantId}__%`);
-      }
+      eQuery = eQuery.eq('tenant_id', activeTenantId);
 
       if (eventIds.length > 0) {
         const { error: eDelErr } = await eQuery.not('id', 'in', `(${eventIds.join(',')})`);
@@ -358,7 +342,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
         location: state.tournament.location,
         date: state.tournament.date,
         settings: state.tournament.settings,
-        current_event_id: state.currentEventId
+        current_event_id: state.currentEventId,
+        tenant_id: activeTenantId
       }, { onConflict: 'id' });
       if (tErr) {
         console.error("Lỗi tại bước 1 (tournament):", tErr.message, tErr.details);
@@ -648,70 +633,63 @@ export const useTournamentStore = create<AppState>()(
             manualQualifiedTeamIds: []
           }
         },
+        permissions: [],
+        hasPermission: (permissionName) => {
+          const state = get();
+          return state.permissions.includes(permissionName) || state.permissions.includes('*');
+        },
         currentEventId: 'event-default',
-        accounts: [],
         currentUser: null,
+        currentEnterpriseUser: null,
         currentSessionId: null,
         userRole: 'guest',
         activeTenantId: 'default',
+        permissions: [],
         isLoadingSupabase: false,
-        setAuthStatus: async (role, username, tenantId, providedSessionId) => {
+        setAuthStatus: async (role, username, tenantId, providedSessionId, enterpriseUser) => {
           const sessionId = providedSessionId || Date.now().toString() + Math.random().toString(36).substring(2, 9);
           console.log(`[Session Setup] Bắt đầu thiết lập Auth cho "${username}". Khởi tạo Session ID mới: "${sessionId}".`);
           
           originalSet({
             userRole: role,
             currentUser: username,
+            currentEnterpriseUser: enterpriseUser || null,
             currentSessionId: sessionId,
             activeTenantId: tenantId,
-            isAdmin: role === 'admin1' || role === 'admin2' || role === 'admin3',
-            selectedTab: role === 'admin3' ? 'scoreEntry' : 'dashboard',
+            permissions: enterpriseUser?.permissions || (role === 'SUPER_ADMIN' ? ['*'] : []),
+            isAdmin: role === 'SUPER_ADMIN' || role === 'TENANT_ADMIN' || role === 'EVENT_ADMIN',
+            selectedTab: role === 'EVENT_ADMIN' ? 'scoreEntry' : 'dashboard',
             isLoadingSupabase: true
           });
 
-          if (username && (role === 'admin2' || role === 'admin3')) {
+          if (enterpriseUser && enterpriseUser.id) {
             try {
-              // Cập nhật session_id lên bảng tournament JSON (nguồn cấu hình tài khoản duy nhất) - Cần await đồng bộ để tránh race condition!
-              console.log(`[Session Setup] Đang truy vấn accounts_config để thiết lập Session ID...`);
-              const { data } = await supabase.from('tournament')
-                .select('settings')
-                .eq('id', 'accounts_config')
-                .single();
+              console.log(`[Session Setup] Đang thiết lập active_session cho ${enterpriseUser.id}`);
               
-              if (data && data.settings) {
-                let arr: any[] = [];
-                let wrapsInObj = false;
-                
-                if (Array.isArray(data.settings)) {
-                  arr = data.settings;
-                } else if (data.settings.accounts && Array.isArray(data.settings.accounts)) {
-                  arr = data.settings.accounts;
-                  wrapsInObj = true;
-                }
-                
-                const updatedAccounts = arr.map((a: any) => 
-                  a.username === username ? { ...a, session_id: sessionId } : a
-                );
-                
-                console.log(`[Session Setup] Đang thực hiện ghi đồng bộ Session ID "${sessionId}" của "${username}" lên cơ sở dữ liệu...`);
-                const { error: upsertErr } = await supabase.from('tournament')
-                  .upsert({
-                    id: 'accounts_config',
-                    name: 'Cấu hình tài khoản cấp 2',
-                    organization: 'Hệ thống',
-                    location: '',
-                    date: '',
-                    settings: wrapsInObj ? { accounts: updatedAccounts } : updatedAccounts
-                  });
-                
-                if (upsertErr) {
-                  console.error('[Session Setup] Ghi Session ID thất bại:', upsertErr);
-                } else {
-                  console.log(`[Session Setup] Lưu Session ID "${sessionId}" lên DB thành công.`);
-                }
+              // First delete old active sessions
+              await supabase.from('active_sessions').delete().eq('account_id', enterpriseUser.id);
+              
+              // Insert new session
+              const { error } = await supabase.from('active_sessions').insert({
+                account_id: enterpriseUser.id,
+                session_token: sessionId,
+                ip_address: 'unknown',
+                user_agent: navigator.userAgent
+              });
+              
+              if (error) {
+                console.error('[Session Setup] Ghi Session ID thất bại:', error);
               } else {
-                console.warn('[Session Setup] Không tìm thấy dữ liệu accounts_config trong CSDL để cập nhật.');
+                console.log(`[Session Setup] Lưu Session ID "${sessionId}" lên DB thành công.`);
               }
+              
+              // Log login success
+              await supabase.from('login_logs').insert({
+                account_id: enterpriseUser.id,
+                status: 'success',
+                reason: 'Login via Enterprise Auth'
+              });
+              
             } catch (e) {
               console.error('[Session Setup] Lỗi trong quá trình kết nối lưu Session ID:', e);
             }
@@ -735,12 +713,21 @@ export const useTournamentStore = create<AppState>()(
             return;
           }
           
+          if (state.currentEnterpriseUser?.id) {
+             try {
+                await supabase.from('active_sessions').delete().eq('account_id', state.currentEnterpriseUser.id);
+                // Also optionally log logout event to login_logs (out of scope for now or just log it simply)
+             } catch(e) {}
+          }
+          
           // Clear credentials synchronously first to avoid race conditions with auth listeners
           originalSet({
             userRole: 'guest',
             currentUser: null,
+            currentEnterpriseUser: null,
             currentSessionId: null,
             activeTenantId: 'default',
+            permissions: [],
             isAdmin: false,
           });
           
@@ -762,10 +749,8 @@ export const useTournamentStore = create<AppState>()(
         setTenantId: async (tenantId) => {
           const currentState = get();
           
-          if (currentState.userRole === 'admin2' || currentState.userRole === 'admin3') {
-            const allowedTenant = currentState.userRole === 'admin3' ? 
-              currentState.accounts.find(a => a.username === currentState.currentUser)?.parentTenantId || 'default' : 
-              currentState.currentUser;
+          if (!currentState.hasPermission('*') && !currentState.hasPermission('switch_tenant')) {
+            const allowedTenant = currentState.activeTenantId || 'default';
               
             // Normalize replacing - with _ to match mapping strategy in App.tsx
             const normalizedAllowed = allowedTenant.replace(/-/g, '_').toLowerCase();
@@ -789,72 +774,12 @@ export const useTournamentStore = create<AppState>()(
           originalSet({ activeTenantId: tenantId, isLoadingSupabase: true });
           await get().initSupabase();
         },
-         addAccount2: async (acc) => {
-          const nextAccounts = [...get().accounts, acc];
-          set({ accounts: nextAccounts });
-          let success = false;
-          try {
-            const { error } = await supabase.from('tournament').upsert({
-              id: 'accounts_config',
-              name: 'Cấu hình tài khoản cấp 2',
-              organization: 'Hệ thống',
-              location: '',
-              date: '',
-              settings: { accounts: nextAccounts },
-              current_event_id: ''
-            });
-            if (!error) success = true;
-          } catch (e) {
-            console.error('Lỗi khi lưu cấu hình tài khoản:', e);
-          }
-          return success;
-        },
-        updateAccount2: async (acc) => {
-          const nextAccounts = get().accounts.map(a => a.username === acc.username ? acc : a);
-          set({ accounts: nextAccounts });
-          let success = false;
-          try {
-            const { error } = await supabase.from('tournament').upsert({
-              id: 'accounts_config',
-              name: 'Cấu hình tài khoản cấp 2',
-              organization: 'Hệ thống',
-              location: '',
-              date: '',
-              settings: { accounts: nextAccounts },
-              current_event_id: ''
-            });
-            if (!error) success = true;
-          } catch (e) {
-            console.error('Lỗi khi cập nhật cấu hình tài khoản:', e);
-          }
-          return success;
-        },
-        deleteAccount2: async (username) => {
-          const nextAccounts = get().accounts.filter(a => a.username !== username);
-          set({ accounts: nextAccounts });
-          let success = false;
-          try {
-            const { error } = await supabase.from('tournament').upsert({
-              id: 'accounts_config',
-              name: 'Cấu hình tài khoản cấp 2',
-              organization: 'Hệ thống',
-              location: '',
-              date: '',
-              settings: { accounts: nextAccounts },
-              current_event_id: ''
-            });
-            if (!error) success = true;
-          } catch (e) {
-            console.error('Lỗi khi xóa cấu hình tài khoản:', e);
-          }
-          return success;
-        },
         isAdmin: false,
         setAdminStatus: (status: boolean) => {
-          if (!status) {
+          if (status) {
             get().setAuthStatus('guest', null, 'default');
           } else {
-            set({ isAdmin: true, userRole: 'admin2' });
+            console.log('Force authentication layout reset');
           }
         },
         supabaseConnected: null,
@@ -866,23 +791,18 @@ export const useTournamentStore = create<AppState>()(
         },
         checkAdminSession: async () => {
           const state = get();
-          if ((state.userRole === 'admin2' || state.userRole === 'admin3') && state.currentUser && state.currentSessionId) {
+          if (state.currentEnterpriseUser && state.currentSessionId) {
             try {
               let latestDbSessionId = null;
               
-              // Đọc từ cấu hình JSON của bảng tournament (nguồn cấu hình tài khoản duy nhất)
-              const { data: tData } = await supabase.from('tournament').select('settings').eq('id', 'accounts_config').single();
-              if (tData && tData.settings) {
-                let arr: any[] = [];
-                if (Array.isArray(tData.settings)) {
-                  arr = tData.settings;
-                } else if (tData.settings.accounts && Array.isArray(tData.settings.accounts)) {
-                  arr = tData.settings.accounts;
-                }
-                const acc = arr.find((a: any) => a.username === state.currentUser);
-                if (acc && acc.session_id) {
-                  latestDbSessionId = acc.session_id;
-                }
+              const { data: sessionData, error } = await supabase
+                .from('active_sessions')
+                .select('session_token')
+                .eq('account_id', state.currentEnterpriseUser.id)
+                .single();
+                
+              if (!error && sessionData) {
+                latestDbSessionId = sessionData.session_token;
               }
 
               console.log(`[SingleSession Audit - checkAdminSession] Polling check:`, {
@@ -967,14 +887,15 @@ export const useTournamentStore = create<AppState>()(
           // 1. Xóa trên Supabase trước (theo thứ tự FK)
           // Đặt active_group_id thành null trước để gỡ bỏ ràng buộc khóa ngoại (nếu có)
           try {
-            await supabase.from('events').update({ active_group_id: null }).eq('id', id);
-            const { error: e1 } = await supabase.from('matches').delete().eq('event_id', id);
+            const activeTenantId = get().activeTenantId;
+            await supabase.from('events').update({ active_group_id: null }).eq('id', id).eq('tenant_id', activeTenantId);
+            const { error: e1 } = await supabase.from('matches').delete().eq('event_id', id).eq('tenant_id', activeTenantId);
             if (e1) throw e1;
-            const { error: e2 } = await supabase.from('teams').delete().eq('event_id', id);
+            const { error: e2 } = await supabase.from('teams').delete().eq('event_id', id).eq('tenant_id', activeTenantId);
             if (e2) throw e2;
-            const { error: e3 } = await supabase.from('groups').delete().eq('event_id', id);
+            const { error: e3 } = await supabase.from('groups').delete().eq('event_id', id).eq('tenant_id', activeTenantId);
             if (e3) throw e3;
-            const { error: e4 } = await supabase.from('events').delete().eq('id', id);
+            const { error: e4 } = await supabase.from('events').delete().eq('id', id).eq('tenant_id', activeTenantId);
             if (e4) throw e4;
           } catch (err) {
             console.error("Lỗi xóa dữ liệu liên quan trên Supabase:", err);
@@ -2257,8 +2178,8 @@ export const useTournamentStore = create<AppState>()(
             supabase.auth.onAuthStateChange((event) => {
               if (event === 'SIGNED_OUT') {
                 const cur = get();
-                // Bỏ qua cho các tài khoản quản trị ảo (admin1, admin2, admin3) để tránh false-positives khi nạp lại trang
-                if (cur.userRole !== 'admin1' && cur.userRole !== 'admin2' && cur.userRole !== 'admin3') {
+                // Bỏ qua cho các tài khoản đang đăng nhập hợp lệ
+                if (!cur.currentEnterpriseUser) {
                   if (cur.isAdmin || cur.userRole !== 'guest' || cur.currentUser !== null) {
                     console.log('[AuthState] Nhận sự kiện SIGNED_OUT cho tài khoản standard. Đang đăng xuất...');
                     cur.logout();
@@ -2292,57 +2213,46 @@ export const useTournamentStore = create<AppState>()(
               throw tError;
             }
 
-            // Tải danh sách tài khoản từ cấu hình JSON 'accounts_config' trong tournament (nguồn cấu hình tài khoản duy nhất)
-            let loadedAccounts: Account[] = [];
+            // Khởi tạo trạng thái Enterprise Auth session check
             let forceLogout = false;
-            try {
-              const accountsConfigRow = (tData || []).find((row: any) => row.id === 'accounts_config');
-              let jsonAccounts: Account[] = [];
-              if (accountsConfigRow && accountsConfigRow.settings) {
-                if (Array.isArray(accountsConfigRow.settings)) {
-                  jsonAccounts = accountsConfigRow.settings;
-                } else if (accountsConfigRow.settings.accounts && Array.isArray(accountsConfigRow.settings.accounts)) {
-                  jsonAccounts = accountsConfigRow.settings.accounts;
-                }
-              }
-              
-              loadedAccounts = jsonAccounts.map((row: any) => ({
-                username: row.username,
-                password: row.password,
-                displayName: row.display_name || row.displayName,
-                tournamentName: row.tournament_name || row.tournamentName,
-                session_id: row.session_id,
-                role: row.role || 'admin2',
-                parentTenantId: row.parent_tenant_id || row.parentTenantId || 'default',
-                permittedEventIds: row.permitted_event_ids || row.permittedEventIds || []
-              }));
-
-              // Kiểm tra bảo mật phiên đăng nhập (chỉ áp dụng cho admin2 và admin3)
-              if ((localState.userRole === 'admin2' || localState.userRole === 'admin3') && localState.currentUser) {
-                const myLatestDbAccount = loadedAccounts.find(a => a.username === localState.currentUser);
-                const dbSessionId = myLatestDbAccount?.session_id;
-                const localSessionId = localState.currentSessionId;
-                
-                console.log(`[SingleSession Audit - initSupabase] Trạng thái kiểm tra:`, {
-                  username: localState.currentUser,
-                  role: localState.userRole,
-                  localSessionId,
-                  dbSessionId,
-                  status: dbSessionId === localSessionId ? 'MATCH (Valid)' : (dbSessionId ? 'MISMATCH (Invalid)' : 'NO_SESSION_IN_DB')
-                });
-
-                if (dbSessionId && dbSessionId !== localSessionId) {
-                  console.warn(`[SingleSession Audit] Phát hiện xung đột phiên cho "${localState.currentUser}": CSDL là "${dbSessionId}" nhưng cục bộ là "${localSessionId}".`);
-                  forceLogout = true;
-                }
-              }
-            } catch (e) {
-              console.warn('Lỗi phân tích tài khoản từ JSON:', e);
+            
+            if (localState.currentEnterpriseUser) {
+               try {
+                  const { data: sessionData, error } = await supabase
+                    .from('active_sessions')
+                    .select('session_token')
+                    .eq('account_id', localState.currentEnterpriseUser.id)
+                    .single();
+                  
+                  if (!error && sessionData) {
+                    const dbSessionId = sessionData.session_token;
+                    const localSessionId = localState.currentSessionId;
+                    
+                    console.log(`[SingleSession Audit - initSupabase] Trạng thái kiểm tra:`, {
+                      username: localState.currentUser,
+                      role: localState.userRole,
+                      localSessionId,
+                      dbSessionId,
+                      status: dbSessionId === localSessionId ? 'MATCH (Valid)' : (dbSessionId ? 'MISMATCH (Invalid)' : 'NO_SESSION_IN_DB')
+                    });
+                    
+                    if (dbSessionId && dbSessionId !== localSessionId) {
+                      console.warn(`[SingleSession Audit] Phát hiện xung đột phiên cho "${localState.currentUser}": CSDL là "${dbSessionId}" nhưng cục bộ là "${localSessionId}".`);
+                      forceLogout = true;
+                    }
+                  } else if (error) {
+                    // if it's because there's no session, it's fine, it could have been cleared.
+                    // But if they have a local token and DB has NO token, should they be logged out?
+                    // Better log them out if DB session is completely gone.
+                    forceLogout = true;
+                  }
+               } catch(e) {
+                 console.warn("Lỗi kiểm tra session Enterprise:", e);
+               }
             }
-            originalSet({ accounts: loadedAccounts });
             
             if (forceLogout) {
-              console.warn('Phát hiện đăng nhập song song. Tự động đăng xuất phiên làm việc cũ.');
+              console.warn('Phát hiện đăng nhập song song hoặc mất phiên kết nối. Tự động đăng xuất phiên làm việc cũ.');
               alert(`CẢNH BÁO: KẾT NỐI BỊ NGẮT\n\nTài khoản "${localState.currentUser}" vừa được đăng nhập thành công ở thiết bị hoặc trình duyệt khác.\n\nNhằm bảo vệ tính toàn vẹn dữ liệu lúc nhập điểm, hệ thống chỉ cho phép 1 tài khoản hoạt động trên 1 thiết bị/1 tab trình duyệt ở cùng một thời điểm.\n\nPhiên làm việc này sẽ được đăng xuất tự động.`);
               get().logout();
               return; // Ngừng quá trình initSupabase
@@ -2355,11 +2265,7 @@ export const useTournamentStore = create<AppState>()(
             let eData: any[] | null = null;
             try {
               let eQuery = supabase.from('events').select('*');
-              if (activeTenantId === 'default') {
-                eQuery = eQuery.not('id', 'like', '%__%');
-              } else {
-                eQuery = eQuery.like('id', `${activeTenantId}__%`);
-              }
+              eQuery = eQuery.eq('tenant_id', activeTenantId);
               const res = await eQuery;
               if (res.error) throw res.error;
               eData = res.data;
@@ -2371,11 +2277,7 @@ export const useTournamentStore = create<AppState>()(
             let teamData: any[] | null = null;
             try {
               let tQuery = supabase.from('teams').select('*');
-              if (activeTenantId === 'default') {
-                tQuery = tQuery.not('event_id', 'like', '%__%');
-              } else {
-                tQuery = tQuery.like('event_id', `${activeTenantId}__%`);
-              }
+              tQuery = tQuery.eq('tenant_id', activeTenantId);
               const res = await tQuery;
               if (res.error) throw res.error;
               teamData = res.data;
@@ -2387,11 +2289,7 @@ export const useTournamentStore = create<AppState>()(
             let groupData: any[] | null = null;
             try {
               let gQuery = supabase.from('groups').select('*');
-              if (activeTenantId === 'default') {
-                gQuery = gQuery.not('event_id', 'like', '%__%');
-              } else {
-                gQuery = gQuery.like('event_id', `${activeTenantId}__%`);
-              }
+              gQuery = gQuery.eq('tenant_id', activeTenantId);
               const res = await gQuery;
               if (res.error) throw res.error;
               groupData = res.data;
@@ -2403,11 +2301,7 @@ export const useTournamentStore = create<AppState>()(
             let matchData: any[] | null = null;
             try {
               let mQuery = supabase.from('matches').select('*');
-              if (activeTenantId === 'default') {
-                mQuery = mQuery.not('event_id', 'like', '%__%');
-              } else {
-                mQuery = mQuery.like('event_id', `${activeTenantId}__%`);
-              }
+              mQuery = mQuery.eq('tenant_id', activeTenantId);
               const res = await mQuery;
               if (res.error) throw res.error;
               matchData = res.data;
@@ -2420,12 +2314,8 @@ export const useTournamentStore = create<AppState>()(
             try {
               const res = await supabase.from('audit_logs').select('*').eq('tenant_id', activeTenantId).order('id', { ascending: false }).limit(200);
               if (res.error) {
-                if (res.error.code === '42703' || res.error.message?.includes('tenant_id')) {
-                  const fallbackRes = await supabase.from('audit_logs').select('*').order('id', { ascending: false }).limit(200);
-                  logData = fallbackRes.data || [];
-                } else {
-                  logData = [];
-                }
+                // If column doesn't exist, ignore logs. But now tenant_id must exist.
+                logData = [];
               } else {
                 logData = res.data;
               }
@@ -2449,7 +2339,7 @@ export const useTournamentStore = create<AppState>()(
                     timestamp: l.timestamp,
                     action: l.action,
                     details: l.details,
-                    tenant_id: 'default'
+                    tenant_id: localState.activeTenantId
                   }));
                   await supabase.from('audit_logs').insert(initialLogs);
                 }
@@ -2471,11 +2361,20 @@ export const useTournamentStore = create<AppState>()(
             if (!dbTournament) {
               let tournamentDetailsName = DEFAULT_TOURNAMENT.name;
               if (localState.activeTenantId !== 'default') {
-                const acc = loadedAccounts.find((a: any) => a.username === localState.activeTenantId);
-                if (acc && acc.tournamentName) {
-                  tournamentDetailsName = acc.tournamentName;
+                if (localState.currentEnterpriseUser?.tenant?.name) {
+                  tournamentDetailsName = localState.currentEnterpriseUser.tenant.name;
                 } else {
-                  tournamentDetailsName = `Giải Pickleball thuộc Đơn Vị ${localState.activeTenantId}`;
+                  // Fallback to fetch tenant info if current user isn't populated
+                  try {
+                    const { data: tenantData } = await supabase.from('tenants').select('name').eq('id', localState.activeTenantId).single();
+                    if (tenantData) {
+                      tournamentDetailsName = tenantData.name;
+                    } else {
+                      tournamentDetailsName = `Giải Pickleball thuộc Đơn Vị ${localState.activeTenantId}`;
+                    }
+                  } catch(e) {
+                      tournamentDetailsName = `Giải Pickleball thuộc Đơn Vị ${localState.activeTenantId}`;
+                  }
                 }
               }
 
@@ -2486,9 +2385,10 @@ export const useTournamentStore = create<AppState>()(
                 location: DEFAULT_TOURNAMENT.location,
                 date: DEFAULT_TOURNAMENT.date,
                 settings: DEFAULT_SETTINGS,
-                current_event_id: localState.activeTenantId === 'default' ? 'event-default' : `${localState.activeTenantId}__event-default`
+                current_event_id: localState.activeTenantId === 'default' ? 'event-default' : `${localState.activeTenantId}__event-default`,
+                tenant_id: localState.activeTenantId
               };
-              if (localState.userRole === 'admin1' || localState.userRole === 'admin2') {
+              if (localState.hasPermission('manage_system') || localState.hasPermission('manage_tournaments') || localState.hasPermission('*')) {
                 await supabase.from('tournament').insert([defaultObj]);
               }
               dbTournament = defaultObj;
@@ -2512,9 +2412,9 @@ export const useTournamentStore = create<AppState>()(
                 active_group_id: null,
                 advance_selection_mode: 'auto',
                 manual_qualified_team_ids: [],
-                tenant_id: activeTenantId
+                tenant_id: localState.activeTenantId
               };
-              if (localState.userRole === 'admin1' || localState.userRole === 'admin2') {
+              if (localState.hasPermission('manage_system') || localState.hasPermission('manage_events') || localState.hasPermission('*')) {
                 const { error: insErr } = await supabase.from('events').insert([defaultEvt]);
                 if (insErr) {
                   console.error("Lỗi khi tạo Event mặc định trên Supabase:", insErr.message, insErr.details);

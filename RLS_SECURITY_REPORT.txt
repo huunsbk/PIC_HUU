@@ -1,0 +1,43 @@
+BÁO CÁO KIỂM TRA BẢO MẬT RLS (ENTERPRISE)
+
+==================================================
+Table: accounts
+RLS Status: ENABLED (Nhưng đang dính policy public / sai logic)
+Policy hiện tại: Public / Users_Read_Own_Account (chưa hoàn thiện)
+Policy còn thiếu: TENANT_ADMIN chỉ được đọc account thuộc tenant_id của mình, cẩn chặn đọc account của tenant khác.
+PASS / FAIL: FAIL
+
+==================================================
+Table: active_sessions
+RLS Status: DISABLED
+Policy hiện tại: Không có (Do chưa ENABLE RLS)
+Policy còn thiếu: Policy chỉ cho phép người dùng thấy (SELECT/UPDATE/DELETE) phiên đăng nhập (session) của chính mình.
+PASS / FAIL: FAIL
+
+==================================================
+Table: account_permissions
+RLS Status: DISABLED
+Policy hiện tại: Không có
+Policy còn thiếu: Phân quyền CRUD logic cho bảng quyền, cấm sửa trái phép.
+PASS / FAIL: FAIL
+
+==================================================
+Table: account_event_permissions
+RLS Status: DISABLED
+Policy hiện tại: Không có
+Policy còn thiếu: Ràng buộc ngăn chặn EVENT_ADMIN tự cấp quyền cho tài khoản của chính mình (self-grant).
+PASS / FAIL: FAIL
+
+==================================================
+Table: login_logs
+RLS Status: DISABLED
+Policy hiện tại: Không có (Do chưa ENABLE RLS)
+Policy còn thiếu: Người dùng chỉ xem log của mình, cấm người dùng/TENANT_ADMIN đọc log thuộc về tenant khác.
+PASS / FAIL: FAIL
+
+==================================================
+Table: tenants
+RLS Status: DISABLED
+Policy hiện tại: Không có
+Policy còn thiếu: Policy đọc thông tin tenant bị cô lập theo tenant_id hiện tại.
+PASS / FAIL: FAIL

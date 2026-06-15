@@ -218,13 +218,15 @@ export default function Dashboard() {
     reader.readAsText(file);
   };
 
-  const handleImportJson = async () => {
+    const handleImportJson = async () => {
     try {
       const parsed = JSON.parse(jsonInput);
       if (!parsed.tournament) {
         showToast('Cấu trúc mã JSON sao lưu không hợp chuẩn. Thiếu thông tin giải đấu.');
         return;
       }
+
+      const currentTenantId = useTournamentStore.getState().activeTenantId;
 
       // 1. Tạo bản đồ tra cứu từ groupId -> eventId từ groups cũng như matches trong JSON
       const groupIdToEventIdMap = new Map<string, string>();
@@ -330,7 +332,8 @@ export default function Dashboard() {
                   name: t.name,
                   group_id: normTeam.groupId,
                   seed: normTeam.seed,
-                  event_id: getTeamEventId(t, evtId)
+                  event_id: getTeamEventId(t, evtId),
+                  tenant_id: currentTenantId
                 });
               }
             });
@@ -355,7 +358,8 @@ export default function Dashboard() {
                   id: finalGroupId,
                   name: g.name,
                   team_ids: normalizedGroupsObj[finalGroupId].teamIds,
-                  event_id: evtId
+                  event_id: evtId,
+                  tenant_id: currentTenantId
                 });
               }
             });
@@ -377,7 +381,8 @@ export default function Dashboard() {
                   knockout_match_id: m.knockoutMatchId !== undefined ? m.knockoutMatchId : (m.knockout_match_id || null),
                   next_match_id: m.nextMatchId !== undefined ? m.nextMatchId : (m.next_match_id || null),
                   next_match_slot: m.nextMatchSlot !== undefined ? m.nextMatchSlot : (m.next_match_slot || null),
-                  event_id: evtId
+                  event_id: evtId,
+                  tenant_id: currentTenantId
                 });
               }
             });
@@ -408,7 +413,8 @@ export default function Dashboard() {
               settings: evt.settings || parsed.tournament?.settings || {},
               active_group_id: activeGroupId,
               advance_selection_mode: evt.advanceSelectionMode || 'auto',
-              manual_qualified_team_ids: evt.manualQualifiedTeamIds || []
+              manual_qualified_team_ids: evt.manualQualifiedTeamIds || [],
+              tenant_id: currentTenantId
             });
           }
         });
@@ -440,7 +446,8 @@ export default function Dashboard() {
               name: t.name,
               group_id: normTeam.groupId,
               seed: normTeam.seed,
-              event_id: getTeamEventId(t, defEvtId)
+              event_id: getTeamEventId(t, defEvtId),
+              tenant_id: currentTenantId
             });
           }
         });
@@ -463,7 +470,8 @@ export default function Dashboard() {
               id: finalGroupId,
               name: g.name,
               team_ids: normalizedGroupsObj[finalGroupId].teamIds,
-              event_id: defEvtId
+              event_id: defEvtId,
+              tenant_id: currentTenantId
             });
           }
         });
@@ -484,7 +492,8 @@ export default function Dashboard() {
               knockout_match_id: m.knockoutMatchId !== undefined ? m.knockoutMatchId : (m.knockout_match_id || null),
               next_match_id: m.nextMatchId !== undefined ? m.nextMatchId : (m.next_match_id || null),
               next_match_slot: m.nextMatchSlot !== undefined ? m.nextMatchSlot : (m.next_match_slot || null),
-              event_id: defEvtId
+              event_id: defEvtId,
+              tenant_id: currentTenantId
             });
           }
         });
@@ -514,7 +523,8 @@ export default function Dashboard() {
           settings: parsed.tournament?.settings || {},
           active_group_id: activeGroupId,
           advance_selection_mode: parsed.advanceSelectionMode || 'auto',
-          manual_qualified_team_ids: parsed.manualQualifiedTeamIds || []
+          manual_qualified_team_ids: parsed.manualQualifiedTeamIds || [],
+          tenant_id: currentTenantId
         });
       }
 
@@ -579,13 +589,13 @@ export default function Dashboard() {
         try {
           if (incomingMatchIds.length > 0) {
             const { error: mDelErr } = incomingEventIds.length > 0
-              ? await supabase.from('matches').delete().in('event_id', incomingEventIds).not('id', 'in', `(${incomingMatchIds.map(id => `'${id}'`).join(',')})`)
-              : await supabase.from('matches').delete().not('id', 'in', `(${incomingMatchIds.map(id => `'${id}'`).join(',')})`);
+              ? await supabase.from('matches').delete().eq('tenant_id', activeTenantId).in('event_id', incomingEventIds).not('id', 'in', `(${incomingMatchIds.map(id => `'${id}'`).join(',')})`)
+              : await supabase.from('matches').delete().eq('tenant_id', activeTenantId).not('id', 'in', `(${incomingMatchIds.map(id => `'${id}'`).join(',')})`);
             if (mDelErr) {
               console.error("Lỗi tại bước dọn dẹp MATCHES khi Import JSON:", mDelErr.message);
             }
           } else {
-            const query = supabase.from('matches').delete();
+            const query = supabase.from('matches').delete().eq('tenant_id', activeTenantId);
             if (incomingEventIds.length > 0) {
               await query.in('event_id', incomingEventIds);
             } else {
@@ -600,13 +610,13 @@ export default function Dashboard() {
         try {
           if (incomingTeamIds.length > 0) {
             const { error: tDelErr } = incomingEventIds.length > 0
-              ? await supabase.from('teams').delete().in('event_id', incomingEventIds).not('id', 'in', `(${incomingTeamIds.map(id => `'${id}'`).join(',')})`)
-              : await supabase.from('teams').delete().not('id', 'in', `(${incomingTeamIds.map(id => `'${id}'`).join(',')})`);
+              ? await supabase.from('teams').delete().eq('tenant_id', activeTenantId).in('event_id', incomingEventIds).not('id', 'in', `(${incomingTeamIds.map(id => `'${id}'`).join(',')})`)
+              : await supabase.from('teams').delete().eq('tenant_id', activeTenantId).not('id', 'in', `(${incomingTeamIds.map(id => `'${id}'`).join(',')})`);
             if (tDelErr) {
               console.error("Lỗi tại bước dọn dẹp TEAMS khi Import JSON:", tDelErr.message);
             }
           } else {
-            const query = supabase.from('teams').delete();
+            const query = supabase.from('teams').delete().eq('tenant_id', activeTenantId);
             if (incomingEventIds.length > 0) {
               await query.in('event_id', incomingEventIds);
             } else {
@@ -621,13 +631,13 @@ export default function Dashboard() {
         try {
           if (incomingGroupIds.length > 0) {
             const { error: gDelErr } = incomingEventIds.length > 0
-              ? await supabase.from('groups').delete().in('event_id', incomingEventIds).not('id', 'in', `(${incomingGroupIds.map(id => `'${id}'`).join(',')})`)
-              : await supabase.from('groups').delete().not('id', 'in', `(${incomingGroupIds.map(id => `'${id}'`).join(',')})`);
+              ? await supabase.from('groups').delete().eq('tenant_id', activeTenantId).in('event_id', incomingEventIds).not('id', 'in', `(${incomingGroupIds.map(id => `'${id}'`).join(',')})`)
+              : await supabase.from('groups').delete().eq('tenant_id', activeTenantId).not('id', 'in', `(${incomingGroupIds.map(id => `'${id}'`).join(',')})`);
             if (gDelErr) {
               console.error("Lỗi tại bước dọn dẹp GROUPS khi Import JSON:", gDelErr.message);
             }
           } else {
-            const query = supabase.from('groups').delete();
+            const query = supabase.from('groups').delete().eq('tenant_id', activeTenantId);
             if (incomingEventIds.length > 0) {
               await query.in('event_id', incomingEventIds);
             } else {
@@ -640,12 +650,12 @@ export default function Dashboard() {
 
         try {
           if (incomingEventIds.length > 0) {
-            const { error: eDelErr } = await supabase.from('events').delete().not('id', 'in', `(${incomingEventIds.map(id => `'${id}'`).join(',')})`);
+            const { error: eDelErr } = await supabase.from('events').delete().eq('tenant_id', activeTenantId).not('id', 'in', `(${incomingEventIds.map(id => `'${id}'`).join(',')})`);
             if (eDelErr) {
               console.error("Lỗi tại bước dọn dẹp EVENTS khi Import JSON:", eDelErr.message);
             }
           } else {
-            await supabase.from('events').delete().eq('id', 'dummy_safeguard');
+            await supabase.from('events').delete().eq('tenant_id', activeTenantId).eq('id', 'dummy_safeguard');
           }
         } catch (exc) {
           console.error("Ngoại lệ dọn dẹp EVENTS khi Import JSON:", exc);
@@ -663,7 +673,8 @@ export default function Dashboard() {
             location: parsed.tournament.location,
             date: parsed.tournament.date,
             settings: parsed.tournament.settings,
-            current_event_id: targetEventId
+            current_event_id: targetEventId,
+            tenant_id: currentTenantId
           });
           if (tErr) {
             console.error("Lỗi tại bước 1 (tournament) khi Import JSON:", tErr.message, tErr.details);

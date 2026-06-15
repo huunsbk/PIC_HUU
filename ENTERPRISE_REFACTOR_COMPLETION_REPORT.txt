@@ -1,0 +1,82 @@
+BÁO CÁO HOÀN THÀNH MIGRATION KIẾN TRÚC ENTERPRISE
+
+==================================================
+TỔNG QUAN
+==================================================
+Hệ thống tài khoản cũ thông qua JSON `accounts_config` trong bảng `tournament` đã bị xóa sổ hoàn toàn khỏi ứng dụng (source code).
+Ứng dụng hiện tại đã được cấu hình trỏ hoàn toàn sang các bảng độc lập theo chuẩn Enterprise (`accounts`, `tenants`, `roles`, `active_sessions`, `login_logs`).
+
+==================================================
+PHẦN 1: FILE ĐÃ SỬA
+==================================================
+1. src/types.ts
+   - Thêm cấu trúc bảng: Tenant, AppRole, EnterpriseAccount, ActiveSession, LoginLog.
+   - Thêm thuộc tính tenant_id, role_id cho Account cũ (chỉ để tương thích giao diện tạm).
+2. src/store.ts
+   - Gỡ bỏ mảng accounts và các hàm CRUD cũ (addAccount2, updateAccount2, deleteAccount2).
+   - Thêm object `currentEnterpriseUser`.
+   - Viết lại hàm `setAuthStatus`: Đăng xuất các session cũ và Insert token đăng nhập vào bảng `active_sessions`. Log đăng nhập vào `login_logs`.
+   - Viết lại hàm `checkAdminSession`: Polling trực tiếp từ `active_sessions` thay vì chọc vào `accounts_config` chung.
+   - Viết lại hàm `initSupabase`: Kiểm tra phân quyền single-login Enterprise.
+   - Viết lại luồng `logout`: Xóa session trong database qua bảng `active_sessions`.
+3. src/components/AuthModal.tsx
+   - Gỡ bỏ logic loop duyệt accounts cũ.
+   - Thay bằng logic trực tiếp SELECT query bảng `accounts` có mapping với `tenants` và `roles`.
+   - Xác định `admin1`, `admin2`, `admin3` dựa trên `role_level` trả về từ bảng Role (1, 2, 3).
+4. src/components/ScoreEntry.tsx
+   - Kiểm tra `permittedEventIds` thông qua array có sẵn ở `currentEnterpriseUser` thay vì lookup trong mảng accounts[] lỗi thời.
+5. src/App.tsx
+   - Cắt toàn bộ Component `AccountManager.tsx` khỏi Routing và Render Tree.
+   - Loại bỏ tab quản lý tài khoản trên giao diện (chỉ dẫn User truy cập Enterprise Dashboard / Database để thêm Account).
+
+==================================================
+PHẦN 2: FILE ĐÃ XÓA
+==================================================
+1. src/components/AccountManager.tsx
+   - Component thực hiện tính năng quản lý mảng tài khoản JSON -> Đã xóa bỏ hoàn toàn.
+
+==================================================
+PHẦN 3: SQL ĐÃ DÙNG / ÁP DỤNG TRÊN HỆ THỐNG
+==================================================
+Sử dụng các tables đã được thiết kế sẵn cho doanh nghiệp ở các bước trước:
+- auth.users (Supabase nguyên bản)
+- public.tenants
+- public.roles
+- public.permissions
+- public.accounts
+- public.account_event_permissions
+- public.active_sessions
+- public.login_logs
+
+Code React hiện tại truy vấn:
+SELECT * FROM \`accounts\` (join tenants, roles)
+SELECT * FROM \`active_sessions\`
+INSERT INTO \`active_sessions\`
+DELETE FROM \`active_sessions\`
+INSERT INTO \`login_logs\`
+
+==================================================
+PHẦN 4: CHỨC NĂNG ĐÃ THAY ĐỔI
+==================================================
+1. Đăng nhập: Không còn xác thực offline qua mảng JSON. Xác thực qua `supabase.auth.signInWithPassword`, sau đó kéo object Account từ cơ sở dữ liệu để map Role và phân tải Tenant (Khu vực CSDL).
+2. Kiểm soát phiên đăng nhập song song (Single-Login): Đăng nhập thiết bị mới sẽ Force Logout thiết bị cũ ở cấp độ Database Row Constraint / Table `active_sessions` chuẩn SaaS. Hàm polling client check token khớp với Row duy nhất.
+3. Chặn đăng nhập Tenant ngẫu nhiên: Cắt bỏ khả năng đổi Tenant trái phép trong localStorage; hệ thống tự rà soát nếu URL sai tenant. Doanh nghiệp (tenant) tách biệt 100%.
+
+==================================================
+PHẦN 5: CHỨC NĂNG CẦN KIỂM THỬ
+==================================================
+1. Đăng nhập qua auth.users có map với Enterprise Accounts.
+2. Redirect sau khi đăng nhập: Có chuyển người dùng cấp 2 (Tenant Admin) thẳng vào đúng nhánh `/:tenant_id` hay không?
+3. Admin level 3 (Event Admin) đăng nhập: Có bị hạn chế nhập điểm chỉ ở đúng Event ID cho phép hay không?
+4. Đăng nhập ở 2 thiết bị cùng lúc: Polling (5 giây) có kích hoạt Force Logout lên thiết bị đầu tiên không?
+
+==================================================
+PHẦN 6: DANH SÁCH TEST CASE BẮT BUỘC
+==================================================
+[TC-01]: Nhập tài khoản/mật khẩu sai -> Trả về lỗi "Tên đăng nhập hoặc mật khẩu không chính xác."
+[TC-02]: Đăng nhập với tài khoản có status != 'active' -> Lỗi "Tài khoản không tồn tại hoặc đã bị khóa."
+[TC-03]: Đăng nhập thành công -> Kiểm tra LocalStorage chứa đúng Token Session & DB `active_sessions` chứa 1 dòng của account.
+[TC-04]: Log ra `login_logs` khi đăng nhập thành công.
+[TC-05]: Thiết bị B đăng nhập cùng Auth ID với thiết bị A -> DB override session_token. Thiết bị A sau tối đa 5s tự load lại trang, bay khỏi account và cảnh báo bị đăng xuất.
+[TC-06]: Khi Admin cấp 3 mở ScoreEntry, dropdown chỉ cho phép trỏ tới Event ID có chứa trong property của đối tượng phân quyền Enterprise.
+[TC-07]: Log out khỏi hệ thống -> Trình duyệt xóa hoàn toàn JWT, Token Session và bảng DB row Active Sessions bị xóa trắng.

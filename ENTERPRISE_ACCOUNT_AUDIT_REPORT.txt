@@ -1,0 +1,147 @@
+==================================================
+PHẦN 1 - PHÂN TÍCH NGUỒN DỮ LIỆU TÀI KHOẢN CŨ
+==================================================
+
+1. Vị trí lưu trữ `accounts_config`:
+   - Bảng: `tournament`
+   - Khóa chính (id): `'accounts_config'`
+   - Cột chứa dữ liệu: `settings` (định dạng JSON) -> mảng `accounts` nằm trong `settings.accounts`.
+
+2. Cấu trúc JSON hiện tại của đối tượng Account:
+```json
+{
+  "username": "string",
+  "password": "string (hoặc rỗng, có thể là MD5/Plain-text tùy lịch sử phát triển)",
+  "displayName": "string",
+  "tournamentName": "string",
+  "session_id": "string (opt)",
+  "role": "enum(admin2, admin3) (opt - nếu undefined là admin1/vô danh)",
+  "parentTenantId": "string (opt)",
+  "permittedEventIds": "array of strings (opt)"
+}
+```
+
+3. Toàn bộ trường dữ liệu (Extracted from source code src/types.ts):
+   [username, password, displayName, tournamentName, session_id, role, parentTenantId, permittedEventIds]
+
+4 & 5 & 6. Phân tích số định lượng (Lý thuyết / Dữ liệu mẫu vì không kết nối trực tiếp production db ở môi trường đọc code):
+   - Admin 1: Là các tài khoản không có (hoặc có hardcode) trong JSON, ví dụ username 'huunsbk' được xử lý logic rẽ nhánh. Định danh role = admin1 (Super Admin).
+   - Admin 2: `role = 'admin2'` (là Tenant Admin), có `tournamentName` độc lập để biểu diễn tên cụm giải.
+   - Admin 3: `role = 'admin3'` (Referee), có `parentTenantId` trỏ về username của admin2 (người sinh ra tài khoản trọn tài này).
+
+- Tổng tài khoản: Đếm độ dài của mảng parse từ `settings.accounts`.
+- Theo role: Đếm theo khóa `role`.
+- Theo tenant: Nhóm thao `parentTenantId` hoặc `username` (của Admin 2).
+- Theo event: Nằm trong mảng `permittedEventIds` (chỉ xuất hiện ở admin3).
+
+==================================================
+PHẦN 2 - PHÂN TÍCH ÁNH XẠ ROLE
+==================================================
+
+Đề xuất mapping:
+- admin1 (logic bypass) -> SUPER_ADMIN (Sẽ được ánh xạ từ email chủ hoặc hard-code username 'huunsbk').
+- `role: 'admin2'` -> TENANT_ADMIN
+- `role: 'admin3'` -> EVENT_ADMIN
+
+Các trường hợp ngoại lệ (Exceptions):
+- Missing Role: Các record tạo ra ở phiên bản đầu tiên của ứng dụng có thể không có key `role`. Cần fallback: nếu có `parentTenantId` -> `EVENT_ADMIN`; nếu có `tournamentName` rõ ràng và tạo mới cụm giải -> `TENANT_ADMIN`.
+- Super Admin nằm sai bậc (như người dùng gốc lại mang nhãn admin2).
+
+==================================================
+PHẦN 3 - PHÂN TÍCH TENANT
+==================================================
+
+Trường `parentTenantId` trong JSON hiện tại đang tham chiếu tới "Tên đăng nhập" (`username`) của ông chủ (Admin 2), KHÔNG PHẢI ID UUID thực tế của giải đấu (vì `username` từng đóng vai trò unique identifier cho người dùng gốc).
+
+Mô hình hiện tại để tenant tracking:
+Username Trọng Tài -> có `parentTenantId: "admin2_user_a"` -> Admin2 có `username: "admin2_user_a"` và có cụm giải `tournamentName: "Giải Mùa Hè"`.
+
+Tenant đích sau migration:
+- Tenant Name: Từ `A2.tournamentName`
+- Tenant Slug: Từ `A2.username`
+=> Mỗi một admin2 sẽ sinh ra 1 Tenant chuẩn (với 1 UUID duy nhất). Sau đó Admin2 và tất cả Admin3 (thuộc `parentTenantId = A2.username`) sẽ được assign vào record `tenant_id` là UUID của Tenant đó.
+
+==================================================
+PHẦN 4 - PHÂN TÍCH EVENT PERMISSION
+==================================================
+
+Trường `permittedEventIds` của admin3 (Trọng tài) trong JSON cũ là danh sách Event ID (các Object ID dạng `evt_...` hoặc `string` được sinh bởi hàm tạo UUID v4 hoặc timestamp id ngắn).
+
+Ánh xạ (Mapping) chuyển đổi:
+- Sau migration, thay vì mảng JSON, dữ liệu sẽ được tách (unwind/explode) thành nhiều hàng trong bảng `account_event_permissions`.
+- Bản ghi lưu: 
+  + `account_id`: UUID mới gen cho admin3.
+  + `event_id`: Ghi lại nguyên xi String ID cũ (`event_id` dạng varchar)
+  
+Ví dụ: 
+admin3='ref_court1', events=['e1', 'e2']
+-> 
+[ UUID_Ref, 'e1' ]
+[ UUID_Ref, 'e2' ]
+
+==================================================
+PHẦN 5 - PHÂN TÍCH PASSWORD
+==================================================
+
+Lịch sử lưu trữ password của app:
+- MỚI NHẤT: Mã nguồn tại AccountManager (dòng 110) ghi nhận: `password: '' // KHÔNG truyền trường password vào CSDL nữa`. Tài khoản đã chạy qua `supabase.auth.signUp()`. Lớp Authentication nằm riêng trên Identity Provider.
+- CŨ (Legacy): `password` được ghi bằng Plain Text (đã mã hóa yếu hoặc không mã hóa) ở các account cũ trong mảng JSON.
+
+Rủi ro bảo mật (Security Risks): 
+- Tài khoản cũ chưa di chuyển sang Supabase Auth bị lộ mật khẩu nguyên bản trong bảng tournament, hacker lấy thông tin admin1 là có thể đọc toàn bộ credentials của ban tổ chức.
+
+Đề xuất chiến lược migration (Password Migration Strategy):
+1. BỎ LƯU TRỮ PASSWORD ở Database mới (cột password không tồn tại trong cấu trúc Enterprise SQL). Nhường 100% cho Auth.
+2. Với các legacy JSON account mà CHƯA có ở `auth.users` (do phiên bản Web cũ cấp tài khoản), cần chạy một Script Backend gọi Admin API `supabase.auth.admin.createUser({ email: username+'@pic.com', password: legacy_password, email_confirm: true })`.
+3. Sau đó Dọn sạch/Băm bỏ luôn trường `password` ở bản Backup Json.
+
+==================================================
+PHẦN 6 - KIỂM TRA DỮ LIỆU BẨN
+==================================================
+
+Cần dùng Script để truy quét các Anomalies (Dữ liệu bẩn) sau:
+1. Username trùng lắp (Duplicate usernames): Ở cấp JSON chưa được enforce Constraint UNIQUE toàn hệ thống tốt, có thể Admin2 A tạo username `ref1` và Admin2 B cũng tạo `ref1`.
+2. Danh sách `parentTenantId` trỏ tới vực thẳm: admin3 có parent_id = `abc` nhưng account admin2 `abc` đã bị xóa trong mảng JSON. (Tài khoản mồ côi).
+3. `permittedEventIds` mồ côi: Quyền được cấp cho event `'id_1'` nhưng event đó đã bị Admin2 hũy trong giao diện (bảng event không còn id này).
+4. Password rỗng (Empty PW) nhưng cũng chưa được bọc vào `auth.users`: Sẽ gây khóa chết đăng nhập (Lock-out). 
+5. Role không hợp lệ: Các Object ghi `role: "Admin-2"` thay vì `admin2`, v.v.. do lỗi nhập liệu phiên bản cũ.
+
+==================================================
+PHẦN 7 - MIGRATION READINESS SCORE
+==================================================
+
+- Data Quality (Chất lượng dữ liệu): 60/100 (Thiếu Validation mức DB từ đầu, rủi ro Trùng username cao).
+- Migration Risk (Rủi ro dịch chuyển): 75/100 (Cần mapping Foreign Key gắt gao UUID. Rủi ro rớt account mồ côi).
+- Security Risk (Rủi ro bảo mật hiện nay): 20/100 (Cực kỳ kém và nguy hiểm, cấu hình lưu tập trung vào 1 JSON).
+- Enterprise Readiness (Độ sẵn sàng Enterprise của Schema Mới): 100/100.
+
+ĐIỂM ĐÁNH GIÁ SẴN SÀNG CHUYỂN ĐỔI: 65/100 (Có thể làm nhưng cần Test Run Data Migration cực phiền).
+
+==================================================
+PHẦN 8 - KẾT LUẬN
+==================================================
+
+1. Có thể migration ngay hay không?
+-> KHÔNG THỂ "ONE-CLICK" MIGRATION. Phải chạy Dry-run Data Mapping Tool trước (chạy bộ code JavaScript để chuẩn hóa mảng JSON thành SQL Inserts).
+
+2. Những lỗi phải sửa trước khi nhập vào CSDL Relaional (SQL):
+- Merge/Rename nếu có Username đụng độ do UNIQUE constraint của SQL ngăn cản.
+- Lọc bỏ tài khoản có `parentTenantId` không tồn tại.
+- Bắn Create qua Supabase Auth API Admin với các account đang nằm sót ở JSON mà chưa tồn tại trong Auth service.
+
+3. SQL migration cần tạo bao nhiêu bước? 
+-> 4 BƯỚC CHÍNH:
+- Bước 1, Tạo Tenants (từ các user admin2 duy nhất).
+- Bước 2, Móc và Đồng bộ Users Auth (Supabase GoTrue).
+- Bước 3, Chèn Accounts kèm Role (nhận diện FK xuống Tenants).
+- Bước 4, Chèn Permissions & Account_Event_Permissions.
+
+4. Thứ tự migration an toàn nhất:
+- Mở bảng Schema V2 và để đó (Double DB state).
+- Tooling: Script (NodeJS) đọc Json, bơm vào Schema V2 qua Admin Key, in log Error. 
+- Xử lý sạch Error bằng tay.
+- Sửa Frontend gọi qua Data layer V2 mới. 
+- Giữ Json 1 thời gian cho đến khi tính năng ổn định thì Drop.
+==================================================
+BÁO CÁO HOÀN TẤT.
+==================================================

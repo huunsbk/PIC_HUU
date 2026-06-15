@@ -1,0 +1,151 @@
+==================================================
+ENTERPRISE AUTH REFACTOR PLAN
+==================================================
+Dự án: Hệ thống Quản lý Giải đấu Pickleball Đa Tenant (PIC_HUU)
+Mục tiêu: Dỡ bỏ hoàn toàn hệ thống cũ json accounts_config, chuyển đổi qua mô hình cơ sở dữ liệu quan hệ bảo mật cao. Đánh giá tất cả các phụ thuộc trong mã nguồn hiện nay.
+==================================================
+
+==================================================
+PHẦN 1 - ACCOUNT DEPENDENCY MAP
+==================================================
+
+1. src/store.ts
+   - initSupabase()
+     [Mức độ: RẤT CAO] Đọc toàn bộ danh sách `accounts` từ json của `accounts_config` nạp vào RAM.
+   - checkAdminSession()
+     [Mức độ: RẤT CAO] Polling đọc lại `accounts_config` để dò xét đối lập session_id.  
+   - setAuthStatus()
+     [Mức độ: RẤT CAO] Xác lập định hình Role, Tenant ngay sau khi Auth, đồng thời upsert ghi lại session_id lên mảng Json CSDL.
+   - addAccount2() / updateAccount2() / deleteAccount2()
+     [Mức độ: RẤT CAO] Logic C-R-U-D thao tác đè lên document duy nhất `accounts_config` trên database.
+   - logout()
+     [Mức độ: TRUNG BÌNH] Thu dọn Zustand, signOut khỏi thiết bị, xử lý session logic.
+
+2. src/components/AuthModal.tsx
+   - handleLogin()
+     [Mức độ: RẤT CAO] Điểm khởi đầu đăng nhập. So khớp hardcode admin1. Đọc list từ store json để phân luồng admin2/admin3.
+
+3. src/components/AccountManager.tsx
+   - Giao diện Admin
+     [Mức độ: CAO] Đọc arrays hiển thị table, gọi add/update/delete. Sửa đổi permittedEventIds bằng UI.
+
+4. src/components/ScoreEntry.tsx
+   - Xử lý trận
+     [Mức độ: CAO] Đọc role để khóa UI. Đọc `permittedEventIds` để so sánh với sự kiện có được quyền edit hay không.
+
+5. src/components/ResetPasswordModal.tsx
+   - Xử lý bảo mật
+     [Mức độ: CAO] Thiết lập update liên kết password cho Auth nhưng dùng mảng Json để đồng bộ.
+
+6. src/App.tsx
+   - Layout & Định tuyến
+     [Mức độ: CAO] Lắng nghe role để ẩn hiện menu trái. Force Logout 30 mins nhàn rỗi. Lắng nghe event `SIGNED_OUT`.
+
+7. src/types.ts
+   - Type definitions
+     [Mức độ: TRUNG BÌNH] Định nghĩa cấu trúc mảng Account Json (role, session_id, permittedEventIds).
+
+==================================================
+PHẦN 2 - LOGIN FLOW MAP
+==================================================
+
+1. LOGIN HIỆN TẠI:
+   - File: `src/components/AuthModal.tsx`, `src/store.ts`.
+   - Luồng: Gửi form (AuthModal) -> Supabase auth (`...signInWithPassword()`) -> Nếu username=="huunsbk" => Role `admin1` -> Nếu không, tìm trong mảng RAM `accounts` -> Trả ra `admin2` hoặc `admin3`, đồng thời lấy `parentTenantId`. Chuyền qua `store.ts` (`setAuthStatus`).
+
+2. SESSION HIỆN TẠI:
+   - File: `src/store.ts`.
+   - Luồng: `setAuthStatus` sinh `Date.now() + Math.random()`. Lưu local. Gọi hàm upsert chèn chuỗi session này vào lại dòng 'accounts_config'. Tiếp đó, hàm `checkAdminSession` thỉnh thoảng gọi API đọc ra để so sánh có lệch pha (bị remote login đè) hay không.
+
+3. LOGOUT HIỆN TẠI:
+   - File: `src/store.ts`, `src/App.tsx`.
+   - Luồng: Xóa local session/state. Call `supabase.auth.signOut()`. Đặc biệt ở `App.tsx` có setInterval 30 phút timer không làm gì sẽ ép trigger `logout()`.
+
+==================================================
+PHẦN 3 - ROLE FLOW MAP
+==================================================
+
+Hệ thống quy định 3 mức độ và kiểm tra như sau:
+- admin1 (Hardcode): 
+  > AuthModal.tsx (Quyết định) -> App.tsx (Bật menu Quản trị đơn vị) -> Store (Set isAdmin = true).
+- admin2 (Chủ giải): 
+  > Nằm rải rác trong các form, `AccountManager.tsx` lấy check xem có cho tạo account con `admin3` hay là tạo account bạn (Admin2).
+- admin3 (Trọng tài): 
+  > Ngăn chặn sửa đổi giải đấu. `ScoreEntry.tsx` lấy check role !== admin3 thì auto pass, nếu == admin3 thì quét list permittedEventIds.
+
+==================================================
+PHẦN 4 - TENANT FLOW MAP
+==================================================
+
+Tenant được suy luận gián tiếp từ quy ước đặt tên và thông tin trong mảng:
+- Từ đâu: Lấy ở AuthModal khi đối soát mảng tài khoản từ Json. 
+- admin2: Lấy thẳng username của người đó gán làm `activeTenantId`.
+- admin3: Lấy mỏ neo `parentTenantId` (username của admin2 sinh ra nó) để làm `activeTenantId`.
+- Tác dụng: Chui vào `src/store.ts` ở hàm `initSupabase()`, thực hiện filter `.like('id', activeTenantId + '__%')`.
+
+==================================================
+PHẦN 5 - EVENT PERMISSION FLOW
+==================================================
+
+Mảng `permittedEventIds` (chỉ dành cho admin3) chuyên dùng để kiểm soát việc nhập tỷ số.
+- Nguồn: Nạp từ database `tournament` document 'accounts_config' trong init store state.
+- Nơi check: `src/components/ScoreEntry.tsx` dòng số 26.
+- Hành vi: Gán thuộc tính `disabled` hoặc bung Return chối bỏ form hành động nếu Event_Id đấu đang chọn không nằm trong mảng.
+- Nơi cập nhật: Tại UI của `src/components/AccountManager.tsx` quản trị viên cấp 2 đánh dấu tích checkbox (lưu thành string config rồi upsert lên store).
+
+==================================================
+PHẦN 6 - ENTERPRISE REFACTOR PLAN
+==================================================
+
+PHASE 1: LOGIN (Chuyển JWT & API Database)
+- Dẹp bỏ array search accounts_config.
+- AuthModal sau khi vượt qua `.signIn` -> Trích Metadata hoặc gọi API bảng `accounts` SQL để lấy `tenant_id`, `role_id`.
+
+PHASE 2: SESSION (Active Sessions Tracker)
+- Xóa bỏ việc Update Json lên cấu hình.
+- Thêm lời gọi API nhúng device info (user-agent, ip_address) vào SQL bảng `active_sessions`.
+- Theo dõi Session bằng Hook Supabase Supabase-realtime thay vì Polling thô sơ.
+
+PHASE 3: ROLE (DB Roles Context)
+- Xóa hardcode admin1. Tất cả lấy từ join sql `roles`.
+- Tổ chức lại Role Based Access Control cho các Component UI.
+
+PHASE 4: TENANT (Drop Prefix - RLS Migration)
+- Xóa mọi chuỗi lọc prefix `activeTenantId + '__%'`.
+- Lợi dụng SQL RLS Firewall để bảo mật. Data trả về auto được lọc đúng tenant mà client không cần bận tâm làm thuật toán.
+
+PHASE 5: PERMISSION (Relational Auth)
+- Bắn event permission rời rạc thành bảng `account_event_permissions`.
+- Khi cần load trận, query bảng API hoặc chèn subquery RLS chứ không lưu mảng RAM.
+- Giao diện Admin thay UI đọc SQL Relational.
+
+PHASE 6: REMOVE ACCOUNTS_CONFIG (Dọn rác & Clean Up)
+- Tiêu huỷ tất cả function addAccount2, updateAccount2, deleteAccount2 trong `store.ts`.
+- Tiêu hủy function checkAdminSession cũ. 
+- Đổi Type Account thành interface Table mới.
+- Dứt điểm tài liệu `accounts_config` trong Supabase table `tournament`.
+
+==================================================
+PHẦN 7 - FILE CHANGE LIST
+==================================================
+
+Dưới đây là các tệp nguồn cần tái cấu trúc mã (Sửa đổi logic):
+
+1. src/types.ts 
+   (Refactor interface Account sang DB Schema Schema, EventData).
+2. src/store.ts
+   (Nơi thay đổi nặng nề nhất - Xóa các API viết cho JSON, thêm API gọi cho Bảng SQL Enterprise, gỡ lệnh lọc Like).
+3. src/components/AuthModal.tsx
+   (Thay đổi Request xác định Auth & Tenant - Đổi từ Query Array sang Select Single Table Data).
+4. src/components/AccountManager.tsx
+   (Khắc phục logic Quản lý người dùng, chuyển từ Upsert Json Array sang API CRUD).
+5. src/components/ScoreEntry.tsx
+   (Tương tác với Permissions Relation thay vì Arrays - Hook check quyền rẽ nhánh khác).
+6. src/App.tsx
+   (Khung nhìn định tuyến cho Roles bị biến thiên, thay đổi Timer & SignOut listener).
+7. src/components/ResetPasswordModal.tsx
+   (Sửa logic Update Password kèm thao tác User SQL).
+
+==================================================
+KẾT THÚC BÁO CÁO PHÂN TÍCH DI CHUYỂN MODULE ACCOUNTS
+==================================================

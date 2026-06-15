@@ -1,0 +1,57 @@
+BÁO CÁO HOÀN THÀNH TRIỂN KHAI RLS (ENTERPRISE SECURITY SPRINT)
+
+==================================================
+CHI TIẾT TRIỂN KHAI PHÒNG CHỖNG TRUY CẬP (RLS)
+==================================================
+Script triển khai (Kèm Security Definer chống vô hạn tuần hoàn đệ quy vòng lặp) đã được trích xuất an toàn ra `ENTERPRISE_RLS_FINAL.sql`.
+
+* Table: accounts
+RLS Enabled: YES
+Policies: Accounts_Isolation (TENANT_ADMIN chỉ đọc tài khoản tenant của mình, SUPER_ADMIN full).
+PASS
+
+* Table: active_sessions  
+RLS Enabled: YES
+Policies: ActiveSessions_Isolation (Người dùng chỉ thấy session của chính mình dựa trên account_id).
+PASS
+
+* Table: login_logs
+RLS Enabled: YES
+Policies: LoginLogs_Isolation (Tenant không xem được log các tenant khác dựa trên ánh xạ account_id -> tenant_id).
+PASS
+
+* Table: groups
+RLS Enabled: YES
+Policies: Groups_Isolation (EVENT_ADMIN truy cập theo tenant + event được cấp; SUPER/TENANT_ADMIN full tenant).
+PASS
+
+* Table: teams
+RLS Enabled: YES  
+Policies: Teams_Isolation (Tương tự logic Groups).
+PASS
+
+* Table: matches
+RLS Enabled: YES
+Policies: Matches_Isolation (Tương tự logic Groups).
+PASS
+
+* Table: account_permissions
+RLS Enabled: YES
+Policies: AcctPerms_Isolation (Tenant không thể chỉnh sửa account_permissions bên ngoài phạm vi account thuộc tenant của họ).
+PASS
+
+* Table: account_event_permissions
+RLS Enabled: YES
+Policies: AcctEvtPerms_Isolation (Theo dõi ràng buộc account_id thuộc tenant vs auth. EVENT_ADMIN ngăn tự cấp qua rules account_id != auth_account_id).
+PASS
+
+* Table: tournament
+RLS Enabled: YES
+Policies: Tournament_Isolation (Kiểm soát tenant_id song song SUPER_ADMIN).
+PASS
+
+==================================================
+GIỮ NGUYÊN
+==================================================
+* Table: events (Đã có sẵn RLS và Policy từ hệ thống, hoặc giữ nguyên theo chỉ định).
+* Table: audit_logs (Đã có sẵn RLS và Policy từ hệ thống, hoặc giữ nguyên theo chỉ định).

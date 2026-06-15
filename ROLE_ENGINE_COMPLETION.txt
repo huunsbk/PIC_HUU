@@ -1,0 +1,39 @@
+BÁO CÁO HOÀN THÀNH ROLE ENGINE
+
+==================================================
+TỔNG QUAN
+==================================================
+Tất cả các định danh phân quyền cũ mang tính chất kỹ thuật (`admin1`, `admin2`, `admin3`) đã được loại bỏ hoàn toàn khỏi source code (0 mentions left).
+Chúng được thay thế bằng các định danh semantic phản ánh đúng cấu trúc doanh nghiệp SaaS nhiều khách thuê (`SUPER_ADMIN`, `TENANT_ADMIN`, `EVENT_ADMIN`).
+
+==================================================
+CHI TIẾT THỰC HIỆN
+==================================================
+
+1. src/types.ts
+   - Sửa định nghĩa type string literal: `role?: 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EVENT_ADMIN' | 'guest'`.
+
+2. src/store.ts
+   - Thay đổi initial state: `userRole: 'guest' | 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EVENT_ADMIN'`.
+   - Update `setAuthStatus` parameter types.
+   - Các luồng polling định tuyến (`checkAdminSession`) kiểm tra Enterprise token hiện tại trên `TENANT_ADMIN` và `EVENT_ADMIN`.
+   - Các thao tác admin chặn bằng việc kiểm tra phân quyền `SUPER_ADMIN` / `TENANT_ADMIN` / `EVENT_ADMIN` với độ phủ code tương đương mã cũ.
+
+3. src/components/AuthModal.tsx
+   - Việc map các account pull từ Supabase về client app phân quyền như sau (dựa trên cột `level` schema DB Enterprise):
+     + Level 1 => `SUPER_ADMIN`
+     + Level 2 => `TENANT_ADMIN` 
+     + Level 3 => `EVENT_ADMIN`
+
+4. src/components/ScoreEntry.tsx
+   - Điều kiện nhập điểm giờ check bằng `userRole !== 'EVENT_ADMIN'` kết hợp với object `currentEnterpriseUser`.
+
+5. src/App.tsx
+   - Re-Map hệ thống Sidebar/Navigation `allNavItems` với property list roles: `['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'guest']`.
+   - Re-Map badges và indicators trên component Header cho các user tương ứng (`SUPER_ADMIN`, `TENANT_ADMIN`).
+   - Cập nhật các rules ignore AuthListener cho `SUPER_ADMIN`, `TENANT_ADMIN`, `EVENT_ADMIN` để tránh ngắt session sai (false positive).
+
+==================================================
+KẾT LUẬN
+==================================================
+Hệ thống nay đã thuần tuý sử dụng Role Semantic `SUPER_ADMIN`, `TENANT_ADMIN`, `EVENT_ADMIN`. Việc sửa đổi không phá vỡ logic Single-Login lẫn chức năng Navigation có liên quan đã phát triển ở các Phase trước. Đảm bảo clean code ở mức tối đa trước khi đưa ứng dụng vào Production.

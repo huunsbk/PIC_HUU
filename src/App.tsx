@@ -19,7 +19,6 @@ import LiveDashboard from './components/LiveDashboard';
 import AuditLogger from './components/AuditLogger';
 import EventBar from './components/EventBar';
 import ExportManager from './components/ExportManager';
-import AccountManager from './components/AccountManager';
 import AuthModal from './components/AuthModal';
 
 import {
@@ -54,11 +53,23 @@ export default function App() {
   const initSupabase = useTournamentStore((state) => state.initSupabase);
   const supabaseConnected = useTournamentStore((state) => state.supabaseConnected);
   const currentUser = useTournamentStore((state) => state.currentUser);
+  const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
   const userRole = useTournamentStore((state) => state.userRole);
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const setAuthStatus = useTournamentStore((state) => state.setAuthStatus);
   const setTenantId = useTournamentStore((state) => state.setTenantId);
-  const accounts = useTournamentStore((state) => state.accounts);
+  const checkAdminSession = useTournamentStore((state) => state.checkAdminSession);
+  const currentSessionId = useTournamentStore((state) => state.currentSessionId);
+
+  // Kiểm tra Single-Login song song 1 thiết bị/1 tài khoản
+  useEffect(() => {
+    if (currentEnterpriseUser && currentSessionId) {
+      const interval = setInterval(() => {
+        checkAdminSession();
+      }, 5000); // Check every 5 seconds
+      return () => clearInterval(interval);
+    }
+  }, [currentEnterpriseUser, currentSessionId, checkAdminSession]);
 
   const [isLoginOpen, setIsLoginOpen] = React.useState(false);
   const [isDbChanging, setIsDbChanging] = React.useState(false);
@@ -144,8 +155,8 @@ export default function App() {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         const store = useTournamentStore.getState();
-        // Bỏ qua cho các tài khoản quản trị ảo (admin1, admin2, admin3) để tránh false-positives khi nạp lại trang
-        if (store.userRole !== 'admin1' && store.userRole !== 'admin2' && store.userRole !== 'admin3') {
+        // Bỏ qua cho các tài khoản quản trị Enterprise để tránh false-positives khi nạp lại trang
+        if (!store.currentEnterpriseUser) {
           if (store.isAdmin) {
             console.log('[Auth Listener] Phát hiện đăng xuất từ hệ thống/thiết bị khác cho tài khoản standard.');
             store.logout();
@@ -234,20 +245,26 @@ export default function App() {
 
   const navItems = React.useMemo(() => {
     const allNavItems = [
-      { id: 'dashboard', label: 'Trang chủ', icon: Trophy, roles: ['admin1', 'admin2'] },
-      { id: 'teams', label: 'Quản lý đội', icon: Users, roles: ['admin1', 'admin2'] },
-      { id: 'groups', label: 'Chia bảng', icon: Layers, roles: ['admin1', 'admin2'] },
-      { id: 'scoreEntry', label: 'Nhập điểm', icon: Gamepad2, roles: ['admin1', 'admin2', 'admin3'] },
-      { id: 'matches', label: 'Lịch & Kết quả', icon: CalendarDays, roles: ['admin1', 'admin2'] },
-      { id: 'standings', label: 'Tuyển chọn vòng trong', icon: FileSpreadsheet, roles: ['admin1', 'admin2'] },
-      { id: 'knockout', label: 'Sơ đồ trực tiếp', icon: Network, roles: ['admin1', 'admin2'] },
-      { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv, roles: ['guest', 'admin1', 'admin2', 'admin3'] },
-      { id: 'export', label: 'Xuất file', icon: FileDown, roles: ['admin1', 'admin2'] },
-      { id: 'accounts', label: userRole === 'admin1' ? 'Quản trị đơn vị' : 'Tạo tài khoản', icon: Settings, roles: ['admin1', 'admin2'] },
-      { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList, roles: ['admin1', 'admin2'] },
+      { id: 'dashboard', label: 'Trang chủ', icon: Trophy, permission: 'view_dashboard' },
+      { id: 'teams', label: 'Quản lý đội', icon: Users, permission: 'manage_teams' },
+      { id: 'groups', label: 'Chia bảng', icon: Layers, permission: 'manage_groups' },
+      { id: 'scoreEntry', label: 'Nhập điểm', icon: Gamepad2, permission: 'enter_score' },
+      { id: 'matches', label: 'Lịch & Kết quả', icon: CalendarDays, permission: 'manage_matches' },
+      { id: 'standings', label: 'Tuyển chọn vòng trong', icon: FileSpreadsheet, permission: 'view_standings' },
+      { id: 'knockout', label: 'Sơ đồ trực tiếp', icon: Network, permission: 'manage_knockout' },
+      { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv, permission: 'view_live' },
+      { id: 'export', label: 'Xuất file', icon: FileDown, permission: 'export_data' },
+      { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList, permission: 'view_logs' },
     ];
-    return allNavItems.filter(item => item.roles.includes(userRole));
-  }, [userRole]);
+    
+    // Always show live for guest if they don't have explicit permissions but userRole is guest. 
+    // And actually, guest can see only 'live'.
+    if (userRole === 'guest') {
+      return allNavItems.filter(item => item.id === 'live');
+    }
+
+    return allNavItems.filter(item => useTournamentStore.getState().hasPermission(item.permission));
+  }, [useTournamentStore.getState().permissions, userRole]);
 
   useEffect(() => {
     if (!navItems.find(item => item.id === selectedTab)) {
@@ -368,39 +385,26 @@ export default function App() {
 
               {isAdmin ? (
                 <div className="flex items-center gap-2 text-xs">
-                  {userRole === 'admin1' && (
+                  {useTournamentStore.getState().hasPermission('*') && (
                     <span className="bg-indigo-50 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 px-2 py-0.5 rounded-md font-bold text-[10px] border border-indigo-200 flex items-center gap-1">
-                      👑 Cấp 1 (huunsbk)
+                      👑 Quyền cao nhất
                     </span>
                   )}
-                  {userRole === 'admin2' && (
+                  {useTournamentStore.getState().hasPermission('manage_tournaments') && !useTournamentStore.getState().hasPermission('*') && (
                     <span className="bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-350 px-2 py-0.5 rounded-md font-bold text-[10px] border border-emerald-250 flex items-center gap-1">
                       👤 BTC: @{currentUser}
                     </span>
                   )}
-                  {userRole === 'admin1' && (
+                  {useTournamentStore.getState().hasPermission('*') && (
                     <div className={`flex items-center gap-1.5 bg-slate-100 dark:bg-zinc-800 px-2.5 py-0.5 rounded-md text-[10px] border border-[#e2e8f0] dark:border-zinc-700 transition-all ${isDbChanging ? 'opacity-60 animate-pulse' : ''}`}>
                       <span className="text-zinc-500 font-bold uppercase tracking-wider text-[9px] flex items-center gap-1">
                         {isDbChanging && <RefreshCw size={10} className="animate-spin text-indigo-500 shrink-0" />}
-                        Xem CSDL:
+                        Tạo tài khoản / Tenant ở Enterprise Dashboard.
                       </span>
-                      <select
-                        value={activeTenantId}
-                        disabled={isDbChanging}
-                        onChange={(e) => handleDbChange(e.target.value)}
-                        className="bg-transparent font-extrabold focus:outline-none text-zinc-950 dark:text-zinc-200 cursor-pointer disabled:cursor-not-allowed"
-                      >
-                        <option value="default" className="text-black">Mặc định (t-1)</option>
-                        {accounts.map(acc => (
-                          <option key={acc.username} value={acc.username} className="text-black">
-                            {acc.displayName}
-                          </option>
-                        ))}
-                      </select>
                     </div>
                   )}
                   <button
-                    onClick={() => setAuthStatus('guest', null, 'default')}
+                    onClick={() => useTournamentStore.getState().logout()}
                     className="cursor-pointer text-[10px] font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-red-650 dark:text-red-400 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded transition-colors"
                   >
                     Đăng xuất
@@ -419,7 +423,7 @@ export default function App() {
 
           {/* Outer Wrapper cho màn hình chính - Mở rộng toàn bộ chiều rộng (Full Width) */}
           <main className="flex-1 p-4 lg:p-6 w-full print:p-0 print:w-full" id="main-content-panel">
-            {selectedTab !== 'live' && selectedTab !== 'logs' && selectedTab !== 'export' && selectedTab !== 'accounts' && selectedTab !== 'scoreEntry' && <EventBar />}
+            {selectedTab !== 'live' && selectedTab !== 'logs' && selectedTab !== 'export' && selectedTab !== 'scoreEntry' && <EventBar />}
             
             <div className="animate-fade-in">
               {selectedTab === 'dashboard' && <Dashboard />}
@@ -431,7 +435,6 @@ export default function App() {
               {selectedTab === 'knockout' && <KnockoutBracket />}
               {selectedTab === 'live' && <LiveDashboard />}
               {selectedTab === 'export' && <ExportManager />}
-              {selectedTab === 'accounts' && <AccountManager />}
               {selectedTab === 'logs' && <AuditLogger />}
             </div>
           </main>

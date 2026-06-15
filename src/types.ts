@@ -18,6 +18,8 @@ export interface Tournament {
   location: string;
   date: string;
   settings: TournamentSettings;
+  tenant_id?: string;
+  current_event_id?: string;
 }
 
 export type SeedType = 'none' | '1' | '2' | '3' | '4';
@@ -27,12 +29,16 @@ export interface Team {
   name: string;
   groupId: string | null;  // Bảng đấu mà đội thuộc về, null nếu chưa gán
   seed: SeedType;          // Hạt giống (none hoặc 1, 2, 3, 4)
+  tenant_id?: string;
+  event_id?: string;
 }
 
 export interface Group {
   id: string;
   name: string; // VD: Bảng A, Bảng B...
   teamIds: string[];
+  tenant_id?: string;
+  event_id?: string;
 }
 
 export interface Match {
@@ -51,12 +57,15 @@ export interface Match {
   nextMatchSlot?: 'A' | 'B'; // Đội thắng sẽ vào slot A hay slot B trong trận tiếp theo
   placeholderA?: string;
   placeholderB?: string;
+  tenant_id?: string;
+  event_id?: string;
 }
 
 export interface AuditLog {
   timestamp: string; // ISO string hoặc định dạng xem được
   action: string;    // Hành động chính
   details: string;   // Chi tiết hành động
+  tenant_id?: string;
 }
 
 export interface GroupStanding {
@@ -99,21 +108,82 @@ export interface EventData {
   teams: Record<string, Team>;
   groups: Record<string, Group>;
   matches: Match[];
+  tenant_id?: string;
   settings: TournamentSettings;
   activeGroupId: string | null;
   advanceSelectionMode: 'auto' | 'manual';
   manualQualifiedTeamIds: string[];
 }
 
+export interface Tenant {
+  id: string; // UUID of the tenant
+  name: string;
+  slug: string;
+  status: 'active' | 'suspended';
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AppRole {
+  id: string; // UUID of the role
+  name: string;
+  description?: string;
+  is_system: boolean;
+  level: number; // 1 = super admin, 2 = tenant admin, 3 = event admin
+}
+
+export interface EnterpriseAccount {
+  id: string; // UUID from auth.users
+  username: string; // Used for login display
+  display_name: string;
+  tenant_id?: string; // Foreign key to tenants
+  role_id: string; // Foreign key to roles
+  status: 'active' | 'inactive';
+  last_login?: string;
+  created_at?: string;
+  updated_at?: string;
+
+  // Joined properties
+  tenant?: Tenant;
+  role?: AppRole;
+  permittedEventIds?: string[]; // Array of strings (populated manually for event_admins)
+  permissions?: string[]; // Array of permission codes
+}
+
+export interface ActiveSession {
+  id: string;
+  account_id: string; // UUID
+  session_token: string;
+  ip_address?: string;
+  user_agent?: string;
+  last_activity: string;
+  created_at: string;
+}
+
+export interface LoginLog {
+  id: string;
+  account_id: string; // UUID
+  login_time: string;
+  ip_address?: string;
+  user_agent?: string;
+  status: 'success' | 'failed';
+  reason?: string;
+}
+
+// Keeping the older Account type around for any non-migrated components until they are updated
+// but we will mainly rely on EnterpriseAccount
 export interface Account {
+  id?: string;
   username: string;
   password?: string;
-  displayName: string;
-  tournamentName: string;
+  displayName?: string;
+  tournamentName?: string;
   session_id?: string;
-  role?: 'admin2' | 'admin3';
+  role?: 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EVENT_ADMIN' | 'guest'; // adjusted to capture all states
   parentTenantId?: string;
   permittedEventIds?: string[];
+  tenant_id?: string;
+  role_id?: string;
 }
 
 

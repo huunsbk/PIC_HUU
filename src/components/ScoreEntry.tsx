@@ -4,7 +4,8 @@ import { useTournamentStore } from '../store';
 import { getReadableTeamName, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
 
 export default function ScoreEntry() {
-  const { events, updateMatchScore, updateMatchStatus, currentEventId, setCurrentEvent, userRole, currentUser, accounts } = useTournamentStore();
+  const { events, updateMatchScore, updateMatchStatus, currentEventId, setCurrentEvent, userRole, currentUser } = useTournamentStore();
+  const currentEnterpriseUser = useTournamentStore(state => state.currentEnterpriseUser);
 
   const [localScores, setLocalScores] = useState<Record<string, { a: string, b: string }>>({});
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -20,11 +21,15 @@ export default function ScoreEntry() {
   const currentEvt = currentEventId && events[currentEventId] ? events[currentEventId] : eventList[0];
   
   const isPermitted = React.useMemo(() => {
-    if (userRole !== 'admin3') return true;
+    // If they have all access, they are permitted
+    if (useTournamentStore.getState().hasPermission('*') || useTournamentStore.getState().hasPermission('manage_events') || useTournamentStore.getState().hasPermission('manage_tournaments')) return true;
     if (!currentEvt) return false;
-    const admin3Acc = accounts.find(a => a.username === currentUser);
-    return admin3Acc?.permittedEventIds?.includes(currentEvt.id) || false;
-  }, [userRole, accounts, currentUser, currentEvt?.id]);
+    
+    // Fallback or specific case handling: EVENT_ADMIN might have permittedEventIds
+    // inside the EnterpriseAccount payload (retrieved dynamically or aggregated during login)
+    // Check if the current ID matches any permitted IDs
+    return currentEnterpriseUser?.permittedEventIds?.includes(currentEvt.id) || false;
+  }, [useTournamentStore.getState().permissions, currentEnterpriseUser, currentEvt?.id]);
 
   if (eventList.length === 0) {
     return <div className="text-center py-20 text-zinc-500 font-bold bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">Chưa có nội dung thi đấu nào. Vui lòng tạo nội dung trước.</div>;
