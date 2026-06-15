@@ -650,7 +650,7 @@ export default function ExportManager() {
                           <p className="text-[11px] text-zinc-400 italic pl-3">Nội dung này không chia bảng.</p>
                         ) : (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {evtGroups.map((group) => {
+                            {evtGroups.map((group: any) => {
                               const std = stdByGrp[group.id] || [];
                               return (
                                 <div key={group.id} className="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">

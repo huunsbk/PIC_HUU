@@ -21,8 +21,10 @@ export default function KnockoutBracket() {
     updateKnockoutParticipant,
     propagateKnockoutResets,
     addLog,
-    isAdmin,
+    hasPermission,
   } = useTournamentStore();
+
+  const canManage = hasPermission("manage_knockout");
 
   const [sz, setSz] = useState<4 | 8 | 16 | 32>(4);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
@@ -72,7 +74,7 @@ export default function KnockoutBracket() {
     const isFinished = gMatchs.length > 0 && gMatchs.every((m) => m.status === 'finished');
     if (gMatchs.length > 0) {
       const stds = calculateGroupStandings(g.id, g.teamIds, gMatchs, teams, tournament.settings);
-      groupStandingsMap[g.id] = { standings: stds.ranking || stds, isFinished };
+      groupStandingsMap[g.id] = { standings: (stds as any).ranking || stds, isFinished };
     } else {
       groupStandingsMap[g.id] = { standings: [], isFinished: false };
     }
@@ -381,7 +383,7 @@ export default function KnockoutBracket() {
   };
 
   const handleToggleEditMode = () => {
-    if (!isAdmin) return;
+    if (!canManage) return;
     if (!isEditMode) {
       let initialMatches = matches.filter((m) => m.groupId === 'knockout');
       if (initialMatches.length === 0) {
@@ -561,7 +563,7 @@ export default function KnockoutBracket() {
         </div>
       )}
 
-      {!isAdmin && (
+      {!canManage && (
         <div className="bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 text-amber-800 dark:text-amber-400 text-xs p-3.5 rounded-xl flex items-start gap-2.5 shadow-xs transition-all duration-300 animate-pulse">
           <AlertTriangle size={16} className="text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
           <div className="space-y-0.5 animate-none">
@@ -585,7 +587,7 @@ export default function KnockoutBracket() {
           </p>
         </div>
 
-        {isAdmin && (
+        {canManage && (
           <div className="flex flex-wrap items-center gap-3">
             {/* Chọn số đội (Quy mô nhánh đấu) - Chỉ hiện khi ở chế độ khoá */}
             {!isEditMode && (
@@ -931,7 +933,7 @@ export default function KnockoutBracket() {
                                   placeholder=""
                                   value={localScores[m.id]?.scoreA ?? ''}
                                   onChange={(e) => handleScoreInputChange(m.id, 'A', e.target.value)}
-                                  disabled={!isAdmin}
+                                  disabled={!canManage}
                                   className="w-12 h-9 border border-zinc-250 dark:border-zinc-800 rounded-xl text-center font-bold text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                   id={`input-ko-match-${m.id}-scoreA`}
                                 />
@@ -1016,7 +1018,7 @@ export default function KnockoutBracket() {
                                   placeholder=""
                                   value={localScores[m.id]?.scoreB ?? ''}
                                   onChange={(e) => handleScoreInputChange(m.id, 'B', e.target.value)}
-                                  disabled={!isAdmin}
+                                  disabled={!canManage}
                                   className="w-12 h-9 border border-zinc-250 dark:border-zinc-800 rounded-xl text-center font-bold text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                   id={`input-ko-match-${m.id}-scoreB`}
                                 />

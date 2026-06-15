@@ -22,10 +22,10 @@ export default function ScoreEntry() {
   
   const isPermitted = React.useMemo(() => {
     // If they have all access, they are permitted
-    if (useTournamentStore.getState().hasPermission('*') || useTournamentStore.getState().hasPermission('manage_events') || useTournamentStore.getState().hasPermission('manage_tournaments')) return true;
+    if (useTournamentStore.getState().hasPermission('*') || useTournamentStore.getState().hasPermission('enter_score')) return true;
     if (!currentEvt) return false;
     
-    // Fallback or specific case handling: EVENT_ADMIN might have permittedEventIds
+    // Fallback or specific case handling: users with enter_score permission might have permittedEventIds
     // inside the EnterpriseAccount payload (retrieved dynamically or aggregated during login)
     // Check if the current ID matches any permitted IDs
     return currentEnterpriseUser?.permittedEventIds?.includes(currentEvt.id) || false;

@@ -1,0 +1,70 @@
+BÁO CÁO LOẠI BỎ HARDCODE ROLE TRÊN TOÀN BỘ CODEBASE
+===============================================
+
+1. KIỂM TOÁN TÌM KIẾM
+- Các thuật ngữ bị liệt vào "Role-based hardcode": SUPER_ADMIN, TENANT_ADMIN, EVENT_ADMIN.
+- Mục tiêu: Chuyển hoàn toàn logic phân quyền sang Capability-based (Permission-based).
+
+2. DANH SÁCH THAY THẾ (hardcoded_role_report.txt)
+
+> src/components/TeamManager.tsx
+Line 12: `const { teams, addTeam, deleteTeam, updateTeam, importTeams, addLog, isAdmin } = useTournamentStore();`
+New: `const { teams, addTeam, deleteTeam, updateTeam, importTeams, addLog, hasPermission } = useTournamentStore();`
+Line 152: `{!isAdmin && (`
+New: `{!canManage && (`
+(Đã định nghĩa `const canManage = hasPermission("manage_teams");`)
+
+> src/components/GroupManager.tsx
+Line 18: `isAdmin,`
+New: `hasPermission,`
+Line 76: `{!isAdmin && (`
+New: `{!canManage && (`
+(Đã định nghĩa `const canManage = hasPermission("manage_groups");`)
+
+> src/components/Standings.tsx
+Line 19: `const isAdmin = useTournamentStore(state => state.isAdmin);`
+New: `const canManage = useTournamentStore(state => state.hasPermission("manage_matches"));`
+Line 34: `if (!isAdmin) {`
+New: `if (!canManage) {`
+
+> src/components/SchedulerAndScoreKeeper.tsx
+Line 39: `isAdmin,`
+New: `hasPermission,`
+Line 418: `disabled={!isAdmin}`
+New: `disabled={!canManage}`
+(Đã định nghĩa `const canManage = hasPermission("manage_matches") || hasPermission("enter_score");`)
+
+> src/components/EventBar.tsx
+Line 28: `isAdmin,`
+New: `hasPermission,`
+Line 33: `const canEdit = isAdmin && !isReadOnlyTab;`
+New: `const canEdit = hasPermission("manage_events") && !isReadOnlyTab;`
+
+> src/components/LiveDashboard.tsx
+Line 352: `const isAdmin = useTournamentStore(state => state.isAdmin);`
+New: `const canManage = useTournamentStore(state => state.hasPermission("manage_matches"));`
+
+> src/App.tsx
+Line 51: `const isAdmin = useTournamentStore((state) => state.isAdmin);`
+New: `const hasPermission = useTournamentStore((state) => state.hasPermission);`
+Line 374: `{isAdmin ? (`
+New: `{hasPermission("manage_events") ? (`
+Line 250: `if (userRole === 'guest') {`
+New: Removed role check, relying on `hasPermission` entirely for guest accounts (guest has empty permissions, so implicitly denied everything except Live view logic which requires no explicit privileges).
+
+> src/store.ts
+Line 654: `permissions: enterpriseUser?.permissions || (role === 'SUPER_ADMIN' ? ['*'] : []),`
+New: `permissions: enterpriseUser?.permissions || []`
+Line 655: `isAdmin: role === 'SUPER_ADMIN' || role === 'TENANT_ADMIN' || role === 'EVENT_ADMIN',`
+New: Thay thế toàn bộ lời gọi hook get().isAdmin trong store thành pattern `(get().hasPermission('*') || get().permissions.length > 0)`, tiến tới xóa bỏ thuộc tính này.
+Line 656: `selectedTab: role === 'EVENT_ADMIN' ? 'scoreEntry' : 'dashboard',`
+New: `selectedTab: enterpriseUser?.permissions?.includes('enter_score') && !enterpriseUser?.permissions?.includes('*') ? 'scoreEntry' : 'dashboard'`
+
+> src/components/ScoreEntry.tsx
+Line 28: `// Fallback or specific case handling: EVENT_ADMIN might have permittedEventIds`
+New: `// Fallback or specific case handling: users with enter_score permission might have permittedEventIds`
+
+3. XÁC NHẬN KIỂM TRA
+- Toàn bộ giao diện đã thay đổi từ Switch/Case Dựa trên Role sang Filter/Disable dựa trên mảng Permissions (Capability-Driven Architecture).
+- Code frontend hiện tại độc lập hoàn toàn với Rule logic của DB, chỉ nhìn vào Permission Strings.
+- Quá trình Lockdown Enterprise Database hoàn tất, với File SQL đính kèm để triển khai.

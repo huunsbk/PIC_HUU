@@ -15,11 +15,12 @@ export default function GroupManager() {
     autoGroupTeams,
     moveTeamToGroup,
     clearAllGroups,
-    isAdmin,
+    hasPermission,
   } = useTournamentStore();
 
   const [numGroups, setNumGroups] = useState(4);
   const [draggedTeamId, setDraggedTeamId] = useState<string | null>(null);
+  const canManage = hasPermission('manage_groups');
 
   // Custom Confirmation Modal State to bypass iframe confirm dialog blocking
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -73,7 +74,7 @@ export default function GroupManager() {
   return (
     <div className="space-y-4.5" id="group-manager-view">
 
-      {!isAdmin && (
+      {!canManage && (
         <div className="bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 text-amber-800 dark:text-amber-400 text-xs p-3.5 rounded-xl flex items-start gap-2.5 shadow-xs transition-all duration-300 animate-pulse">
           <AlertCircle size={16} className="text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
           <div className="space-y-0.5">
@@ -103,7 +104,7 @@ export default function GroupManager() {
               onChange={(e) => setNumGroups(Number(e.target.value))}
               className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-extrabold text-zinc-900 dark:text-zinc-100 bg-white dark:bg-zinc-900 focus:outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               id="select-num-groups"
-              disabled={!isAdmin}
+              disabled={!canManage}
             >
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 32].map((n) => {
                 const getAlphabetLabel = (index: number) => {
@@ -132,7 +133,7 @@ export default function GroupManager() {
             onClick={() => handleAutoGroup('seed')}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-lg transition-all flex items-center gap-1.5 text-xs cursor-pointer shadow-sm uppercase tracking-wider hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-blue-600"
             id="btn-group-seed"
-            disabled={!isAdmin}
+            disabled={!canManage}
           >
             <Sparkles size={14} className="stroke-[2]" /> Tự Động Chia Bảng (Hạt Giống)
           </button>
@@ -141,7 +142,7 @@ export default function GroupManager() {
             onClick={() => handleAutoGroup('random')}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-750 dark:text-white dark:hover:bg-emerald-650 text-white font-black rounded-lg transition-all flex items-center gap-1.5 text-xs cursor-pointer shadow-sm uppercase tracking-wider hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-emerald-600"
             id="btn-group-random"
-            disabled={!isAdmin}
+            disabled={!canManage}
           >
             <Shuffle size={14} /> Chia Ngẫu Nhiên
           </button>
@@ -150,7 +151,7 @@ export default function GroupManager() {
             onClick={handleCreateGroupsEmpty}
             className="px-4 py-2 bg-zinc-105 hover:bg-zinc-200 dark:bg-zinc-805 dark:text-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 font-extrabold rounded-lg transition-all text-xs cursor-pointer uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
             id="btn-group-empty"
-            disabled={!isAdmin}
+            disabled={!canManage}
           >
             Tạo Bảng Đấu Trống
           </button>
@@ -159,7 +160,7 @@ export default function GroupManager() {
             onClick={() => setShowClearConfirm(true)}
             className="px-4 py-2 hover:bg-red-50 dark:hover:bg-red-955/15 text-red-650 font-black rounded-lg transition-all text-xs cursor-pointer ml-auto border border-red-200/50 dark:border-red-900/30 uppercase tracking-widest flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             id="btn-clear-groups"
-            disabled={!isAdmin}
+            disabled={!canManage}
           >
             <Trash2 size={14} /> Giải Tán Bảng
           </button>
@@ -201,9 +202,9 @@ export default function GroupManager() {
               unassignedTeams.map((team) => (
                 <div
                   key={team.id}
-                  draggable={isAdmin}
+                  draggable={canManage}
                   onDragStart={(e) => handleDragStart(e, team.id)}
-                  className={`p-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-805 rounded-lg shadow-xs hover:border-blue-500 hover:ring-1 hover:ring-blue-500/20 dark:hover:border-blue-500 transition-all flex items-center justify-between font-semibold ${isAdmin ? "cursor-grab" : "cursor-default opacity-85"}`}
+                  className={`p-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-805 rounded-lg shadow-xs hover:border-blue-500 hover:ring-1 hover:ring-blue-500/20 dark:hover:border-blue-500 transition-all flex items-center justify-between font-semibold ${canManage ? "cursor-grab" : "cursor-default opacity-85"}`}
                 >
                   <div className="truncate pr-1.5">
                     <p className="text-xs font-black text-zinc-850 dark:text-zinc-100 truncate">{team.name}</p>
@@ -222,7 +223,7 @@ export default function GroupManager() {
                     }}
                     value=""
                     className="p-1 px-1.5 text-[10px] font-bold border border-zinc-200 dark:border-zinc-800 rounded bg-zinc-50 dark:bg-zinc-950 text-zinc-650 dark:text-zinc-400 cursor-pointer focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
-                    disabled={!isAdmin}
+                    disabled={!canManage}
                   >
                     <option value="" disabled>Gán...</option>
                     {groupList.map((g) => (
@@ -274,7 +275,7 @@ export default function GroupManager() {
                         groupTeams.map((team) => (
                           <div
                             key={team.id}
-                            draggable={isAdmin}
+                            draggable={canManage}
                             onDragStart={(e) => handleDragStart(e, team.id)}
                             className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-850 rounded-xl hover:border-blue-500 dark:hover:border-blue-500 transition-all flex items-center justify-between pointer-events-auto cursor-grab"
                           >
@@ -294,7 +295,7 @@ export default function GroupManager() {
                                 moveTeamToGroup(team.id, val === "unassigned" ? null : val);
                               }}
                               value={group.id}
-                              disabled={!isAdmin}
+                              disabled={!canManage}
                               className="p-0.5 text-[9px] font-black border border-zinc-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 text-zinc-550 dark:text-zinc-400 cursor-pointer focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <option value="unassigned">Rời nhóm</option>

@@ -25,12 +25,12 @@ export default function EventBar() {
     deleteEvent, 
     renameEvent, 
     setCurrentEvent,
-    isAdmin,
+    hasPermission,
     selectedTab
   } = useTournamentStore();
 
   const isReadOnlyTab = ['groups', 'matches', 'standings', 'knockout'].includes(selectedTab);
-  const canEdit = isAdmin && !isReadOnlyTab;
+  const canEdit = hasPermission("manage_events") && !isReadOnlyTab;
 
   const [isAdding, setIsAdding] = useState(false);
   const [newEventName, setNewEventName] = useState('');

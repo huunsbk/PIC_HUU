@@ -9,7 +9,8 @@ import { Trash2, Edit2, Plus, Upload, FileType, Check, AlertCircle, Sparkles, He
 import { SeedType } from '../types';
 
 export default function TeamManager() {
-  const { teams, groups, addTeam, deleteTeam, updateTeam, importTeams, addLog, isAdmin } = useTournamentStore();
+  const { teams, groups, addTeam, deleteTeam, updateTeam, importTeams, addLog, hasPermission } = useTournamentStore();
+  const canManage = hasPermission('manage_teams');
   const [newTeamName, setNewTeamName] = useState('');
   const [newSeed, setNewSeed] = useState<SeedType>('none');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -149,7 +150,7 @@ export default function TeamManager() {
   return (
     <div className="space-y-4" id="team-manager-view">
 
-      {!isAdmin && (
+      {!canManage && (
         <div className="bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 text-amber-800 dark:text-amber-400 text-xs p-3.5 rounded-xl flex items-start gap-2.5 shadow-xs transition-all duration-300 animate-pulse">
           <AlertCircle size={16} className="text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
           <div className="space-y-0.5">
@@ -191,12 +192,12 @@ export default function TeamManager() {
                 <label className="block text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Tên Đội / Đấu Thủ</label>
                 <input
                   type="text"
-                  placeholder={isAdmin ? "Nhập tên CLB hoặc tên cặp đấu..." : "Yêu cầu quyền Admin..."}
+                  placeholder={canManage ? "Nhập tên CLB hoặc tên cặp đấu..." : "Yêu cầu quyền Admin..."}
                   value={newTeamName}
                   onChange={(e) => setNewTeamName(e.target.value)}
                   className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-xs font-semibold transition-all focus:shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   required
-                  disabled={!isAdmin}
+                  disabled={!canManage}
                 />
               </div>
 
@@ -206,7 +207,7 @@ export default function TeamManager() {
                   value={newSeed}
                   onChange={(e) => setNewSeed(e.target.value as SeedType)}
                   className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-xs font-black cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!isAdmin}
+                  disabled={!canManage}
                 >
                   <option value="none">Không hạt giống (Unseeded)</option>
                   <option value="1">Hạt giống số 1 (Seed 1)</option>
@@ -223,7 +224,7 @@ export default function TeamManager() {
                 type="submit"
                 className="w-full py-2 bg-blue-600 hover:bg-blue-500 hover:scale-[1.01] active:scale-[0.99] text-white font-black rounded-lg transition-all shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600 disabled:scale-100"
                 id="btn-add-team"
-                disabled={!isAdmin}
+                disabled={!canManage}
               >
                 <Plus size={15} className="stroke-[2.5]" /> 
                 Thêm Vào Danh Sách
@@ -250,7 +251,7 @@ export default function TeamManager() {
                 <FileType size={14} className="text-blue-500" /> Tải File Excel Mẫu (.csv)
               </button>
 
-              {isAdmin ? (
+              {canManage ? (
                 <label className="w-full py-2 bg-emerald-50 hover:bg-emerald-100/80 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-250 dark:border-emerald-800 rounded-lg transition-all font-extrabold flex items-center justify-center gap-1.5 text-xs cursor-pointer shadow-xs uppercase tracking-wider">
                   <Upload size={14} /> Nhập Danh Sách Có Sẵn
                   <input
@@ -280,19 +281,19 @@ export default function TeamManager() {
             </p>
             <div className="space-y-2">
               <textarea
-                placeholder={isAdmin ? "Dán các hàng tên đội tại đây..." : "Yêu cầu quyền Admin để dán..."}
+                placeholder={canManage ? "Dán các hàng tên đội tại đây..." : "Yêu cầu quyền Admin để dán..."}
                 rows={3}
                 value={excelPasteText}
                 onChange={(e) => setExcelPasteText(e.target.value)}
                 className="w-full p-2.5 border border-zinc-200 dark:border-zinc-805 rounded-lg text-xs font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 id="textarea-excel-paste"
-                disabled={!isAdmin}
+                disabled={!canManage}
               />
               <button
                 onClick={handleImportFromExcelText}
                 className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-lg transition-all flex items-center justify-center gap-1.5 text-xs cursor-pointer shadow-sm uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
                 id="btn-import-excel-paste"
-                disabled={!isAdmin}
+                disabled={!canManage}
               >
                 Nhập danh sách dán vào
               </button>
@@ -343,7 +344,7 @@ export default function TeamManager() {
                       <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Tên Đội Đấu</th>
                       <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Hạt Giống</th>
                       <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Vòng Bảng</th>
-                      {isAdmin && <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">Thao Tác</th>}
+                      {canManage && <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">Thao Tác</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-850">
@@ -410,7 +411,7 @@ export default function TeamManager() {
                           </td>
 
                           {/* Thao Tác */}
-                          {isAdmin && (
+                          {canManage && (
                             <td className="py-2 px-4 text-right">
                               {isEditing ? (
                                 <div className="flex items-center justify-end gap-1.5">

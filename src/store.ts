@@ -31,9 +31,9 @@ interface AppState {
   // Multi-tier accounts configuration
   currentUser: string | null;
   currentEnterpriseUser: any | null; // Will store full EnterpriseAccount details
-  userRole: 'guest' | 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EVENT_ADMIN';
+  userRole: 'guest' | string;
   activeTenantId: string; // 'default' or UUID of tenant
-  setAuthStatus: (role: 'guest' | 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EVENT_ADMIN', username: string | null, tenantId: string, enterpriseUser?: any) => Promise<void>;
+  setAuthStatus: (role: 'guest' | string, username: string | null, tenantId: string, enterpriseUser?: any) => Promise<void>;
   logout: () => Promise<void>;
   setTenantId: (tenantId: string) => Promise<void>;
 
@@ -153,7 +153,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               name: g.name,
               team_ids: Array.isArray(g.teamIds) ? g.teamIds : [],
               event_id: evtId,
-              tenant_id: activeTenantId,
+              
               tournament_id: tournamentId
             });
           });
@@ -169,7 +169,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               group_id: t.groupId || null,
               seed: t.seed || 'none',
               event_id: evtId,
-              tenant_id: activeTenantId,
+              
               tournament_id: tournamentId
             });
           });
@@ -207,7 +207,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               placeholder_a: pH_A,
               placeholder_b: pH_B,
               event_id: evtId,
-              tenant_id: activeTenantId,
+              
               tournament_id: tournamentId
             });
           });
@@ -341,8 +341,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
         date: state.tournament.date,
         settings: state.tournament.settings,
         current_event_id: state.currentEventId,
-        tenant_id: activeTenantId
-      }, { onConflict: 'id' });
+        }, { onConflict: 'id' });
       if (tErr) {
         console.error("Lỗi tại bước 1 (tournament):", tErr.message, tErr.details);
         errors.push(`Giải đấu: ${tErr.message}`);
@@ -366,8 +365,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
           id: activeTenantId,
           name: `Giải đấu của ${activeTenantId}`,
           settings: DEFAULT_SETTINGS,
-          tenant_id: activeTenantId
-        });
+          });
       }
     } catch (err) {
       console.error("Lỗi khởi tạo Tenant Tournament:", err);
@@ -384,7 +382,7 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
           active_group_id: (evt.activeGroupId && evt.activeGroupId !== 'knockout') ? evt.activeGroupId : null,
           advance_selection_mode: evt.advanceSelectionMode || 'auto',
           manual_qualified_team_ids: evt.manualQualifiedTeamIds || [],
-          tenant_id: activeTenantId,
+          
           tournament_id: tournamentId
         };
       });
@@ -577,7 +575,7 @@ export const useTournamentStore = create<AppState>()(
 
         // Sync with Supabase on modifications if admin holds active session and not loading from database
         const currentState = get();
-        if (currentState.isAdmin && hasActualDataChanges && !currentState.isLoadingSupabase) {
+        if ((currentState.hasPermission('*') || currentState.permissions.length > 0) && hasActualDataChanges && !currentState.isLoadingSupabase) {
           syncStateToSupabase(currentState, originalSet);
         }
       };
@@ -597,12 +595,11 @@ export const useTournamentStore = create<AppState>()(
         
         // Save audit activity stream concurrently if Admin is actively mutating data
         const currentState = get();
-        if (currentState.isAdmin) {
+        if ((currentState.hasPermission('*') || currentState.permissions.length > 0)) {
           supabase.from('audit_logs').insert([{
             timestamp: newLog.timestamp,
             action: newLog.action,
-            details: newLog.details,
-            tenant_id: currentState.activeTenantId || 'default'
+            details: newLog.details
           }]).then();
         }
       };
@@ -641,19 +638,18 @@ export const useTournamentStore = create<AppState>()(
         currentEnterpriseUser: null,
         userRole: 'guest',
         activeTenantId: 'default',
-        permissions: [],
         isLoadingSupabase: false,
         setAuthStatus: async (role, username, tenantId, enterpriseUser) => {
           console.log(`[Auth Setup] Bắt đầu thiết lập Auth cho "${username}".`);
           
           originalSet({
-            userRole: role,
+            userRole: role || 'guest',
             currentUser: username,
             currentEnterpriseUser: enterpriseUser || null,
             activeTenantId: tenantId,
-            permissions: enterpriseUser?.permissions || (role === 'SUPER_ADMIN' ? ['*'] : []),
-            isAdmin: role === 'SUPER_ADMIN' || role === 'TENANT_ADMIN' || role === 'EVENT_ADMIN',
-            selectedTab: role === 'EVENT_ADMIN' ? 'scoreEntry' : 'dashboard',
+            permissions: enterpriseUser?.permissions || [],
+            isAdmin: false /* deprecated */,
+            selectedTab: enterpriseUser?.permissions?.includes('enter_score') && !enterpriseUser?.permissions?.includes('*') ? 'scoreEntry' : 'dashboard',
             isLoadingSupabase: true
           });
 
@@ -673,9 +669,11 @@ export const useTournamentStore = create<AppState>()(
         logout: async () => {
           // Guard to avoid recursive logout calls if already guest
           const state = get();
-          if (state.userRole === 'guest' && !state.isAdmin && !state.currentUser) {
+          if (state.userRole === 'guest' && !state.currentUser) {
             return;
           }
+
+          const accountId = state.currentEnterpriseUser?.id;
           
           // Clear credentials synchronously first to avoid race conditions with auth listeners
           originalSet({
@@ -693,6 +691,14 @@ export const useTournamentStore = create<AppState>()(
           } catch (e) {}
 
           try {
+            if (accountId) {
+              const { data: sessionData } = await supabase.auth.getSession();
+              if (sessionData?.session) {
+                await supabase.from("active_sessions").delete()
+                  .eq("account_id", accountId)
+                  .eq("session_token", sessionData.session.access_token);
+              }
+            }
             await supabase.auth.signOut();
           } catch (e) {
             console.warn('Error signing out:', e);
@@ -747,7 +753,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateTournament: (t) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           set((state) => {
             const updated = { ...state.tournament, ...t };
             return { tournament: updated };
@@ -756,7 +762,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateSettings: (s) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           set((state) => {
             const updatedSettings = { ...state.tournament.settings, ...s };
             const updated = { ...state.tournament, settings: updatedSettings };
@@ -766,7 +772,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         addEvent: (name) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           const tenantPrefix = get().activeTenantId === 'default' ? '' : `${get().activeTenantId}__`;
           const id = `${tenantPrefix}event-${Math.random().toString(36).substring(2, 9)}`;
           const trimmedName = name.trim() || 'Nội dung mới';
@@ -798,7 +804,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         deleteEvent: async (id) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           const event = get().events[id];
           if (!event) return;
 
@@ -846,7 +852,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         renameEvent: (id, newName) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           const trimmed = newName.trim();
           if (!trimmed) return;
           const oldName = get().events[id]?.name || id;
@@ -871,7 +877,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         addTeam: (name, seed) => {
-          if (!get().isAdmin) {
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) {
             return { success: false, message: 'Yêu cầu quyền Admin để thêm đội.' };
           }
           if (!get().currentEventId) {
@@ -906,7 +912,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         deleteTeam: (id) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           const team = get().teams[id];
           if (!team) return;
 
@@ -942,7 +948,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateTeam: (id, name, seed) => {
-          if (!get().isAdmin) {
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) {
             return { success: false, message: 'Yêu cầu quyền Admin để sửa thông tin đội.' };
           }
           const trimmedName = name.trim();
@@ -972,7 +978,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         importTeams: (csvContent) => {
-          if (!get().isAdmin) {
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) {
             return { success: false, addedCount: 0, errors: ['Yêu cầu quyền Admin để nhập danh sách từ file.'] };
           }
           if (!csvContent.trim()) {
@@ -1054,7 +1060,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         setupGroups: (numGroups) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           if (numGroups < 1 || numGroups > 32) return;
 
           const getGroupName = (index: number) => {
@@ -1104,7 +1110,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         autoGroupTeams: (method, numGroups) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           if (numGroups < 1 || numGroups > 32) return;
           const allTeams = Object.values(get().teams);
           if (allTeams.length === 0) return;
@@ -1189,7 +1195,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         moveTeamToGroup: (teamId, targetGroupId) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           const team = get().teams[teamId];
           if (!team) return;
 
@@ -1240,7 +1246,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         clearAllGroups: () => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           set((state) => {
             const nextGroups: Record<string, Group> = {};
             const nextTeams = { ...state.teams };
@@ -1263,7 +1269,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         generateMatchesForGroup: (groupId) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           const group = get().groups[groupId];
           if (!group || group.teamIds.length === 0) return;
 
@@ -1300,7 +1306,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         clearMatchesForGroup: (groupId) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           const group = get().groups[groupId];
           set((state) => {
             const finalMatchesList = state.matches.filter((m) => m.groupId !== groupId);
@@ -1326,7 +1332,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateMatchStatus: (matchId, status) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           set((state) => {
             const matchesCopy = state.matches.map((m) => {
               if (m.id !== matchId) return m;
@@ -1359,7 +1365,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateMatchScore: (matchId, scoreA, scoreB) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           set((state) => {
             const matchesCopy = state.matches.map((m) => {
               if (m.id !== matchId) return m;
@@ -1421,7 +1427,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         resetMatchScore: (matchId) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           const m = get().matches.find((x) => x.id === matchId);
           set((state) => {
             const matchesCopy = state.matches.map((x) => {
@@ -1451,7 +1457,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
          generateAllSchedules: () => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           const groupsMap = get().groups;
           const groupIdsList = Object.keys(groupsMap);
           if (groupIdsList.length === 0) return;
@@ -1495,7 +1501,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         generateKnockoutBracket: (size) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           // 1. Tính toán bảng xếp hạng của các bảng
           const standingsByGroup: Record<string, GroupStanding[]> = {};
           const groupsMap = get().groups;
@@ -1697,7 +1703,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateKnockoutScore: (matchId, scoreA, scoreB) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           
           set((state) => {
             const matchesMap = new Map<string, Match>();
@@ -1799,7 +1805,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateKnockoutParticipant: (matchId, slot, teamNameOrId) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           set((state) => {
             const updated = state.matches.map((m) => {
               if (m.id !== matchId) return m;
@@ -1841,7 +1847,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         propagateKnockoutResets: (changedMatchIds) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           if (changedMatchIds.length === 0) return;
 
           set((state) => {
@@ -1903,7 +1909,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         clearKnockout: () => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           set((state) => {
             const finalMatchesList = state.matches.filter((m) => m.groupId !== 'knockout');
 
@@ -1925,7 +1931,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateKnockoutManualBracket: (updatedKoMatches, numBestThirds) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           set((state) => {
             const nonKoMatches = state.matches.filter((m) => m.groupId !== 'knockout');
             const mergedMatches = [...nonKoMatches, ...updatedKoMatches];
@@ -1962,12 +1968,12 @@ export const useTournamentStore = create<AppState>()(
         setSelectedTab: (tab) => set({ selectedTab: tab }),
         setActiveGroupId: (id) => set({ activeGroupId: id }),
         setAdvanceSelectionMode: (mode) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           set({ advanceSelectionMode: mode });
           logToStore('Tuyển chọn', `Thay đổi chế độ tuyển chọn vòng trong thành: ${mode === 'auto' ? 'Tự động' : 'Tích chọn thủ công'}`);
         },
         toggleManualQualifiedTeam: (teamId) => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           set((state) => {
             const current = state.manualQualifiedTeamIds || [];
             const isExist = current.includes(teamId);
@@ -1979,19 +1985,19 @@ export const useTournamentStore = create<AppState>()(
           logToStore('Tuyển chọn', `Thay đổi trạng thái đấu thủ "${tName}" thành ${status}.`);
         },
         clearManualQualifiedTeams: () => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           set({ manualQualifiedTeamIds: [] });
           logToStore('Tuyển chọn', `Xóa toàn bộ lựa chọn vé đi tiếp thủ công.`);
         },
 
         addLog: (action, details) => logToStore(action, details),
         clearLogs: () => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           set({ logs: [] });
         },
 
         resetAll: () => {
-          if (!get().isAdmin) return;
+          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
           set({
             tournament: DEFAULT_TOURNAMENT,
             teams: {},
@@ -2098,7 +2104,7 @@ export const useTournamentStore = create<AppState>()(
                 const cur = get();
                 // Bỏ qua cho các tài khoản đang đăng nhập hợp lệ
                 if (!cur.currentEnterpriseUser) {
-                  if (cur.isAdmin || cur.userRole !== 'guest' || cur.currentUser !== null) {
+                  if ((cur.hasPermission('*') || cur.permissions.length > 0) || cur.userRole !== 'guest' || cur.currentUser !== null) {
                     console.log('[AuthState] Nhận sự kiện SIGNED_OUT cho tài khoản standard. Đang đăng xuất...');
                     cur.logout();
                   }
@@ -2212,7 +2218,7 @@ export const useTournamentStore = create<AppState>()(
             // CỰC KỲ QUAN TRỌNG: Chỉ tự động đồng bộ (push) dữ liệu cũ lên cho tenant mặc định ('default') khi khởi chạy lần đầu tiên.
             // Ngăn chặn triệt để tình trạng lệch hoặc sao chép rác dữ liệu từ tenant cũ sang tenant mới tinh khi đổi view CSDL!
             if (activeTenantId === 'default' && !hasRemoteData && hasLocalData) {
-              if (localState.isAdmin) {
+              if ((localState.hasPermission('*') || localState.permissions.length > 0)) {
                 console.log('Phát hiện cơ sỡ dữ liệu mặc định trống, đang đồng bộ dữ liệu Local Cache lên cloud...');
                 await syncStateToSupabase(localState);
                 
@@ -2222,8 +2228,7 @@ export const useTournamentStore = create<AppState>()(
                     timestamp: l.timestamp,
                     action: l.action,
                     details: l.details,
-                    tenant_id: localState.activeTenantId
-                  }));
+                    }));
                   await supabase.from('audit_logs').insert(initialLogs);
                 }
 
@@ -2269,8 +2274,7 @@ export const useTournamentStore = create<AppState>()(
                 date: DEFAULT_TOURNAMENT.date,
                 settings: DEFAULT_SETTINGS,
                 current_event_id: localState.activeTenantId === 'default' ? 'event-default' : `${localState.activeTenantId}__event-default`,
-                tenant_id: localState.activeTenantId
-              };
+                };
               if (localState.hasPermission('manage_system') || localState.hasPermission('manage_tournaments') || localState.hasPermission('*')) {
                 await supabase.from('tournament').insert([defaultObj]);
               }
@@ -2295,8 +2299,7 @@ export const useTournamentStore = create<AppState>()(
                 active_group_id: null,
                 advance_selection_mode: 'auto',
                 manual_qualified_team_ids: [],
-                tenant_id: localState.activeTenantId
-              };
+                };
               if (localState.hasPermission('manage_system') || localState.hasPermission('manage_events') || localState.hasPermission('*')) {
                 const { error: insErr } = await supabase.from('events').insert([defaultEvt]);
                 if (insErr) {

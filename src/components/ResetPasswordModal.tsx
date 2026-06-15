@@ -48,7 +48,7 @@ export default function ResetPasswordModal({ isOpen, onClose, targetUsername }: 
       }
 
       const targetEmail = `${targetUsername}@pic.com`.toLowerCase();
-      const user = users.find(u => u.email === targetEmail);
+      const user = users.find((u: any) => u.email === targetEmail);
 
       if (!user) {
         throw new Error(`Không tìm thấy người dùng với email ảo: ${targetEmail}`);

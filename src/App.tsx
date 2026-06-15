@@ -48,7 +48,7 @@ export default function App() {
   const setDarkMode = useTournamentStore((state) => state.setDarkMode);
   const selectedTab = useTournamentStore((state) => state.selectedTab);
   const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
-  const isAdmin = useTournamentStore((state) => state.isAdmin);
+  const hasPermission = useTournamentStore((state) => state.hasPermission);
   const setAdminStatus = useTournamentStore((state) => state.setAdminStatus);
   const initSupabase = useTournamentStore((state) => state.initSupabase);
   const supabaseConnected = useTournamentStore((state) => state.supabaseConnected);
@@ -58,7 +58,6 @@ export default function App() {
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const setAuthStatus = useTournamentStore((state) => state.setAuthStatus);
   const setTenantId = useTournamentStore((state) => state.setTenantId);
-  const currentSessionId = useTournamentStore((state) => state.currentSessionId);
 
   const [isLoginOpen, setIsLoginOpen] = React.useState(false);
   const [isDbChanging, setIsDbChanging] = React.useState(false);
@@ -190,7 +189,7 @@ export default function App() {
 
   // Bảo mật phiên làm việc: Auto-Logout và xóa cache khi đóng trình duyệt
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!hasPermission("manage_events")) return;
 
     // Tự động đăng xuất sau 30 phút (1,800,000ms) không hoạt động
     let inactivityTimer: number;
@@ -212,10 +211,10 @@ export default function App() {
       window.clearTimeout(inactivityTimer);
       events.forEach(evt => document.removeEventListener(evt, resetTimer));
     };
-  }, [isAdmin]);
+  }, [hasPermission("manage_events")]);
 
   const handleAdminAuth = () => {
-    if (isAdmin) {
+    if (hasPermission("manage_events")) {
       useTournamentStore.getState().logout();
     } else {
       setIsLoginOpen(true);
@@ -371,7 +370,7 @@ export default function App() {
               </span>
               <span className="h-3 w-px bg-zinc-200 dark:bg-zinc-800"></span>
 
-              {isAdmin ? (
+              {hasPermission("manage_events") ? (
                 <div className="flex items-center gap-2 text-xs">
                   {useTournamentStore.getState().hasPermission('*') && (
                     <span className="bg-indigo-50 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 px-2 py-0.5 rounded-md font-bold text-[10px] border border-indigo-200 flex items-center gap-1">

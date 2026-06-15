@@ -16,7 +16,7 @@ export default function Standings() {
   const tournament = useTournamentStore(state => state.tournament);
   const advanceSelectionMode = useTournamentStore(state => state.advanceSelectionMode);
   const manualQualifiedTeamIds = useTournamentStore(state => state.manualQualifiedTeamIds);
-  const isAdmin = useTournamentStore(state => state.isAdmin);
+  const canManage = useTournamentStore(state => state.hasPermission("manage_matches"));
   const activeTenantId = useTournamentStore(state => state.activeTenantId);
   const currentEventId = useTournamentStore(state => state.currentEventId);
 
@@ -31,7 +31,7 @@ export default function Standings() {
   const [remoteStandings, setRemoteStandings] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!canManage) {
       const fetchStandings = async () => {
         const tenant = activeTenantId || 'default';
         const { data, error } = await supabase.from('view_team_standings')
@@ -46,7 +46,7 @@ export default function Standings() {
       };
       fetchStandings();
     }
-  }, [isAdmin, activeTenantId, currentEventId, matches]);
+  }, [canManage, activeTenantId, currentEventId, matches]);
 
   // 1. Tính toán BXH toàn bộ các bảng ở trạng thái tức thì
   const { standingsByGroup, groupFinishedMap, allGroupsFinished } = React.useMemo(() => {
@@ -56,7 +56,7 @@ export default function Standings() {
       const groupMatches = matches.filter((m) => m.groupId === group.id);
       gfMap[group.id] = groupMatches.length > 0 && groupMatches.every((m) => m.status === 'finished');
 
-      if (isAdmin) {
+      if (canManage) {
         sbGroup[group.id] = calculateGroupStandings(
           group.id,
           group.teamIds,
@@ -85,7 +85,7 @@ export default function Standings() {
     });
     const allFinished = groupList.length > 0 && groupList.every(g => gfMap[g.id]);
     return { standingsByGroup: sbGroup, groupFinishedMap: gfMap, allGroupsFinished: allFinished };
-  }, [groupList, matches, isAdmin, teams, settings, remoteStandings]);
+  }, [groupList, matches, canManage, teams, settings, remoteStandings]);
 
   // 2. Tính toán BXH Hạng 3 xuất sắc nhất (UEFA)
   const bestThirdPlaces = React.useMemo(() => {

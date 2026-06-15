@@ -9,6 +9,7 @@ export interface TournamentSettings {
   maxScore: number;       // Điểm chạm đích của séc (mặc định: 15)
   capScore: number;       // Điểm trần tối đa, ví dụ chạm tối đa 17 (mặc định: 17)
   advanceCount: number;   // Số đội mỗi bảng đi tiếp (1 hoặc 2 hoặc 3)
+  numBestThirds?: number; // Số đội đứng thứ ba xuất sắc nhất
 }
 
 export interface Tournament {
@@ -178,7 +179,7 @@ export interface Account {
   password?: string;
   displayName?: string;
   tournamentName?: string;
-  role?: 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EVENT_ADMIN' | 'guest'; // adjusted to capture all states
+  role?: string; // Capabilities now rely on permissions, role is just informational
   permittedEventIds?: string[];
   tenant_id?: string;
   role_id?: string;

@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import ExcelJS from 'exceljs';
 import { useTournamentStore } from '../store';
 import { supabase } from '../supabaseClient';
 import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
@@ -349,7 +350,7 @@ export default function LiveDashboard() {
   const tournament = useTournamentStore(state => state.tournament);
   const events = useTournamentStore(state => state.events);
   const activeTenantId = useTournamentStore(state => state.activeTenantId);
-  const isAdmin = useTournamentStore(state => state.isAdmin);
+  const canManage = useTournamentStore(state => state.hasPermission("manage_matches"));
   const addLog = useTournamentStore(state => state.addLog);
 
   const [selectedEventFilter, setSelectedEventFilter] = useState<string>('all');
@@ -359,7 +360,7 @@ export default function LiveDashboard() {
 
   // Fetch standings using SQL View if guest
   useEffect(() => {
-    if (!isAdmin) {
+    if (!canManage) {
       const fetchStandings = async () => {
         const tenant = activeTenantId || 'default';
         const { data, error } = await supabase.from('view_team_standings')
@@ -373,7 +374,7 @@ export default function LiveDashboard() {
       };
       fetchStandings();
     }
-  }, [isAdmin, activeTenantId, matches, events]);
+  }, [canManage, activeTenantId, matches, events]);
 
   // Đếm giờ địa phương ticking liên tục
   useEffect(() => {
@@ -699,9 +700,9 @@ export default function LiveDashboard() {
     eventList.forEach(evt => {
       const stdRecord: Record<string, ReturnType<typeof calculateGroupStandings>> = {};
       const groupList = Object.values(evt.groups || {});
-      groupList.forEach((g) => {
-        if (isAdmin) {
-          const groupMatches = (evt.matches || []).filter((m) => m.groupId === g.id);
+      groupList.forEach((g: any) => {
+        if (canManage) {
+          const groupMatches = (evt.matches || []).filter((m: any) => m.groupId === g.id);
           stdRecord[g.id] = calculateGroupStandings(
             g.id, 
             g.teamIds, 
@@ -731,7 +732,7 @@ export default function LiveDashboard() {
       record[evt.id] = stdRecord;
     });
     return record;
-  }, [eventList, isAdmin, remoteStandings]);
+  }, [eventList, canManage, remoteStandings]);
 
   // Hàm helper để xuất Excel gọi lại
   const getEventStandings = React.useCallback((evt: typeof events[string]) => {
@@ -829,7 +830,7 @@ export default function LiveDashboard() {
                       <p className="text-[11px] text-zinc-400 py-6 text-center">Chưa chia bảng đấu.</p>
                     ) : (
                       <AutoScrollList maxHeight="350px" className="space-y-4">
-                        {evtGroups.map((group) => {
+                        {evtGroups.map((group: any) => {
                           const std = stdByGrp[group.id] || [];
                           return (
                             <StandingGroupCard
@@ -880,8 +881,8 @@ export default function LiveDashboard() {
                       <p className="text-[11px] text-zinc-400 py-6 text-center">Chưa lập sơ đồ Knockout.</p>
                     ) : (
                       <AutoScrollList maxHeight="350px" className="space-y-1.5 pb-2">
-                        {Array.from(new Set(koMatches.map((m) => m.round))).sort((a,b)=>a-b).map((round) => {
-                          const roundMatches = koMatches.filter((m) => m.round === round);
+                        {Array.from(new Set(koMatches.map((m: any) => m.round))).sort((a: any,b: any)=>a-b).map((round: any) => {
+                          const roundMatches = koMatches.filter((m: any) => m.round === round);
                           const roundName = roundMatches[0]?.knockoutRoundName || 'Vòng';
                           return (
                             <KoRoundCard

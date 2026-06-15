@@ -36,8 +36,10 @@ export default function SchedulerAndScoreKeeper() {
     addLog,
     events,
     currentEventId,
-    isAdmin,
+    hasPermission,
   } = useTournamentStore();
+
+  const canManage = hasPermission('manage_matches');
 
   const groupList = React.useMemo(() => Object.values(groups), [groups]);
   const activeGroup = activeGroupId ? groups[activeGroupId] : groupList[0];
@@ -343,7 +345,7 @@ export default function SchedulerAndScoreKeeper() {
   return (
     <div className="space-y-6" id="scheduler-and-scorekeeper-unified">
 
-      {!isAdmin && (
+      {!canManage && (
         <div className="bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 text-amber-800 dark:text-amber-400 text-xs p-3.5 rounded-xl flex items-start gap-2.5 shadow-xs transition-all duration-300 animate-pulse">
           <AlertTriangle size={16} className="text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
           <div className="space-y-0.5">
@@ -415,7 +417,7 @@ export default function SchedulerAndScoreKeeper() {
                 generateAllSchedules();
                 addLog('Lập Lịch', 'Khởi tạo nhanh lịch đấu toàn giải cho tất cả các bảng và nội dung.');
               }}
-              disabled={!isAdmin}
+              disabled={!canManage}
               className="px-4.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-2 cursor-pointer transition-all shadow-md uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-emerald-600"
               id="btn-quick-schedule-all"
             >
@@ -424,7 +426,7 @@ export default function SchedulerAndScoreKeeper() {
             </button>
             <button
               onClick={() => setShowRegenConfirm(true)}
-              disabled={!isAdmin}
+              disabled={!canManage}
               className="px-4.5 py-2.5 bg-white hover:bg-zinc-55 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-bold rounded-xl text-xs flex items-center gap-2 border border-zinc-250 dark:border-zinc-800 cursor-pointer transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
               id="btn-trigger-regen-schedule"
             >
@@ -463,7 +465,7 @@ export default function SchedulerAndScoreKeeper() {
               
               <button
                 onClick={() => setShowResetScoresConfirm(true)}
-                disabled={!isAdmin}
+                disabled={!canManage}
                 className="px-3.5 py-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-955/30 border border-blue-200/50 dark:border-blue-900/40 rounded-lg cursor-pointer transition-colors disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 id="btn-reset-current-group-scores"
               >
@@ -479,7 +481,7 @@ export default function SchedulerAndScoreKeeper() {
                 <p className="text-xs text-zinc-500 font-medium max-w-xs mx-auto">Nhấp vào nút để tự động thiết lập trận đấu vòng tròn cho {activeGroup.name} ngay lập tức.</p>
                 <button
                   onClick={handleRegenSubmit}
-                  disabled={!isAdmin}
+                  disabled={!canManage}
                   className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs cursor-pointer shadow-sm uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Nhấp Tạo Lịch Ngay!
@@ -547,7 +549,7 @@ export default function SchedulerAndScoreKeeper() {
                                     placeholder=""
                                     value={scoreAVal}
                                     onChange={(e) => handleScoreInputChange(match.id, 'A', e.target.value)}
-                                    disabled={!isAdmin}
+                                    disabled={!canManage}
                                     className="w-13 h-8 border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                                     id={`input-match-${match.id}-scoreA`}
                                   />
@@ -563,7 +565,7 @@ export default function SchedulerAndScoreKeeper() {
                                     placeholder=""
                                     value={scoreBVal}
                                     onChange={(e) => handleScoreInputChange(match.id, 'B', e.target.value)}
-                                    disabled={!isAdmin}
+                                    disabled={!canManage}
                                     className="w-13 h-8 border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                                     id={`input-match-${match.id}-scoreB`}
                                   />

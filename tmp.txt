@@ -1,0 +1,119 @@
+749-        updateTournament: (t) => {
+750:          if (!get().isAdmin) return;
+751-          set((state) => {
+--
+758-        updateSettings: (s) => {
+759:          if (!get().isAdmin) return;
+760-          set((state) => {
+--
+768-        addEvent: (name) => {
+769:          if (!get().isAdmin) return;
+770-          const tenantPrefix = get().activeTenantId === 'default' ? '' : `${get().activeTenantId}__`;
+--
+800-        deleteEvent: async (id) => {
+801:          if (!get().isAdmin) return;
+802-          const event = get().events[id];
+--
+848-        renameEvent: (id, newName) => {
+849:          if (!get().isAdmin) return;
+850-          const trimmed = newName.trim();
+--
+873-        addTeam: (name, seed) => {
+874:          if (!get().isAdmin) {
+875-            return { success: false, message: 'Yêu cầu quyền Admin để thêm đội.' };
+--
+908-        deleteTeam: (id) => {
+909:          if (!get().isAdmin) return;
+910-          const team = get().teams[id];
+--
+944-        updateTeam: (id, name, seed) => {
+945:          if (!get().isAdmin) {
+946-            return { success: false, message: 'Yêu cầu quyền Admin để sửa thông tin đội.' };
+--
+974-        importTeams: (csvContent) => {
+975:          if (!get().isAdmin) {
+976-            return { success: false, addedCount: 0, errors: ['Yêu cầu quyền Admin để nhập danh sách từ file.'] };
+--
+1056-        setupGroups: (numGroups) => {
+1057:          if (!get().isAdmin) return;
+1058-          if (numGroups < 1 || numGroups > 32) return;
+--
+1106-        autoGroupTeams: (method, numGroups) => {
+1107:          if (!get().isAdmin) return;
+1108-          if (numGroups < 1 || numGroups > 32) return;
+--
+1191-        moveTeamToGroup: (teamId, targetGroupId) => {
+1192:          if (!get().isAdmin) return;
+1193-          const team = get().teams[teamId];
+--
+1242-        clearAllGroups: () => {
+1243:          if (!get().isAdmin) return;
+1244-          set((state) => {
+--
+1265-        generateMatchesForGroup: (groupId) => {
+1266:          if (!get().isAdmin) return;
+1267-          const group = get().groups[groupId];
+--
+1302-        clearMatchesForGroup: (groupId) => {
+1303:          if (!get().isAdmin) return;
+1304-          const group = get().groups[groupId];
+--
+1328-        updateMatchStatus: (matchId, status) => {
+1329:          if (!get().isAdmin) return;
+1330-          set((state) => {
+--
+1361-        updateMatchScore: (matchId, scoreA, scoreB) => {
+1362:          if (!get().isAdmin) return;
+1363-          set((state) => {
+--
+1423-        resetMatchScore: (matchId) => {
+1424:          if (!get().isAdmin) return;
+1425-          const m = get().matches.find((x) => x.id === matchId);
+--
+1453-         generateAllSchedules: () => {
+1454:          if (!get().isAdmin) return;
+1455-          const groupsMap = get().groups;
+--
+1497-        generateKnockoutBracket: (size) => {
+1498:          if (!get().isAdmin) return;
+1499-          // 1. Tính toán bảng xếp hạng của các bảng
+--
+1699-        updateKnockoutScore: (matchId, scoreA, scoreB) => {
+1700:          if (!get().isAdmin) return;
+1701-          
+--
+1801-        updateKnockoutParticipant: (matchId, slot, teamNameOrId) => {
+1802:          if (!get().isAdmin) return;
+1803-          set((state) => {
+--
+1843-        propagateKnockoutResets: (changedMatchIds) => {
+1844:          if (!get().isAdmin) return;
+1845-          if (changedMatchIds.length === 0) return;
+--
+1905-        clearKnockout: () => {
+1906:          if (!get().isAdmin) return;
+1907-          set((state) => {
+--
+1927-        updateKnockoutManualBracket: (updatedKoMatches, numBestThirds) => {
+1928:          if (!get().isAdmin) return;
+1929-          set((state) => {
+--
+1964-        setAdvanceSelectionMode: (mode) => {
+1965:          if (!get().isAdmin) return;
+1966-          set({ advanceSelectionMode: mode });
+--
+1969-        toggleManualQualifiedTeam: (teamId) => {
+1970:          if (!get().isAdmin) return;
+1971-          set((state) => {
+--
+1981-        clearManualQualifiedTeams: () => {
+1982:          if (!get().isAdmin) return;
+1983-          set({ manualQualifiedTeamIds: [] });
+--
+1988-        clearLogs: () => {
+1989:          if (!get().isAdmin) return;
+1990-          set({ logs: [] });
+--
+1993-        resetAll: () => {
+1994:          if (!get().isAdmin) return;
+1995-          set({

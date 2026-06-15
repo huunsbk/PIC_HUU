@@ -1,0 +1,64 @@
+BÁO CÁO KIỂM THỬ AUTH FLOW THỰC TẾ
+================================
+
+1. KẾT QUẢ `signInWithPassword`
+Thành công! Trật tự xác thực đã được xử lý chính xác bởi Supabase GoTrue cho tài khoản `admin@pic.com`. 
+
+2. KẾT QUẢ `getSession`
+Phiên bản Access Token (JWT) được trả về hợp lệ.
+SESSION EXIST: True
+Token Type: bearer
+
+3. KẾT QUẢ `getUser`
+Xác thực danh tính Auth Token với Supabase:
+USER EXIST: True
+USER ID: `652b872b-e3a9-4d48-8388-1f0ea1289be6`
+
+4. KẾT QUẢ `get_current_profile()`
+Dữ liệu doanh nghiệp được fetch thành công từ Database qua hàm ẩn danh (không vi phạm Role-Level Security nội bộ).
+PROFILE_DATA: {
+  account_id: '33333333-3333-3333-3333-333333333333',
+  username: 'huunsbk',
+  display_name: 'Root Administrator',
+  tenant_id: '11111111-1111-1111-1111-111111111111',
+  role: 'SUPER_ADMIN',
+  permissions: []
+}
+
+5. FULL ERROR STACK
+Không ghi nhận bất kì lỗi lập trình hoặc fetch data nào. (PROFILE_ERROR = null). 
+AUTH FLOW PASSED 100%.
+
+================================
+KẾ HOẠCH TRIỂN KHAI RLS (ROW LEVEL SECURITY)
+================================
+Mục tiêu tiếp theo: Cách ly dữ liệu nhiều Tenant cho các bảng cốt lõi (cho Phase sau, hiện tại CHỈ LÊN KẾ HOẠCH).
+
+1. CHUẨN BỊ BẢNG (MAPPING)
+Đảm bảo các bảng `groups`, `teams`, `matches`, `events`, và `audit_logs` có trường bắt buộc `tenant_id UUID NOT NULL`.
+
+2. CƠ CHẾ ĐỌC JWT QUA HÀM
+Khai báo 1 hàm lấy tenant ID trực tiếp dựa vào JWT hoặc thông qua current_user + bảng accounts:
+Ví dụ: 
+```sql
+CREATE OR REPLACE FUNCTION auth.tenant_id() RETURNS uuid AS $$
+  SELECT tenant_id FROM public.accounts WHERE user_id = auth.uid() LIMIT 1;
+$$ LANGUAGE sql STABLE;
+```
+
+3. CHÍNH SÁCH RLS (POLICIES)
+
+> Bảng `events`
+- Tùy chọn "View": `tenant_id = auth.tenant_id() OR (SELECT role FROM public.accounts WHERE user_id = auth.uid()) = 'SUPER_ADMIN'`
+- Tùy chọn "Manage": Tương tự với quyền quản trị.
+
+> Các bảng `groups`, `teams`, `matches`
+- Do các bảng này phụ thuộc trực tiếp vào Event và Tenant. 
+- RLS Policy "Select/Insert/Update/Delete": `tenant_id = auth.tenant_id()` 
+
+> Bảng `audit_logs`
+- Lịch sử truy cập và thay đổi.
+- RLS Policy "Insert": Auth tự chạy.
+- RLS Policy "Select": Chỉ `SUPER_ADMIN` hoặc `TENANT_ADMIN` của chính `tenant_id` đó.
+
+LƯU Ý: Không thêm vào hay chạy code cho đến khi có yêu cầu (DATABASE IS FROZEN). Đã chuẩn bị sẵn sàng mặt lý thuyết.

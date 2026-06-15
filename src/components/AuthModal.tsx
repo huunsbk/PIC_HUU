@@ -81,7 +81,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
        console.warn('[Auth Flow Debug] Missing some expected attributes in payload');
     }
 
-    const mappedRole = accountData.role || 'EVENT_ADMIN';
+    const mappedRole = accountData.role || 'guest';
     const tenantIdStr = accountData.tenant_id || 'default';
     const fetchedPermissions = accountData.permissions || [];
 
@@ -94,6 +94,25 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       role_name: mappedRole,
       permissions: fetchedPermissions
     };
+
+    if (sessionData?.session) {
+      // 1. Ghi active_sessions
+      const sessionInsert = await supabase.from("active_sessions").insert({
+        account_id: accountData.account_id,
+        session_token: sessionData.session.access_token,
+        ip_address: "127.0.0.1",
+        user_agent: navigator.userAgent
+      });
+      console.log('Session insert:', sessionInsert);
+
+      // 2. Ghi login_logs
+      await supabase.from("login_logs").insert({
+        account_id: accountData.account_id,
+        ip_address: "127.0.0.1",
+        user_agent: navigator.userAgent,
+        status: "SUCCESS"
+      });
+    }
 
     setSuccessMsg(`Đăng nhập thành công! Chào mừng đại diện ${accountData.display_name}.`);
     
