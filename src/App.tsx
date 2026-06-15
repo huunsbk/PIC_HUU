@@ -88,6 +88,7 @@ export default function App() {
 
   useEffect(() => {
     if (initializedRef.current) return;
+    initializedRef.current = true;
 
     const detectTenantFromUrl = () => {
       const searchParams = new URLSearchParams(window.location.search);
@@ -133,7 +134,6 @@ export default function App() {
       } else {
         await initSupabase();
       }
-      initializedRef.current = true;
     };
 
     processUrlTenant();

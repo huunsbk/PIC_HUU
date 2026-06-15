@@ -713,14 +713,32 @@ export const useTournamentStore = create<AppState>()(
           get().initSupabase();
         },
         logout: async () => {
-          await supabase.auth.signOut();
-          set({
+          // Guard to avoid recursive logout calls if already guest
+          const state = get();
+          if (state.userRole === 'guest' && !state.isAdmin && !state.currentUser) {
+            return;
+          }
+          
+          // Clear credentials synchronously first to avoid race conditions with auth listeners
+          originalSet({
             userRole: 'guest',
             currentUser: null,
             currentSessionId: null,
             activeTenantId: 'default',
             isAdmin: false,
           });
+          
+          // Reset URL hash so client isn't stuck on the active admin tenant path as guest on reload
+          try {
+            window.location.hash = '';
+          } catch (e) {}
+
+          try {
+            await supabase.auth.signOut();
+          } catch (e) {
+            console.warn('Error signing out during manual logout:', e);
+          }
+          
           sessionStorage.removeItem('pickleball-tournament-cache');
           window.location.reload();
         },
@@ -2200,7 +2218,11 @@ export const useTournamentStore = create<AppState>()(
             isAuthListenerSetup = true;
             supabase.auth.onAuthStateChange((event) => {
               if (event === 'SIGNED_OUT') {
-                get().logout();
+                const cur = get();
+                // Only trigger reload/logout cleanups if the current local state has administrative privileges
+                if (cur.isAdmin || cur.userRole !== 'guest' || cur.currentUser !== null) {
+                  cur.logout();
+                }
               }
             });
           }
