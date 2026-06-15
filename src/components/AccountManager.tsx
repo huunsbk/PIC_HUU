@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTournamentStore } from '../store';
 import { supabase } from '../supabaseClient';
 import { Account } from '../types';
+import ResetPasswordModal from './ResetPasswordModal';
 import { 
   UserPlus, 
   Trash2, 
@@ -47,6 +48,9 @@ export default function AccountManager() {
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editTournamentName, setEditTournamentName] = useState('');
   const [editSelectedEventIds, setEditSelectedEventIds] = useState<string[]>([]);
+
+  // Reset Password Modal State
+  const [resetModalAccount, setResetModalAccount] = useState<string | null>(null);
 
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -594,6 +598,13 @@ export default function AccountManager() {
                             ) : (
                               <>
                                 <button
+                                  onClick={() => setResetModalAccount(acc.username)}
+                                  className="p-1.5 rounded-lg bg-zinc-100 hover:bg-amber-50 dark:bg-zinc-800/60 dark:hover:bg-amber-950/20 text-zinc-500 hover:text-amber-600 dark:text-zinc-400 transition-all cursor-pointer"
+                                  title="Đổi mật khẩu"
+                                >
+                                  <Key size={12} />
+                                </button>
+                                <button
                                   onClick={() => handleStartEdit(acc)}
                                   className="p-1.5 rounded-lg bg-zinc-100 hover:bg-blue-50 dark:bg-zinc-800/60 dark:hover:bg-blue-950/20 text-zinc-500 hover:text-blue-600 dark:text-zinc-400 transition-all cursor-pointer"
                                   title="Sửa tài khoản"
@@ -626,6 +637,12 @@ export default function AccountManager() {
         </div>
 
       </div>
+
+      <ResetPasswordModal 
+        isOpen={!!resetModalAccount}
+        onClose={() => setResetModalAccount(null)}
+        targetUsername={resetModalAccount || ''}
+      />
 
     </div>
   );
