@@ -54,7 +54,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     // Load Enterprise Account details using unified RPC
     const { data: profileStr, error: accountError } = await supabase.rpc('get_current_profile');
     
-    console.log('[Auth Flow Debug] RPC Response:', { profileStr, accountError });
+    console.log('PROFILE_DATA', profileStr);
+    console.log('PROFILE_ERROR', accountError);
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    console.log('SESSION', sessionData.session);
+
+    const { data: userData } = await supabase.auth.getUser();
+    console.log('USER', userData.user);
 
     if (accountError || !profileStr) {
       console.error('[Auth Flow Error] Stack trace / Error details:', accountError);
