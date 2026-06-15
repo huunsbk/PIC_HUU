@@ -188,16 +188,16 @@ export default function App() {
   useEffect(() => {
     if (!isAdmin) return;
 
-    // Tự động đăng xuất sau 2 phút (120,000ms) không hoạt động
+    // Tự động đăng xuất sau 30 phút (1,800,000ms) không hoạt động
     let inactivityTimer: number;
 
     const resetTimer = () => {
       window.clearTimeout(inactivityTimer);
       inactivityTimer = window.setTimeout(() => {
         console.warn('Phiên làm việc đã hết hạn do không hoạt động.');
-        alert('ĐÃ ĐĂNG XUẤT:\n\nVì sự an toàn của dữ liệu, hệ thống tự động đăng xuất nếu không có thao tác nào trong vòng 2 phút. Vui lòng đăng nhập lại.');
+        alert('ĐÃ ĐĂNG XUẤT:\n\nVì sự an toàn của dữ liệu, hệ thống tự động đăng xuất nếu không có thao tác nào trong vòng 30 phút. Vui lòng đăng nhập lại.');
         useTournamentStore.getState().logout();
-      }, 120000);
+      }, 1800000);
     };
 
     const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];

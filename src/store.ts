@@ -668,24 +668,27 @@ export const useTournamentStore = create<AppState>()(
           });
 
           if (username && (role === 'admin2' || role === 'admin3')) {
-            // Cập nhật session_id lên Supabase (fire and forget)
-            supabase.from('accounts')
-              .update({ session_id: sessionId })
-              .eq('username', username)
-              .then(({ error }) => {
-                if (error) console.warn('Không thể cập nhật session_id in accounts:', error);
-              });
-              
-            // Cập nhật session_id lên bảng tournament JSON
+            // Cập nhật session_id lên bảng tournament JSON (nguồn cấu hình tài khoản duy nhất)
             supabase.from('tournament')
               .select('settings')
               .eq('id', 'accounts_config')
               .single()
               .then(({ data }) => {
-                if (data && data.settings && Array.isArray(data.settings)) {
-                  const updatedAccounts = data.settings.map((a: any) => 
+                if (data && data.settings) {
+                  let arr: any[] = [];
+                  let wrapsInObj = false;
+                  
+                  if (Array.isArray(data.settings)) {
+                    arr = data.settings;
+                  } else if (data.settings.accounts && Array.isArray(data.settings.accounts)) {
+                    arr = data.settings.accounts;
+                    wrapsInObj = true;
+                  }
+                  
+                  const updatedAccounts = arr.map((a: any) => 
                     a.username === username ? { ...a, session_id: sessionId } : a
                   );
+                  
                   supabase.from('tournament')
                     .upsert({
                       id: 'accounts_config',
@@ -693,7 +696,7 @@ export const useTournamentStore = create<AppState>()(
                       organization: 'Hệ thống',
                       location: '',
                       date: '',
-                      settings: updatedAccounts
+                      settings: wrapsInObj ? { accounts: updatedAccounts } : updatedAccounts
                     })
                     .then(() => {})
                     .catch(e => console.warn('Lỗi ghi json session:', e));
@@ -772,20 +775,10 @@ export const useTournamentStore = create<AppState>()(
           originalSet({ activeTenantId: tenantId, isLoadingSupabase: true });
           await get().initSupabase();
         },
-        addAccount2: async (acc) => {
+         addAccount2: async (acc) => {
           const nextAccounts = [...get().accounts, acc];
           set({ accounts: nextAccounts });
           let success = false;
-          try {
-            const { error: accError } = await supabase.from('accounts').upsert({
-              username: acc.username,
-              display_name: acc.displayName,
-              tournament_name: acc.tournamentName
-            });
-            if (!accError) success = true;
-          } catch (e) {
-            console.warn("Dedicated accounts table write not available:", e);
-          }
           try {
             const { error } = await supabase.from('tournament').upsert({
               id: 'accounts_config',
@@ -798,7 +791,7 @@ export const useTournamentStore = create<AppState>()(
             });
             if (!error) success = true;
           } catch (e) {
-            console.error(e);
+            console.error('Lỗi khi lưu cấu hình tài khoản:', e);
           }
           return success;
         },
@@ -807,16 +800,6 @@ export const useTournamentStore = create<AppState>()(
           set({ accounts: nextAccounts });
           let success = false;
           try {
-            const { error: accError } = await supabase.from('accounts').upsert({
-              username: acc.username,
-              display_name: acc.displayName,
-              tournament_name: acc.tournamentName
-            });
-            if (!accError) success = true;
-          } catch (e) {
-            console.warn("Dedicated accounts table update not available:", e);
-          }
-          try {
             const { error } = await supabase.from('tournament').upsert({
               id: 'accounts_config',
               name: 'Cấu hình tài khoản cấp 2',
@@ -828,7 +811,7 @@ export const useTournamentStore = create<AppState>()(
             });
             if (!error) success = true;
           } catch (e) {
-            console.error(e);
+            console.error('Lỗi khi cập nhật cấu hình tài khoản:', e);
           }
           return success;
         },
@@ -837,12 +820,6 @@ export const useTournamentStore = create<AppState>()(
           set({ accounts: nextAccounts });
           let success = false;
           try {
-            const { error: accError } = await supabase.from('accounts').delete().eq('username', username);
-            if (!accError) success = true;
-          } catch (e) {
-            console.warn("Dedicated accounts table delete not available:", e);
-          }
-          try {
             const { error } = await supabase.from('tournament').upsert({
               id: 'accounts_config',
               name: 'Cấu hình tài khoản cấp 2',
@@ -854,7 +831,7 @@ export const useTournamentStore = create<AppState>()(
             });
             if (!error) success = true;
           } catch (e) {
-            console.error(e);
+            console.error('Lỗi khi xóa cấu hình tài khoản:', e);
           }
           return success;
         },
@@ -879,19 +856,18 @@ export const useTournamentStore = create<AppState>()(
             try {
               let latestDbSessionId = null;
               
-              // Cách 1: Thử đọc từ bảng accounts (ưu tiên)
-              const { data: dbData } = await supabase.from('accounts').select('session_id').eq('username', state.currentUser).single();
-              if (dbData && dbData.session_id) {
-                latestDbSessionId = dbData.session_id;
-              } else {
-                // Cách 2: Thử đọc từ cấu hình JSON (fallback chuẩn)
-                const { data: tData } = await supabase.from('tournament').select('settings').eq('id', 'accounts_config').single();
-                if (tData && tData.settings && Array.isArray(tData.settings)) {
-                  const arr = tData.settings;
-                  const acc = arr.find((a: any) => a.username === state.currentUser);
-                  if (acc && acc.session_id) {
-                    latestDbSessionId = acc.session_id;
-                  }
+              // Đọc từ cấu hình JSON của bảng tournament (nguồn cấu hình tài khoản duy nhất)
+              const { data: tData } = await supabase.from('tournament').select('settings').eq('id', 'accounts_config').single();
+              if (tData && tData.settings) {
+                let arr: any[] = [];
+                if (Array.isArray(tData.settings)) {
+                  arr = tData.settings;
+                } else if (tData.settings.accounts && Array.isArray(tData.settings.accounts)) {
+                  arr = tData.settings.accounts;
+                }
+                const acc = arr.find((a: any) => a.username === state.currentUser);
+                if (acc && acc.session_id) {
+                  latestDbSessionId = acc.session_id;
                 }
               }
 
@@ -2249,57 +2225,40 @@ export const useTournamentStore = create<AppState>()(
               throw tError;
             }
 
-            // Tải danh sách tài khoản từ bảng 'accounts' chuyên dụng, có fallback về 'accounts_config'
+            // Tải danh sách tài khoản từ cấu hình JSON 'accounts_config' trong tournament (nguồn cấu hình tài khoản duy nhất)
             let loadedAccounts: Account[] = [];
             let forceLogout = false;
             try {
-              const { data: accData, error: accError } = await supabase.from('accounts').select('*');
               const accountsConfigRow = (tData || []).find((row: any) => row.id === 'accounts_config');
-              const jsonAccounts: Account[] = accountsConfigRow?.settings?.accounts || [];
-              
-              if (!accError && accData && accData.length > 0) {
-                loadedAccounts = accData.map((row: any) => {
-                  const baseAcc = {
-                    username: row.username,
-                    password: row.password,
-                    displayName: row.display_name || row.displayName,
-                    tournamentName: row.tournament_name || row.tournamentName,
-                    session_id: row.session_id,
-                    role: row.role || 'admin2',
-                    parentTenantId: row.parent_tenant_id || row.parentTenantId,
-                    permittedEventIds: row.permitted_event_ids || row.permittedEventIds || []
-                  };
-                  // JSON might have the extra fields if table is missing them
-                  const jsonExt = jsonAccounts.find(a => a.username === row.username);
-                  return { ...baseAcc, ...jsonExt };
-                });
-                // Thêm cả những account chỉ tồn tại trong JSON
-                jsonAccounts.forEach(jAcc => {
-                  if (!loadedAccounts.find(a => a.username === jAcc.username)) {
-                    loadedAccounts.push(jAcc);
-                  }
-                });
-                
-                // Kiểm tra bảo mật phiên đăng nhập (chỉ áp dụng cho admin2 và admin3)
-                if ((localState.userRole === 'admin2' || localState.userRole === 'admin3') && localState.currentUser) {
-                  const myLatestDbAccount = loadedAccounts.find(a => a.username === localState.currentUser);
-                  if (myLatestDbAccount && myLatestDbAccount.session_id && myLatestDbAccount.session_id !== localState.currentSessionId) {
-                    forceLogout = true;
-                  }
+              let jsonAccounts: Account[] = [];
+              if (accountsConfigRow && accountsConfigRow.settings) {
+                if (Array.isArray(accountsConfigRow.settings)) {
+                  jsonAccounts = accountsConfigRow.settings;
+                } else if (accountsConfigRow.settings.accounts && Array.isArray(accountsConfigRow.settings.accounts)) {
+                  jsonAccounts = accountsConfigRow.settings.accounts;
                 }
-              } else {
-                loadedAccounts = jsonAccounts;
-                // Vẫn kiểm tra bảo mật nếu dùng JSON
-                if ((localState.userRole === 'admin2' || localState.userRole === 'admin3') && localState.currentUser) {
-                  const myLatestDbAccount = loadedAccounts.find(a => a.username === localState.currentUser);
-                  if (myLatestDbAccount && myLatestDbAccount.session_id && myLatestDbAccount.session_id !== localState.currentSessionId) {
-                    forceLogout = true;
-                  }
+              }
+              
+              loadedAccounts = jsonAccounts.map((row: any) => ({
+                username: row.username,
+                password: row.password,
+                displayName: row.display_name || row.displayName,
+                tournamentName: row.tournament_name || row.tournamentName,
+                session_id: row.session_id,
+                role: row.role || 'admin2',
+                parentTenantId: row.parent_tenant_id || row.parentTenantId || 'default',
+                permittedEventIds: row.permitted_event_ids || row.permittedEventIds || []
+              }));
+
+              // Kiểm tra bảo mật phiên đăng nhập (chỉ áp dụng cho admin2 và admin3)
+              if ((localState.userRole === 'admin2' || localState.userRole === 'admin3') && localState.currentUser) {
+                const myLatestDbAccount = loadedAccounts.find(a => a.username === localState.currentUser);
+                if (myLatestDbAccount && myLatestDbAccount.session_id && myLatestDbAccount.session_id !== localState.currentSessionId) {
+                  forceLogout = true;
                 }
               }
             } catch (e) {
-              const accountsConfigRow = (tData || []).find((row: any) => row.id === 'accounts_config');
-              loadedAccounts = accountsConfigRow?.settings?.accounts || [];
+              console.warn('Lỗi phân tích tài khoản từ JSON:', e);
             }
             originalSet({ accounts: loadedAccounts });
             
