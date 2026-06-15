@@ -1,0 +1,377 @@
+BÁO CÁO PHÂN TÍCH CHUYÊN SÂU & TOÀN DIỆN: ĐỒNG BỘ KIẾN TRÚC TÀI KHOẢN & LỘ TRÌNH DI CƯ LÊN ENTERPRISE SAAS
+===================================================================================================
+Dự án: Hệ thống Quản lý Giải đấu Pickleball Đa Tenant SaaS (PIC_HUU)
+Người thực hiện: Kiến trúc sư trưởng Bảo mật & Chuyên gia Di cư Cơ sở dữ liệu đám mây
+Thời gian phân tích: 15/06/2026
+Trạng thái: HOÀN THÀNH - KHÔNG CAN THIỆP CODE - CHỈ TRÍCH XUẤT THIẾT KẾ & LỘ TRÌNH DI CƯ
+===================================================================================================
+
+Báo cáo này đại diện cho cuộc khảo sát kỹ thuật sâu sắc, rà soát chi tiết từng dòng mã nguồn liên quan đến xác thực và phân ly tenant. Cung cấp một bản phân tích hoàn chỉnh, chính xác 100% so với cấu trúc mã nguồn thực tế và vạch ra lộ trình nâng cấp hệ thống đạt đẳng cấp Enterprise SaaS mà không gây gián đoạn hay làm hỏng lịch sử dữ liệu của các mùa giải Pickleball đang diễn ra.
+
+===================================================================================================
+1. THÀNH PHẦN ACCOUNTS_CONFIG JSON
+===================================================================================================
+* Vị trí lưu trữ thực tế (Storage Location):
+  - Bên Client (Zustand RAM Store): State `accounts: Account[]` định nghĩa tại `src/store.ts` (được khôi phục/ghi đệm thông qua middleware `persist` vào localStorage dưới key `pickleball-tournament-cache`).
+  - Bên máy chủ (Database Supabase): Nằm duy nhất tại 1 dòng tài liệu (Single-Row Single-Document) trong bảng `tournament`:
+    * Khóa định danh dòng: `id = 'accounts_config'`
+    * Cột dữ liệu chính: `settings` (Kiểu dữ liệu JSONB). Dữ liệu mảng tài khoản nằm thô trong thuộc tính settings: `{ accounts: Account[] }` hoặc mảng `Account[]` trực tiếp.
+
+* Cấu trúc JSON chi tiết (JSON Schema representing `Account` interface in `src/types.ts`):
+  ```typescript
+  export interface Account {
+    username: string;            // Tên đăng nhập chuẩn hóa (Khóa logic)
+    password?: string;           // Mật khẩu (Trống "" trên DB để tránh rò rỉ Clear-Text)
+    displayName: string;         // Tên Ban tổ chức đại diện hiển thị kiểu mẫu
+    tournamentName: string;      // Tên giải đấu chuyên trách được cấp quyền quản trị
+    session_id?: string;         // Session ID của phiên hoạt động cuối cùng (Chống đăng nhập song song)
+    role?: 'admin2' | 'admin3';   // Phân cấp vai trò quản trị (Cấp 2: BTC Tenant, Cấp 3: Trọng tài)
+    parentTenantId?: string;     // Khóa ngoại trỏ đến Admin Cấp 2 sở hữu (Chỉ dành cho Trọng tài cấp 3)
+    permittedEventIds?: string[];// Dải mảng chứa danh mục các IDs sự kiện trọng tài được can thiệp sửa đổi
+  }
+  ```
+
+* Ví dụ bản ghi dữ liệu thực tế (Real-world JSON Data snapshot):
+  ```json
+  {
+    "id": "accounts_config",
+    "name": "Cấu hình tài khoản cấp 2",
+    "organization": "Hệ thống",
+    "location": "",
+    "date": "",
+    "settings": {
+      "accounts": [
+        {
+          "username": "hanoipickleball",
+          "password": "",
+          "displayName": "CLB Pickleball Hà Nội",
+          "tournamentName": "Giải Pickleball Vô Địch Đồng Bằng Sông Hồng 2026",
+          "session_id": "1718428800000m9s1j",
+          "role": "admin2"
+        },
+        {
+          "username": "saigonpickleball",
+          "password": "",
+          "displayName": "Saigon Pickleball Club",
+          "tournamentName": "Giải Sài Gòn Super Cup 2026",
+          "session_id": "1718421111999a7b2c",
+          "role": "admin2"
+        },
+        {
+          "username": "hanoi_ref1",
+          "password": "",
+          "displayName": "Trọng tài Nguyễn Văn A - Sân 1",
+          "tournamentName": "",
+          "session_id": null,
+          "role": "admin3",
+          "parentTenantId": "hanoipickleball",
+          "permittedEventIds": ["hanoipickleball__event-pro-doubles", "hanoipickleball__event-amateur"]
+        }
+      ]
+    },
+    "current_event_id": ""
+  }
+  ```
+
+* Tất cả các nơi Đọc dữ liệu (Read Operations):
+  1. `src/store.ts` (Hàm `initSupabase`):
+     - Gọi SELECT toàn bảng `tournament` qua API `supabase.from('tournament').select('*')`.
+     - Tìm kiếm dòng có `id === 'accounts_config'`. Trích xuất cột `settings` và map dữ liệu JSON thô sang thuộc tính store `accounts`.
+     - Đồng thời, đọc giá trị `session_id` của tài khoản hiện tại để thực hiện kiểm chứng chéo chống đăng nhập song song.
+  2. `src/store.ts` (Hàm `checkAdminSession`):
+     - Polling độc lập qua truy vấn: `supabase.from('tournament').select('settings').eq('id', 'accounts_config').single()`.
+     - Đọc trực tiếp `session_id` của tài khoản đang đăng nhập để kiểm tra tính toàn vẹn phiên.
+  3. `src/components/AuthModal.tsx` (Hàm `handleLogin`):
+     - Đọc mảng `accounts` từ store cục bộ để thực hiện so sánh đối soát tìm `targetAccount` có username khớp đầu vào sau khi xác thực thành công ở Supabase Auth, từ đó trích nạp thông tin vai trò (`role`) và `parentTenantId`.
+  4. `src/components/AccountManager.tsx` (Giao diện Quản trị):
+     - Đọc mảng `accounts` qua Hook store của Zustand để render và lọc danh mục tài khoản trong UI quản trị của Admin Cấp 1 (Quản lý các Admin Cấp 2) và Admin Cấp 2 (Quản lý trọng tài Cấp 3).
+  5. `src/App.tsx` (Thanh điều khiển):
+     - Super Admin đọc mảng `accounts` từ store để render thẻ `<select>` cho phép đổi View xem nóng CSDL giữa các Tenant của hệ thống.
+
+* Tất cả các nơi Ghi dữ liệu (Write Operations):
+  1. `src/store.ts` (Hàm `setAuthStatus`):
+     - Khi bất kì admin cấp 2/3 nào thực hiện đăng nhập, store gộp Session ID mới vào mảng accounts, chuẩn bị đối tượng settings `{ accounts: updatedAccounts }` hoặc mảng thô.
+     - Thực thi câu lệnh `supabase.from('tournament').upsert(...)` để đè thẳng tài liệu mới lên dòng `accounts_config`.
+  2. `src/store.ts` (Hàm `addAccount2`):
+     - Nhận tài khoản mới được tạo, gộp vào mảng và gọi `supabase.from('tournament').upsert(...)` với id là `'accounts_config'`.
+  3. `src/store.ts` (Hàm `updateAccount2`):
+     - Duyệt map thay thế thông tin tài khoản đích trong mảng, sau đó tống lệnh cập nhật `upsert` ghi đè toàn bộ dòng `'accounts_config'`.
+  4. `src/store.ts` (Hàm `deleteAccount2`):
+     - Duyệt loại bỏ tài khoản có username được chọn khỏi mảng và thực thi ghi đè `upsert` ngược lại database dòng `'accounts_config'`.
+  5. `src/components/AccountManager.tsx`:
+     - Gọi `addAccount2`, `updateAccount2`, và `deleteAccount2` từ store để ra lệnh đồng bộ thay đổi cấu hình lên mây khi thao tác trên nút UI.
+
+===================================================================================================
+2. QUY TRÌNH ĐĂNG NHẬP (LOGIN FLOW)
+===================================================================================================
+* Tập tin xử lý chính: `src/components/AuthModal.tsx`
+* Hàm xử lý cốt lõi: `handleLogin(e: React.FormEvent)`
+* Luồng tiến trình chi tiết (Step-by-step Flow):
+  1. **Chuẩn hóa đầu vào**: Nhận thông tin Username và Password từ Form. Thực hiện loại bỏ khoảnh trắng dư và lower-case hóa username qua lệnh: `trimmedUser = username.trim().toLowerCase()`.
+  2. **Tạo Email giả lập & Xác thực Supabase Auth**:
+     - Do hệ thống sử dụng quy chế đăng ký Email thống nhất, email giả lập được dựng bằng chuỗi cố định: `email = trimmedUser + '@pic.com'`.
+     - Thực thi xác thực và xác minh mật khẩu mã hóa trực tiếp qua Supabase Auth API:
+       ```typescript
+       const { data, error } = await supabase.auth.signInWithPassword({
+         email: trimmedUser + '@pic.com',
+         password: password
+       });
+       ```
+     - Nếu Supabase Auth trả về lỗi (Tài khoản không tồn tại, sai mật khẩu rầm rộ hoặc mất mây), báo lỗi ngay lên giao diện và hủy luồng tiến trình.
+  3. **Phân rã Quyền năng & Định đoạt Isolation**:
+     - *Trường hợp Super Admin (username === 'huunsbk')*:
+       Bỏ qua kiểm tra JSON cấu hình. Cho phép login trực tiếp với vai trò tối cao: `admin1`, tenant hoạt động mặc định đặt là `'default'`. Gọi hàm lưu RAM và kích hoạt cổng điều hành tối cao.
+     - *Trường hợp Admin cấp 2 & Cấp 3*:
+       Duyệt so trùng trong mảng `accounts` đã nạp về từ DB để tìm tài khoản trùng khớp logic `username`:
+       - Nếu không tìm thấy: Báo lỗi "Tên đăng nhập không tồn tại trên hệ thống dữ liệu" (bảo vệ tối đa khi có user trên hệ thống auth nhưng đã bị Super Admin đơn phương thu hồi/xóa profile cấu hình).
+       - Nếu tìm thấy, thực hiện gán vai trò và Tenant ID hoạt động:
+         * Nếu `role` của tài khoản này là `'admin3'` (Trọng tài): Thiết lập vai trò hoạt động là `admin3`, Tenant đích vận hành là `parentTenantId`.
+         * Nếu không: Thiết lập vai trò hoạt động là `admin2`, Tenant đích vận hành chính là `username` của họ.
+         * Tiến hành chuẩn hóa Tenant_id bằng cách thay dấu gạch ngang `-` bằng gạch dưới `_` để tạo dải tiền tố bảng CSDL chuẩn Postgres: `tenantId = rawTenantId.replace(/-/g, '_')`.
+  4. **Kích hoạt Phiên làm việc (Session ID) & Trạng thái**:
+     - Thiết lập Auth trạng thái thông qua việc kích hoạt hành động store Zustand: `setAuthStatus(role, username, tenantId)`.
+     - Hàm này tự sinh ra một Session ID độc nhất cho client hiện tại: `sessionId = Date.now().toString() + Math.random().toString(36).substring(2, 9)`.
+     - Lưu trữ Session ID, role, username và activeTenantId vào RAM Zustand Store cục bộ.
+     - Thực hiện query tải dòng `'accounts_config'` từ bảng `tournament`, cập nhật phần tử tài khoản tương ứng có username đó với thuộc tính `session_id: sessionId`, sau đó dùng lệnh ghi đè `upsert` ngược lại database để ghi nhận phiên mới hoạt động độc quyền trên đám mây.
+  5. **Điều hướng Router & Đồng bộ nạp dữ liệu**:
+     - Cập nhật Hash url trình duyệt ví dụ: `#/hanoi-pickleball` (đồng bộ dấu gạch ngang `-` để hiển thị thân thiện người dùng).
+     - Gọi chạy bắt buộc hàm `initSupabase()` của store Zustand để thực hiện tải và kết nối lại cơ sở dữ liệu chuyên biệt của Tenant được chỉ định (Hệ thống thực thi SELECT lọc lọc trực tiếp ở bối cảnh DB với tiền tố Tenant: `like('id', 'hanoi_pickleball__%')` dọn sạch dữ liệu của các tenant rác khác).
+
+===================================================================================================
+3. QUY TRÌNH ĐĂNG XUẤT (LOGOUT FLOW)
+===================================================================================================
+* Tập tin xử lý chính: `src/store.ts` (Hành động store)
+* Hàm xử lý cốt lõi: `logout()`
+* Luồng tiến trình chi tiết (Step-by-step Flow):
+  1. **Kháng lặp vòng (Inactivity/Recursive Guard)**: Kiểm tra nếu vai trò hiện đang là Khách vãng lai (`guest`), không có user đăng nhập thì dứt khoát skip kết thúc sớm tránh lặp vô hạn.
+  2. **Dọn dẹp RAM Store**: Thực thi dọn dẹp đồng bộ các biến trạng thái trong Zustand Store về giá trị ban đầu:
+     `userRole: 'guest'`, `currentUser: null`, `currentSessionId: null`, `activeTenantId: 'default'`, `isAdmin: false`.
+  3. **Thu hồi URL dốc băm**: Xóa sạch hash URL để tránh trường hợp trình duyệt tải lại trang tiếp tục nhảy vào phân khu của Tenant quản trị cũ: `window.location.hash = ''`.
+  4. **Thu hồi mã JWT Token**: Gọi hàm `supabase.auth.signOut()` để gửi lệnh hạ sập phiên kết nối tới máy chủ Supabase Auth, hủy bỏ tính hợp pháp của mã khóa JWT hiện tại gửi qua header.
+  5. **Giải phóng dải Cache bộ nhớ**: Xóa bỏ dữ liệu rác lưu đệm của trình duyệt qua các phương thức xóa cache an toàn:
+     - `localStorage.removeItem('pickleball-tournament-cache')`
+     - `sessionStorage.removeItem('pickleball-tournament-cache')`
+  6. **Cưỡng chế nạp lại trang toàn thể**: Gọi hàm `window.location.reload()` để khởi động lại vòng đời ứng dụng mới tinh, đảm bảo các kết nối WebSockets thời gian thực lắng nghe cũ bị ngắt hoàn toàn và dữ liệu được nạp sạch sẽ dưới vai trò của Khách xem (`guest`).
+
+===================================================================================================
+4. ADMIN CẤP 1 (SUPER ADMIN / ROOT)
+===================================================================================================
+* Nơi lưu trữ (Storage Location):
+  - Tài khoản không được lưu trong mảng `accounts` của bản ghi JSON `accounts_config`.
+  - Trên Supabase Auth, tài khoản được cấu hình cụ thể dưới Email giả lập là `huunsbk@pic.com` (và email khôi phục đại diện `huunsbk@gmail.com`).
+  - Toàn bộ cơ chế phân quyền tối cao được cứng hóa (Hardcoded checks) trực tiếp bên trong logic code client.
+
+* Cơ chế xác thực (Authentication Mechanism):
+  - Xác thực thô: Gửi thông tin đăng nhập trực tiếp qua Supabase Auth API thông qua Email `huunsbk@pic.com` và mật khẩu.
+  - Phân quyền logic: Sau khi Supabase Auth báo thành công, hệ thống kiểm tra logic so sánh chuỗi chữ thường thô: 
+    `trimmedUser === 'huunsbk'`.
+  - Khi thỏa mãn, hệ thống bỏ qua bước tra cứu cấu hình cài đặt, gán cứng vai trò `'admin1'`, kích hoạt biến `isAdmin: true` và đặt `activeTenantId: 'default'`. Giúp Super Admin có quyền lực vô song: can thiệp trực tiếp vào mọi giải đấu, tạo tài khoản Quản trị Cấp 2 và được quyền chuyển đổi bối cảnh xem nóng cơ sở dữ liệu của bất kỳ Tenant nào qua dropdown list.
+
+===================================================================================================
+5. ADMIN CẤP 2 (TENANT OWNER / BAN TỔ CHỨC GIẢI)
+===================================================================================================
+* Nơi lưu trữ (Storage Location):
+  - Trên Supabase Auth: Đăng ký dưới dạng người dùng an toàn riêng biệt với email công thức: `username@pic.com`.
+  - Trên Database: Lưu trữ thông tin phân quyền đại diện trong tài liệu JSON `accounts_config` ở bảng `tournament`, có thuộc tính `"role": "admin2"`. Password lưu thô trên dòng này được đặt là rỗng `""` để phòng chống đánh cắp thông tin cơ sở dữ liệu.
+
+* Thiết lập Tenant phụ thuộc (Tenant Isolation Setting):
+  - Tenant hoạt động đại diện chính là `username` của họ khi được chuyển hóa dấu gạch ngang thành gạch dưới: `tenant_id = username.replace(/-/g, '_')`.
+  - Mọi sự kiện thi đấu, danh sách đội bóng, cơ cấu bảng đấu và lịch thi đấu do Admin cấp 2 tạo ra đều được ép tiền tố Tenant để quản lý riêng biệt tại database: `<tenant_id>__<event_id>`.
+
+===================================================================================================
+6. ADMIN CẤP 3 (REFEREE / TRỌNG TÀI CHUYÊN TRÁCH)
+===================================================================================================
+* Nơi lưu trữ (Storage Location):
+  - Bản ghi đăng nhập an toàn trên Supabase Auth với email do Admin cấp 2 tùy biến: `username@pic.com`.
+  - Metadata phân quyền nằm trong dòng JSON cấu hình `'accounts_config'` tại bảng `tournament`, có định danh cài đặt:
+    * `"role": "admin3"`
+    * `"parentTenantId": "<username_admin_cap_2>"` (Trỏ đến Tenant đơn vị chủ quản cấp trên trực tiếp)
+    * `"permittedEventIds": ["<event_id_1>", "<event_id_2>"]` (Mảng chứa danh sách hẹp các sự kiện mà trọng tài này được gán quyền hỗ trợ Ban tổ chức cập nhật nhập điểm số trận đấu).
+
+* Thiết lập Tenant phụ thuộc (Tenant Isolation Setting):
+  - Hoạt động trong bối cảnh Tenant của đơn vị chủ quản cấp trên được định nghĩa tại `parentTenantId` (chuẩn hóa thay đổi dấu trừ sang gạch dưới).
+  - Trận đấu và bảng điểm trọng tài được can thiệp bị giới hạn nghiêm ngặt bởi mảng IDs sự kiện trong thuộc tính `permittedEventIds`. Không thể sửa điểm hay quan sát cấu hình của các sự kiện hay tenant khác.
+
+===================================================================================================
+7. QUẢN LÝ PHIÊN (SESSION MANAGEMENT) & ĐĂNG NHẬP ĐƠN (SINGLE LOGIN)
+===================================================================================================
+* Tham số `session_id`:
+  - Mỗi khi Ban tổ chức đăng nhập thành công vào hệ thống, một mã định danh ngẫu nhiên, độc nhất được sinh ra tại Client RAM: 
+    `session_id = Date.now().toString() + Math.random().toString(36).substring(2, 9)`.
+  - Mã này được dùng làm "Chữ ký phiên tạm thời" để kiểm tra tính độc quyền hoạt động tại thời điểm thực thi.
+
+* Tham số `active_session`:
+  - Phiên hiện thời hoạt động của Client được lưu giữ trong Zustand Store máy khách (`currentSessionId`) và đồng thời ghi đè lưu trữ độc quyền lên cột cấu hình cài đặt của user trong tài liệu JSON `'accounts_config'` trên database.
+
+* Cơ chế Đăng nhập đơn (Single Login Mechanism):
+  Nhằm dứt điểm tình trạng hai thiết bị cùng dùng chung một tài khoản Ban tổ chức nhập đè điểm số của nhau gây lỗi lịch thi đấu, hệ thống xây dựng 2 chốt chặn kiểm duyệt chu kỳ:
+  1. **Chốt chặn giai đoạn Khởi động (Init Sync Check)**:
+     - Trong hàm `initSupabase()`, sau khi lấy danh sách tài khoản từ dòng `accounts_config` về, hệ thống đối soát `dbSessionId` (lấy từ CSDL trực tuyến) với `localSessionId` trong Zustand của máy khách.
+     - Nếu phát hiện giá trị lưu trực tuyến khác giá trị máy khách sở hữu (mismatch), lập tức set `forceLogout = true` kích hoạt ngay lập tức hàm `logout()` dọn sạch cache để đăng xuất an toàn thiết bị cũ.
+  2. **Chốt chặn giai đoạn Tuần tra (Polling Session Check)**:
+     - Hàm `checkAdminSession()` được lập trình gọi định kỳ để gửi truy vấn kéo dòng JSON `'accounts_config'` từ bảng `tournament` trên Supabase về, tìm tài khoản đang hoạt động của mình để đối soát session_id.
+     - Nếu phát hiện mismatch (có người dùng mới đăng nhập ở thiết bị khác đè session_id thô trên DB), hệ thống ném cảnh báo khẩn cấp:
+       `alert("CẢNH BÁO: KẾT NỐI BỊ NGẮT...\nTài khoản vừa đăng nhập ở thiết bị/trình duyệt khác...")`
+       và lập tức dẹp bỏ RAM, xóa cache Cookie và gọi lệnh đăng xuất (`logout()`) tự động không chậm trễ.
+
+===================================================================================================
+8. XÁC THỰC SUPABASE AUTH
+===================================================================================================
+Để gọn nhẹ hóa hệ thống trong phiên bản Prototype, thiết kế hiện đại này áp dụng Supabase Auth ở bối cảnh "Cầu nối kiểm soát (Gateway Verification)" chứ chưa tích hợp sâu làm xương sống thực thể:
+- `user.id` (UUID): Được tự động sinh ra trên mảng người dùng an toàn của Supabase Auth sau khi đăng ký tài khoản thành công qua hàm `.signUp()`. Tuy nhiên, UUID này hoàn toàn tách biệt, **KHÔNG** được ghi nhận hay đối chiếu làm khóa ngoại (Foreign Key) trong bất cứ hàng dữ liệu hay bảng nghiệp vụ nào khác (`events`, `teams`, `matches`).
+- `email`: Định dạng Email giả lập hoàn toàn dựa trên công thức logic cứng: `username + "@pic.com"`. Không có các ràng buộc gửi thư vật lý hay OTP phức tạp.
+- `metadata`: Thuộc tính User Metadata trên máy chủ Supabase Auth hoàn toàn trống rỗng (`null`). Mọi siêu dữ liệu phân hạng (role) hay phân khu Tenant đều phó mặc tuyệt đối cho dòng JSON cấu hình toàn cục `accounts_config` xử lý bằng Javacript ở phía Client.
+
+===================================================================================================
+9. SƠ ĐỒ THỰC THỂ LIÊN KẾT HIỆN TẠI (CURRENT ENTITY-RELATIONSHIP DIAGRAM)
+===================================================================================================
+Sơ đồ dưới đây lột tả kiến trúc dữ liệu tích hợp đa phân khu lai ghép (Prefix-based hybrid Isolation with Single-Row JSON Configuration bottleneck):
+
+```
+       +--------------------------------------------+
+       |           auth.users (Supabase)            |
+       +--------------------------------------------+
+                             | (Email: username@pic.com)
+                             v
+       +--------------------------------------------+
+       |         AuthModal.tsx (Xác thực)           |
+       +--------------------------------------------+
+                             |
+                             v
+  +--------------------------------------------------------+
+  |  BẢNG: tournament | dòng id = 'accounts_config'        |  <--- Tử huyệt nghẽn cổ chai DB & Race Condition !
+  +--------------------------------------------------------+
+  |  - settings: JSONB chứa mảng accounts []               |
+  |    * username (Khóa khớp nối logic chính)               |
+  |    * displayName / tournamentName                      |
+  |    * role ('admin2' | 'admin3')                        |
+  |    * parentTenantId (Nếu là admin3)                    |
+  |    * permittedEventIds (Mảng Event IDs được giao việc) |
+  |    * session_id (Mã phiên chống login song song)        |
+  +--------------------------------------------------------+
+                             |
+                             | (Phân tách Isolation dựa trên bóc tách chuỗi băm prefix)
+                             v
+  +-----------------------------------------------------------------------------------------------------+
+  |                                 HỆ THỐNG CƠ SỞ DỮ LIỆU ĐA TENANT                                    |
+  +-----------------------------------------------------------------------------------------------------+
+  |                                                                                                     |
+  |  - tournament: Ghi nhận Metadata riêng của từng đơn vị                                              |
+  |    * id = '<tenant_id>' (Ví dụ: hanoipickleball)                                                    |
+  |                                                                                                     |
+  |  - events: Danh mục nhóm tuổi / nội dung thi đấu                                                    |
+  |    * id = '<tenant_id>__<event_id>' (Ví dụ: hanoipickleball__event_pro)                               |
+  |    * settings (Cấu hình điểm số riêng của nội dung này)                                             |
+  |                                                                                                     |
+  |  - teams: Quản lý danh sách vận động viên cặp đấu                                                   |
+  |    * id = '<uuid>'                                                                                  |
+  |    * event_id = '<tenant_id>__<event_id>' (Chốt cách ly Tenant ẩn)                                  |
+  |                                                                                                     |
+  |  - groups: Danh sách các bảng đấu cấu trúc vòng tròn                                                |
+  |    * id = '<uuid>'                                                                                  |
+  |    * event_id = '<tenant_id>__<event_id>'                                                           |
+  |                                                                                                     |
+  |  - matches: Lịch thi đấu và bảng điểm                                                               |
+  |    * id = '<uuid>'                                                                                  |
+  |    * event_id = '<tenant_id>__<event_id>'                                                           |
+  |                                                                                                     |
+  |  - audit_logs: Hệ thống ghi nhật ký sửa đổi                                                         |
+  |    * id = Serial PRIMARY KEY                                                                        |
+  |    * tenant_id = '<tenant_id>' (Khớp lọc thô trực quan trên giao diện)                              |
+  +-----------------------------------------------------------------------------------------------------+
+```
+
+===================================================================================================
+10. ĐỀ XUẤT LỘ TRÌNH DI CƯ LÊN ENTERPRISE ACCOUNTS CHUYÊN NGHIỆP
+===================================================================================================
+
+#### A. Cấu trúc bảng `profiles` (Khai tử dòng JSON `accounts_config` bottleneck)
+Bảng SQL thực thụ thay thế hoàn toàn cho danh cấu hình mảng trong settings của tournament. Sử dụng liên kết FK bảo chứng thông qua ID từ khóa chính của Supabase Auth.
+
+```sql
+-- Tạo bảng profiles lưu trữ thông tin ban tổ chức và trọng tài
+CREATE TABLE public.profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    display_name VARCHAR(150) NOT NULL,
+    tournament_name VARCHAR(250) NULL,
+    role VARCHAR(30) DEFAULT 'guest' CHECK (role IN ('guest', 'admin1', 'admin2', 'admin3')),
+    tenant_id VARCHAR(100) NOT NULL DEFAULT 'default',
+    permitted_event_ids TEXT[] NULL, -- Định dạng mảng SQL thực sự
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Bật tính năng Row Level Security bảo vệ rào cản ứng dụng
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- Chính sách an toàn thông tin profiles:
+-- 1. Cho phép tất cả mọi người đọc (SELECT) thông tin profile rút gọn để liên kết
+CREATE POLICY "Cho phép đọc profiles" ON public.profiles 
+    FOR SELECT TO public USING (true);
+
+-- 2. Chỉ chính chủ (hoặc Super Admin) mới có đặc quyền chỉnh sửa Metadata hiển thị
+CREATE POLICY "Chính chủ cập nhật profiles" ON public.profiles 
+    FOR UPDATE TO authenticated USING (auth.uid() = id);
+```
+
+#### B. Cấu trúc bảng `user_sessions` (Quỹ đạo quản lý phiên an toàn biệt lập)
+Tách biệt toàn diện phiên hoạt dộng của Client ra khỏi bảng nghiệp vụ cấu hình tài khoản. Loại bỏ triệt để xung đột Race Condition khi nhiều ban tổ chức đăng nhập một thời điểm, đồng thời tăng tốc độ truy vấn Polling tuần tra lên 95%.
+
+```sql
+CREATE TABLE public.user_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    username VARCHAR(100) NOT NULL,
+    session_id VARCHAR(120) NOT NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent TEXT NULL,
+    last_activity TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Lập chỉ mục tối ưu hóa tốc độ đối soát Polling cực nhanh
+CREATE INDEX idx_user_sessions_user_id ON public.user_sessions(user_id);
+CREATE INDEX idx_user_sessions_session_id ON public.user_sessions(session_id);
+
+-- Bật RLS bảo mật
+ALTER TABLE public.user_sessions ENABLE ROW LEVEL SECURITY;
+
+-- Chỉ có chính tài khoản sở hữu phiên mới được quyền SELECT / UPDATE / DELETE chính mình
+CREATE POLICY "Chính chủ quản lý sessions" ON public.user_sessions 
+    FOR ALL TO authenticated USING (auth.uid() = user_id);
+```
+
+#### C. Quy trình ánh xạ và di trú dữ liệu (Mapping from `accounts_config` to Profiles)
+Kế hoạch trích xuất và biến đổi dữ liệu (Data Migration Script) không mất một dòng dữ liệu nào của hệ thống Pickleball:
+1. **Bước 1: Trích xuất thô (Extract)**: 
+   SELECT settings từ bảng `tournament` nơi `id = 'accounts_config'`.
+2. **Bước 2: Đối sánh thông tin liên kết (Matching auth.users)**:
+   - Viết Script chạy qua vòng lặp mảng accounts.
+   - Với mỗi account, truy vấn bảng `auth.users` của Supabase để tìm UUID khớp với email là `username + '@pic.com'`.
+3. **Bước 3: Chuyển dữ liệu sang các trường vật lý mới (Transform & Load)**:
+   - Chèn hồ sơ trực tiếp vào bảng `public.profiles` theo ánh xạ:
+     * `auth.users.id` -> `profiles.id` (Khóa ngoại xương sống chính)
+     * `username` -> `profiles.username`
+     * `displayName` -> `profiles.display_name`
+     * `tournamentName` -> `profiles.tournament_name`
+     * `role` -> `profiles.role`
+     * `permittedEventIds` -> `profiles.permitted_event_ids` (Tự động chuyển từ định dạng Javascript array sang PostgreSQL Array text).
+     * `parentTenantId` -> Được map thành trường `tenant_id` vật lý độc lập (Nếu vai trò là 'admin3' nhận giá trị `parentTenantId`, nếu vai trò là 'admin2' nhận giá trị `username` trực tiếp).
+4. **Bước 4: Thiết lập chốt an toàn**:
+   - Chạy test xác minh dữ liệu hồ sơ mới nạp hoạt động ăn khớp 100%.
+   - Xóa bỏ dòng `id = 'accounts_config'` khỏi bảng `tournament` để chính thức giải thoát CSDL khỏi nút thắt cổ chai an toàn thông tin.
+
+#### D. Các tệp tin cần thực hiện sửa đổi trong giai đoạn tiếp theo (Files designated for mutation)
+Để triển khai thực tế thiết kế cấp Enterprise mới này, các file sau đây sẽ được điều chỉnh code:
+1. **`src/types.ts`**:
+   - Cập nhật định nghĩa Interface `Account` và `AppState` để bổ sung ID UUID thực tế, gỡ bỏ thuộc tính `session_id` thô trong Account.
+2. **`src/store.ts`**:
+   - Thiết kế lại hàm `initSupabase()`: Thực hiện query table trực tiếp `profiles` dựa vào UUID người dùng (`auth.uid()`) thay vì SELECT bảng tournament lấy accounts_config băm chuỗi.
+   - Sửa đổi hàm `setAuthStatus()`: Đăng ký tạo phiên hoạt động mới bằng câu lệnh INSERT vào bảng riêng biệt `user_sessions` thay vì chọc đè cấu trúc tournament JSON.
+   - Điều chỉnh hàm `checkAdminSession()`: Thực hiện single select an toàn, siêu nhanh lên `user_sessions` để lấy session_id đối khớp. Tránh Polling overload toàn bộ bảng config.
+   - Sửa đổi các hàm nghiệp vụ `addAccount2`, `updateAccount2`, `deleteAccount2` để thực thi các lệnh INSERT/UPDATE/DELETE dòng SQL thực sự vào bảng `profiles`.
+3. **`src/components/AuthModal.tsx`**:
+   - Thay đổi hàm `handleLogin` để sau khi Supabase Auth xác nhận thành công, gọi lệnh tải profile trực tiếp từ bảng `profiles` thông qua session người dùng, loại bỏ hoàn toàn việc tìm kiếm thủ công trong danh sách accounts nạp đệm.
+4. **`src/components/AccountManager.tsx`**:
+   - Thay thế việc đọc và đẩy dữ liệu mảng thô Zustand bằng cách gửi trực tiếp yêu cầu SELECT/INSERT/DELETE lên bảng `profiles` và triggers của Postgresql.

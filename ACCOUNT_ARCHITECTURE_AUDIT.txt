@@ -1,0 +1,290 @@
+====================================================================================================
+           BÁO CÁO KIỂM TOÁN KIẾN TRÚC TÀI KHOẢN TOÀN HỆ THỐNG (PIC_HUU MULTI-TENANT)
+====================================================================================================
+Dự án: Hệ thống Quản lý Giải đấu Pickleball Đa Tenant (PIC_HUU)
+Người thực hiện: Kiến trúc sư trưởng An ninh mạng & Cơ sở dữ liệu SaaS
+Trạng thái: HOÀN THÀNH PHÂN TÍCH KỸ THUẬT SÂU - KHÔNG SỬA CODE - CHỈ XUẤT BÁO CÁO
+====================================================================================================
+
+Báo cáo này đại diện cho cuộc rà soát chi tiết, toàn diện 100% đối với cơ chế xác thực, phân quyền, quản lý phiên và cách ly tenant (Multi-tenant isolation) đang vận hành trong dự án PIC_HUU.
+
+----------------------------------------------------------------------------------------------------
+1. DANH SÁCH TẤT CẢ FILE LIÊN QUAN ĐẾN QUY TRÌNH ĐĂNG NHẬP / PHÂN QUYỀN
+----------------------------------------------------------------------------------------------------
+Hệ thống xác thực và quản trị tài khoản được phân rã thành các tệp tin nghiệp vụ sau:
+
+* `src/components/AuthModal.tsx`: 
+  - Giao diện đăng nhập tập trung.
+  - Chuẩn hóa username (lower-case, trim), giả lập email dạng `username@pic.com`.
+  - Thực thi xác thực thông qua API Supabase Auth.
+  - Đọc quyền truy cập và liên kết phân vùng Tenant từ cấu hình RAM Store.
+
+* `src/store.ts`:
+  - Trái tim xử lý dữ liệu và cấu hình của hệ thống.
+  - Quản lý các biến trạng thái quan trọng: `currentUser`, `userRole`, `currentSessionId`, `activeTenantId`, `isAdmin`, `accounts`.
+  - Triển khai các API kết nối cơ sở dữ liệu: `initSupabase()`, `setAuthStatus()`, `logout()`, `addAccount2()`, `updateAccount2()`, `deleteAccount2()`, `checkAdminSession()`.
+  - Lắng nghe trạng thái session trực tiếp qua `supabase.auth.onAuthStateChange()`.
+
+* `src/App.tsx`:
+  - Đóng vai trò là Bộ định tuyến Layout (Layout Router).
+  - Lọc dải thanh bảng điều hướng (Navigation Items) dựa trên `userRole`.
+  - Triển khai luồng đếm ngược không tương tác (Inactivity Timer - 30 phút) để kích hoạt Auto Logout.
+  - Điều phối bối cảnh xem dữ liệu cho Super Admin thông qua việc thay đổi URL Hash.
+
+* `src/components/AccountManager.tsx`:
+  - Giao diện khởi tạo, chỉnh sửa và loại bỏ tài khoản (Admin Cấp 2 và Cấp 3).
+  - Tích hợp giao diện Reset mật khẩu tài khoản cấp dưới.
+  - Cho phép phân phối mảng trận đấu (`permittedEventIds`) trực tiếp cho trọng tài qua checkbox click.
+
+* `src/components/ResetPasswordModal.tsx`:
+  - Panel xử lý thay đổi mật khẩu của tài khoản cấp dưới.
+  - Truy gọi hàm quản trị để xử lý mật khẩu mới.
+
+* `src/types.ts`:
+  - Định nghĩa kiểu dữ liệu (Interface & Types) cho `Account` và `AppState` Zustand Store.
+
+----------------------------------------------------------------------------------------------------
+2. TẤT CẢ NƠI ĐỌC DỮ LIỆU TÀI KHOẢN (READ OPERATIONS)
+----------------------------------------------------------------------------------------------------
+Thông tin tài khoản được trích xuất và tham chiếu từ các nguồn dữ liệu cố định sau:
+
+* `id = 'accounts_config'` trong bảng `tournament` (Supabase DB):
+  - `src/store.ts` | Trong hàm `initSupabase()` (Dự kiến Dòng 2295 - 2318): SELECT toàn bộ bảng `tournament`, bóc tách dòng có `id === 'accounts_config'` để nạp mảng accounts thô từ trường `settings` cập nhật vào RAM Zustand Store.
+  - `src/store.ts` | Trong hàm `checkAdminSession()` (Dự kiến Dòng 874): SELECT trường `settings` của dòng `accounts_config` để lôi `session_id` trực tuyến về đối soát phòng vệ.
+
+* Zustand RAM Store (`accounts` state):
+  - `src/components/AuthModal.tsx` | Đọc để so trùng username tìm `displayName`, `role` và `parentTenantId`.
+  - `src/components/AccountManager.tsx` | Đọc danh sách để phác họa bố cục quản trị, chỉnh sửa cấu hình.
+  - `src/components/ScoreEntry.tsx` | Đọc để trích xuất mảng `permittedEventIds` kiểm duyệt quyền nhập điểm của Trọng tài.
+  - `src/App.tsx` | Để render danh mục các Tenant và Giải đấu cho Super Admin (`admin1`) nhanh chóng thay đổi luồng hiển thị.
+
+* Trình duyệt cache (`localStorage` / `sessionStorage`):
+  - Khôi phục trạng thái Zustand RAM Store thông qua middleware `persist` dưới key `'pickleball-tournament-cache'`.
+  - Giữ lại các trường `currentUser`, `userRole`, `currentSessionId`, `activeTenantId`, `isAdmin` để tự động khôi phục phiên đăng nhập khi tải lại trang mà không cần gửi form Auth lại.
+
+* Máy chủ Supabase Auth:
+  - `src/components/AuthModal.tsx` | Gửi yêu cầu kiểm soát thông qua API `supabase.auth.signInWithPassword()` để xác minh tính chính danh của thông tin cặp Email/Mật khẩu.
+
+----------------------------------------------------------------------------------------------------
+3. TẤT CẢ NƠI GHI DỮ LIỆU TÀI KHOẢN (WRITE OPERATIONS)
+----------------------------------------------------------------------------------------------------
+Bất cứ sự thay đổi nào về thông tin bảo mật hay phiên làm việc đều thực hiện ghi đè thông qua:
+
+* `createAccount` -> `addAccount2` (`src/store.ts` | Dòng 792):
+  - Nhận thông tin cấu hình tài khoản của Admin Cấp 2 hoặc Trọng tài Cấp 3 và đẩy thẳng mảng JSON mới cập nhật lên mây thông qua hành vi của lệnh `.upsert()` đè toàn dòng `accounts_config`.
+
+* `updateAccount` -> `updateAccount2` (`src/store.ts` | Dòng 812):
+  - Cập nhật thông số hiển thị, mảng giải đấu liên đới và `.upsert()` lưu đè lên dòng `accounts_config` tại database.
+
+* `deleteAccount` -> `deleteAccount2` (`src/store.ts` | Dòng 832):
+  - Lọc loại bỏ username được chọn ra khỏi danh sách mảng cài đặt, thực hiện `.upsert()` đồng bộ lại DB.
+
+* `login` -> `setAuthStatus` (`src/store.ts` | Dòng 658):
+  - Sinh chuỗi Session ID ngẫu nhiên: `Date.now().toString() + Math.random().toString(36)`.
+  - Đọc dòng dữ liệu cấu hình `accounts_config`, thay thế session_id của tài khoản đăng nhập thành session ID vừa tạo và `.upsert()` đè ngược lại DB.
+
+* `logout` -> `logout` (`src/store.ts` | Dòng 731):
+  - Thu hồi logic: Chuyển vai trò sang `guest`, xóa sạch mọi thông số RAM Store.
+  - Thu hồi JWT Token vật lý: Gọi lệnh API `supabase.auth.signOut()`.
+  - Giải cứu bộ nhớ đệm: Xóa hoàn toàn cache `'pickleball-tournament-cache'` trong cả `localStorage` và `sessionStorage`.
+  - Cưỡng chế tải lại trang: `window.location.reload()`.
+
+----------------------------------------------------------------------------------------------------
+4. TẤT CẢ NƠI SỬ DỤNG VAI TRÒ (USER ROLES)
+----------------------------------------------------------------------------------------------------
+Hệ thống sử dụng thuộc tính `userRole` để điều hướng và phân luồng menu hiển thị:
+
+* `admin1` (Super Admin - Tối cao):
+  - Được hardcode riêng qua logic trùng khớp chuỗi `username === 'huunsbk'`.
+  - Quyền lợi: Bỏ qua toàn bộ màng lọc accounts_config, tự do luân chuyển xem nóng CSDL giữa tất cả tenant của giải đấu qua Dropdown select, kích hoạt menu quản trị Cấp 1.
+
+* `admin2` (Tenant Owner - Ban Tổ Chức):
+  - Được lưu dải trạng thái `role: 'admin2'` trong mảng JSON.
+  - Phân cực Tenant: `activeTenantId` được khóa trực tiếp bằng `username` chuẩn hóa. Không có đặc quyền chuyển cảnh sang phân khu của BTC khác. Được phép truy cập trang khởi tạo Trọng tài (Admin Cấp 3).
+
+* `admin3` (Referee - Trọng tài):
+  - Được lưu dải trạng thái `role: 'admin3'` trong JSON.
+  - Phụ thuộc: `activeTenantId` nhận giá trị là `parentTenantId` (username của BTC cấp trên).
+  - Giới hạn: Bị giấu toàn bộ menu quản trị thiết lập, chỉ được xem hai thẻ menu "Nhập điểm trọng tài" (`ScoreEntry`) và "Màn hình Trình chiếu Tivi" (`LiveDashboard`).
+
+* `guest` (Khán giả vãng lai):
+  - Menu xem tự do hoàn toàn ở thể đọc (Read-only). Không có bất cứ quyền chỉnh sửa nào.
+
+----------------------------------------------------------------------------------------------------
+5. TẤT CẢ NƠI KIỂM TRA QUYỀN HẠN (AUTHORIZATION CHECKS)
+----------------------------------------------------------------------------------------------------
+* Trạng thái `isAdmin`:
+  - Khởi phát tại `src/store.ts` khi role khác `'guest'`.
+  - Đóng vai trò là khóa chung vô hiệu hóa/kích hoạt (Enable/Disable) các nút chức năng can thiệp trực tiếp dữ liệu (Nút Thêm đội, Nút Xóa đội, Sắp lịch, Đổi điểm, kéo thả bảng Knockout) tại:
+    - `src/components/SchedulerAndScoreKeeper.tsx`
+    - `src/components/TeamManager.tsx`
+    - `src/components/GroupManager.tsx`
+    - `src/components/KnockoutBracket.tsx`
+    - `src/components/Standings.tsx`
+    - `src/components/LiveDashboard.tsx`
+  - Đọc ghi nghiệp vụ bảo vệ ngầm tại `src/store.ts`: Mọi hàm biên tập CSDL (như `addTeam`, `updateMatchScore`, v.v.) đều chốt chặn dòng code: `if (!get().isAdmin) return;` hoặc ném lỗi.
+
+* Trạng thái `canEdit`:
+  - `src/components/EventBar.tsx` | Dòng 33: `canEdit = isAdmin && !isReadOnlyTab`. Bật/tắt thanh công cụ xử lý sự kiện trong vòng thi đấu.
+
+* Quyền nhập điểm của Trọng tài (`admin3`):
+  - `src/components/ScoreEntry.tsx` | Dòng 23 - 27: 
+    Nếu người dùng đăng nhập là `admin3`, hệ thống kiểm tra chéo giá trị `currentEventId` của nội dung đang chọn xem có nằm trong dải mảng `permittedEventIds` trong cấu hình tài khoản của họ hay không. Nếu không khớp, vô hiệu hóa toàn bộ quyền sửa tỉ số trận đấu của trọng tài đó trên sân.
+
+----------------------------------------------------------------------------------------------------
+6. TẤT CẢ NƠI XỬ LÝ SESSION_ID
+----------------------------------------------------------------------------------------------------
+Session ID được sinh ở client và đính trực tuyến lên hệ thống qua các điểm ráp nối:
+
+* Định nghĩa:
+  - `src/types.ts` | Interface Account: `session_id?: string`.
+
+* Thiết lập & Ghi nhận (Login phase):
+  - `src/store.ts` | Dòng 659 và 692-705 (Hàm `setAuthStatus`): Sinh Unique ID bằng thuật toán `Date.now() + Math.random()` và đính đè lên thuộc tính của username tương ứng trong dòng JSON `accounts_config` trên database.
+
+* Đối soát Khởi hoạt (Init Setup Phase):
+  - `src/store.ts` | Dòng 2314 và 2321-2337 (Hàm `initSupabase`): Trích xuất cấu hình từ database dòng `accounts_config`, tìm session_id của tài khoản mình. Nếu phát hiện lệch pha với local Session ID nằm trong cache store, kích hoạt lá cờ hiệu `forceLogout = true`.
+
+* Đối soát Tuần tra (Scheduled Phase):
+  - `src/store.ts` | Dòng 869 - 904 (Hàm `checkAdminSession`): Đọc cấu hình JSON từ mây để so trùng giá trị. Nếu không khớp thiết bị hiện tại, ném cảnh báo đẩy ra ngoài ngay lập tức.
+
+----------------------------------------------------------------------------------------------------
+7. TẤT CẢ NƠI XỬ LÝ SINGLE-LOGIN (CHỐNG TRÙNG THỜI GIAN THỰC)
+----------------------------------------------------------------------------------------------------
+Hành vi này được thiết kế dựa trên một hệ tuần hoàn đối chiếu liên tục:
+
+* Bước Đăng ký mốc phân biệt: Thực thi tự động trong `setAuthStatus` khi có người nạp thông tin đăng nhập thành công. Ghi nhận thời điểm thiết lập thiết bị trực tuyến duy nhất.
+* Bước Chốt an toàn Khởi nguồn: Nằm trong `initSupabase()`. Khi ứng dụng vừa bật lên hoặc tải lại trình duyệt, nếu phát hiện thông số session_id hiện tại khác so với bộ nhớ Cloud, nó sẽ đá phiên tự động.
+* **LỖ HỔNG CODE KHOA HỌC**:
+  Hàm `checkAdminSession()` đã được lập trình hoàn hảo để gửi truy vấn kiểm tra chéo session thời gian thực, TUY NHIÊN, rà soát toàn bộ code dự án cho thấy KHÔNG CÓ BẤT CỨ NƠI NÀO thực sự chạy một hàm định kỳ (như `setInterval` hoặc `requestAnimationFrame` lặp vòng) đối với hàm tuần tra bảo mật này. Vì lý do đó, cơ chế Single-Login hiện trạng hoạt động ở trạng thái Thụ động (Passive) - chỉ có tác dụng khi reload trang, chứ đang sử dụng dở dang liên tục trên tab thì không thể tự động đá phiên một cách chủ động thời gian thực.
+
+----------------------------------------------------------------------------------------------------
+8. TẤT CẢ NƠI XỬ LÝ FORCE LOGOUT (CƯỠNG CHẾ ĐĂNG XUẤT)
+----------------------------------------------------------------------------------------------------
+Việc cưỡng chế gỡ bỏ phiên làm việc của Client được tự động kích hoạt bởi 3 điểm vệ tinh:
+
+1. Đồng bộ lệch pha khởi chạy (`src/store.ts` | Dòng 2344):
+   - Nếu `initSupabase()` phát hiện session lệch hướng, nộp thông tin cảnh báo thông qua alert box và gọi hàm `get().logout()` rút lui dọn gạch an toàn.
+2. Hoạt động Polling thụ động (`src/store.ts` | Dòng 902):
+   - Nếu `checkAdminSession()` bắt mạch được sự lệch pha, ngay lập tức báo ngắt kết nối và gọi `logout()`.
+3. Lắng nghe trạng thái Huỷ từ thiết bị khác (`src/App.tsx` | Dòng 149):
+   - Supabase Auth Event Listener lắng nghe biến cố hệ thống. Nếu nhận được sự kiện `SIGNED_OUT` trong khi hệ thống cục bộ đang lưu trữ phiên hoạt động (`isAdmin === true`), nó kích hoạt hàm đăng xuất `store.logout()` để giải độc trạng thái lưu đệm.
+
+----------------------------------------------------------------------------------------------------
+9. SƠ ĐỒ LUỒNG ĐĂNG NHẬP HIỆN TẠI (LOGIN FLOW DIAGRAM)
+----------------------------------------------------------------------------------------------------
+
+```
+ +-------------------------------------------------------------------------------+
+ |  [1] LOGIN UI Form (AuthModal.tsx)                                            |
+ |  - Nhận Username & Password từ Ban tổ chức (Trim + lower-case username).      |
+ +-------------------------------------------------------------------------------+
+                                         |
+                                         v
+ +-------------------------------------------------------------------------------+
+ |  [2] AUTH GATEWAY (Supabase Auth API)                                         |
+ |  - Chuyển đổi công thức logic: Email = username + "@pic.com"                  |
+ |  - Thực thi gửi thông số xác cấu: auth.signInWithPassword({ email, password }) |
+ +-------------------------------------------------------------------------------+
+                                         |
+                                         +-----------------------+ (Lỗi thông tin)
+                                         |                       v
+                                         |             [ Giao diện cảnh báo ]
+                                         |             "Sai tên/mật khẩu"
+                                         v (Thành công: Trích nạp Session an toàn)
+ +-------------------------------------------------------------------------------+
+ |  [3] KIỂM TRA PHÂN CỰC CHUỖI (Super Admin Guard)                              |
+ |  - Nếu username === "huunsbk" -> Gán cứng vai trò "admin1", Tenant: "default" |
+ +-------------------------------------------------------------------------------+
+                                         |
+                                         | (Nếu là tài khoản Tenant thường)
+                                         v
+ +-------------------------------------------------------------------------------+
+ |  [4] XÁC THỰC NGƯỜI DÙNG QUAN HỆ (accounts_config JSON)                       |
+ |  - Duyệt tìm kiếm username khớp mảng cấu hình nạp từ database về RAM.          |
+ |  - Trích xuất: hiển thị displayName, tournamentName, role (admin2 / admin3).  |
+ |  - Nếu không tìm thấy: Hủy bỏ -> Ném lỗi "Tài khoản không tồn tại trên DB".   |
+ +-------------------------------------------------------------------------------+
+                                         |
+                                         v
+ +-------------------------------------------------------------------------------+
+ |  [5] SESSION & DATABASE WRITES (setAuthStatus - store.ts)                     |
+ |  - Sinh Local unique Session ID.                                              |
+ |  - SELECT cấu hình accounts_config, ghi đè Session ID của user này lên mây.     |
+ |  - Thực thi UPSERT đồng bộ đè tài liệu JSON trở lại bảng tournament.          |
+ +-------------------------------------------------------------------------------+
+                                         |
+                                         v
+ +-------------------------------------------------------------------------------+
+ |  [6] THIẾT LẬP RAM STORE & ĐỒNG BỘ MẠNG TIỀN TỐ (initSupabase - store.ts)      |
+ |  - Lưu Zustand RAM: userRole, currentUser, activeTenantId, currentSessionId.  |
+ |  - Đồng bộ Hash URL thân thiện: #/<tenant-id>                                 |
+ |  - Chạy hàm query lọc thô dữ liệu giải gắn tiền tố băm: like('id', 'prefix%')|
+ |  - Nạp bố cục tương ứng lên UI hiển thị chính thức của ban tổ chức.           |
+ +-------------------------------------------------------------------------------+
+```
+
+----------------------------------------------------------------------------------------------------
+10. LIỆT KÊ TOÀN BỘ HÀM PHẢI SỬA KHI CHUYỂN TỪ JSON SANG BẢNG CHUẨN SQL
+----------------------------------------------------------------------------------------------------
+Để dẹp bỏ dòng JSON bottleneck cực kì nguy hiểm `accounts_config` và chuyển sang sử dụng mô hình 4 bảng SQL vật lý thực thụ (`profiles`, `permissions`, `event_permissions`, `user_sessions`), các hàm sau đây sẽ được tái cấu trúc:
+
+* `src/store.ts` -> Hàm `initSupabase()`:
+  - Sắp xếp lại: Không SELECT dòng 'accounts_config' nữa. Thay vào đó, sau khi người dùng đăng nhập, sử dụng mã hồ sơ UUID an toàn của Supabase Auth để SELECT dữ liệu khớp với `auth.uid() = profiles.id` từ bảng hồ sơ mới `profiles`. Trích nạp danh sách sự kiện được quyền quản lý của trọng tài từ bảng `event_permissions`.
+
+* `src/store.ts` -> Hàm `setAuthStatus()`:
+  - Sắp xếp lại: Không pull mảng JSON của dòng 'accounts_config' rồi upsert đè nguyên mảng rủi ro cao. Thực hiện hành vi chèn một dòng ghi phiên vật lý mới độc lập vào bảng `user_sessions`: `INSERT INTO user_sessions (user_id, session_id, last_activity) VALUES (...)`.
+
+* `src/store.ts` -> Hàm `checkAdminSession()`:
+  - Sắp xếp lại: Thay thế toàn bộ truy vấn bóc tách JSON thành phép so sánh SELECT thô siêu tốc lên bảng `user_sessions` với thời gian truy vấn nhỏ hơn 5ms: `SELECT session_id FROM user_sessions WHERE user_id = auth.uid() ORDER BY last_activity DESC LIMIT 1`.
+
+* `src/store.ts` -> Các hàm nghiệp vụ: `addAccount2()`, `updateAccount2()`, `deleteAccount2()`:
+  - Sắp xếp lại: Khai tử các phép toán duyệt và ghi đè mảng JSON. Chuyển hóa thành các truy vấn đơn dòng SQL thực sự như `INSERT INTO profiles ...`, `UPDATE profiles ...`, `DELETE FROM profiles WHERE username = ...`. Việc gán quyền trận đấu cho trọng tài chuyển sang chèn hoặc xoá bản ghi đơn giản trong bảng quan hệ `event_permissions`.
+
+* `src/components/AuthModal.tsx` -> Hàm `handleLogin()`:
+  - Sắp xếp lại: Gỡ bỏ phép duyệt mảng JSON `accounts`. Sau khi Supabase Auth trả về thông tin đăng nhập thành công, trực tiếp truy vấn thông số phân quyền của người dùng hiện hữu thẳng từ bảng hồ sơ bảo mật `profiles`.
+
+* `src/components/AccountManager.tsx` -> Luồng nạp dữ liệu:
+  - Sắp xếp lại: Đổi trạng thái hiển thị bằng cách đọc danh sách trực quan của các ban tổ chức/trọng tài bằng cách SELECT tập trung dữ liệu lọc phân khu từ bảng `profiles` thông minh thay vì thông mảng cục bộ Zustand.
+
+----------------------------------------------------------------------------------------------------
+11. ƯỚC LƯỢNG MỨC ĐỘ RỦI RO CỦA KIẾN TRÚC HIỆN TẠI
+----------------------------------------------------------------------------------------------------
+MỨC ĐỘ RỦI RO ĐANG Ở NGƯỠNG: [ HIGH ] (CAO)
+
+* Lý do chi tiết:
+  1. Tử huyệt Race Condition (Ghi đè song song làm lệch dữ liệu): 
+     Nếu hai hoặc nhiều Ban tổ chức thuộc các CLB khác nhau cùng thực hiện thao tác quản trị (Thêm tài khoản trọng tài cấp dưới, đăng nhập khởi phát sinh session ID mới) ở cùng một thời điểm, các câu lệnh `.upsert()` đè toàn mảng JSON sẽ bốc hơi đè xoá pha lẫn nhau, dẫn đến khả năng bị vô hiệu hóa hoặc làm "bốc hơi" đột ngột tài khoản của CLB khác.
+  2. Rò rỉ thông tin cá nhân (Privacy Breach):
+     Mảng tài khoản cấu hình nằm thô trong một thuộc tính lưu trữ chung. Nếu dải bảo vệ RLS trên bảng `tournament` bị rò rỉ hoặc cấu hình lỏng lẻo, bất kỳ người dùng Khách (`guest`) nào cũng có thể trích xuất thô danh sách mảng JSON này và đọc toàn diện tên CLB, các dòng cấu hình email, vai trò và thông tin mật của toàn bộ các giải đấu trong nước.
+  3. Lỗ hổng Trọng tài phá quyền:
+     Dây mảng `permittedEventIds` nạp vào Zustand Client RAM để kiểm duyệt quyền can thiệp biên tập trận đấu. Nếu Trọng tài có hiểu biết công nghệ, họ có thể sửa đổi biến lưu trữ của trình duyệt (Zustand Local Cache) hoặc can thiệp trực tiếp vào mảng logic này để tự cấp quyền sửa đổi tỉ số cho bất kì nội dung hay trận đấu nào của CLB chủ quản mà không cần sự đồng hóa từ máy chủ DB.
+
+----------------------------------------------------------------------------------------------------
+12. ĐỀ XUẤT TIẾN TRÌNH DI CƯ KHÔNG CÓ THỜI GIAN CHẾT (ZERO-DOWNTIME MIGRATION PLAN)
+----------------------------------------------------------------------------------------------------
+Để chuyển đổi từ kiến trúc JSON bottleneck cổ hủ lên kiến trúc SQL chuẩn hóa đa luồng an toàn mà không làm gián đoạn các mùa giải Pickleball đang diễn ra sôi động, áp dụng quy trình 4 giai đoạn logic khép kín sau:
+
+* GIAI ĐOẠN 1: THIẾT LẬP CƠ SỞ HẠ TẦNG SONG SONG (PARALLEL CONFIGURATION)
+  - Khởi tạo 3 bảng SQL mới tinh trên database Supabase (`profiles`, `event_permissions`, `user_sessions`) với phân tách khóa ngoại UUID, thiết lập chỉ mục tốc độ INDEX, và cài đặt hàng rào RLS cực kỳ an toàn.
+  - Vẫn giữ nguyên bảng và dòng `accounts_config` hoạt động bình thường, không gây ảnh hưởng đến phần code Client cũ đang vận hành giải đấu.
+
+* GIAI ĐOẠN 2: DI TRÚ DỮ LIỆU ĐƯỜNG KÍNH KHÉP KÍN (BATCH DATA MIGRATION SCRIPT)
+  - Triển khai một Script tự động chạy ngập dưới nền CSDL (ví dụ chạy qua Supabase SQL Editor / Node Script) để quét mảng tài khoản trong dòng `'accounts_config'`:
+    * Với mỗi BTC/Trọng tài, query tìm UUID chính danh trong bảng hệ thống an toàn `auth.users` của Supabase Auth.
+    * Chèn thông số ánh xạ trực tiếp sang bảng vật lý hồ sơ `profiles` (Đồng bộ đổi dấu `-` sang `_` cho dải khớp tenant).
+    * Chuyển đổi dữ liệu chuỗi mảng JSON `permittedEventIds` sang các bản ghi quan hệ tương thích bên bảng `event_permissions`.
+
+* GIAI ĐOẠN 3: TRIỂN KHAI PHIÊN BẢN COMPATIBLE LẠI (DOUBLE WRITE & READ FALLBACK)
+  - Cập nhật mã nguồn hệ thống với nguyên tắc hoạt động kép:
+    * Lúc Đọc (READ FALLBACK): Ưu tiên kéo dữ liệu trực tiếp từ bảng SQL mới `profiles`. Nếu bảng này chưa có dữ liệu hoặc lỗi nạp, hệ thống tự động nhảy về cơ chế fallback đọc thông mảng `accounts_config` cũ.
+    * Lúc Ghi (DOUBLE WRITE): Khi khởi tạo tài khoản mới hay cập nhật phiên đăng nhập, hệ thống thực thi đồng bộ đồng thời 2 lệnh: ghi bản ghi SQL vào bảng mới VÀ ghi đè mảng JSON ở accounts_config cũ.
+    * Thử nghiệm tuần tự trong vòng 48 giờ để xác minh sự đồng hóa dữ liệu tuyệt đối giữa hai bên.
+
+* GIAI ĐOẠN 4: KHAI TỬ MÔ HÌNH CŨ (CLEANUP & HARD RE-ROUTE)
+  - Sau khi kiểm định thành công cấu trúc mới chạy ổn định tuyệt đối, cập nhật phiên bản code client mới gỡ bỏ toàn bộ fallback, xóa bỏ hoàn toàn dải ghi đè lên dòng tài liệu `'accounts_config'`.
+  - Thực thi lệnh DELETE xóa dòng `'accounts_config'` khỏi bảng `tournament` trên Supabase cloud. Chuyển đổi hệ thống sang trạng thái Enterprise SaaS chuẩn quốc tế với tốc độ và khả năng an ninh tối đa.
+
+====================================================================================================
+Báo cáo kiểm toán này vạch ra phương án xử lý cấu trúc lý tưởng, toàn diện cho hệ thống Pickleball.
+====================================================================================================

@@ -1,0 +1,111 @@
+BÁO CÁO THIẾT KẾ BẢO MẬT RLS ENTERPRISE VÀ TENANT ISOLATION CHUẨN SAAS
+====================================================================================================
+Dự án: Hệ thống Quản lý Giải đấu Pickleball Đa Tenant (PIC_HUU)
+Mục tiêu: Xây dựng cơ rào cản bảo mật RLS vững chắc 100% tại Database Level, dẹp bỏ bảo mật Client-side.
+Trạng thái: BẢN THIẾT KẾ NGHIỆP VỤ - KHÔNG SINH SQL, KHÔNG SỬA CODE
+====================================================================================================
+
+1. THIẾT KẾ TENANT ISOLATION CHUẨN SAAS
+----------------------------------------------------------------------------------------------------
+- Xóa bỏ mô hình lai (Hybrid) dựa vào tiền tố chuỗi (Prefix IDs như `hanoipickleball__event1`).
+- Áp dụng mô hình Cột phân mảng vật lý (Row-Level Tenant Isolation): Tất cả các bảng dữ liệu nghiệp vụ (events, groups, teams, matches, audit_logs) MUST (bắt buộc) bổ sung một cột độc lập: `tenant_id`.
+- Chặn đứng 100% lỗ hổng ở Client: Bộ điều khiển Zustand tại Front-end không còn cần lọc `.like('id', prefix)` vì bản thân cơ sở dữ liệu đã tự tàng hình (Invisible) những dữ liệu thuộc Tenant khác ngoài JWT.
+
+2. THIẾT KẾ JWT CLAIMS (CUSTOM METADATA)
+----------------------------------------------------------------------------------------------------
+Để RLS đạt tốc độ mili-giây (thay vì join bảng user liên tục), siêu dữ liệu quyền hạn phải được ký trực tiếp vào bên trong payload JWT của Supabase.
+Cấu trúc Claim trong `app_metadata` của Supabase Auth Token:
+{
+  "app_metadata": {
+    "provider": "email",
+    "providers": ["email"],
+    "tenant_id": "UUID-of-Tenant",     // Định danh phân khu cho Isolation
+    "role": "admin2"                   // Cấp độ quản trị ('admin1', 'admin2', 'admin3')
+  }
+}
+* Ưu điểm: Lệnh RLS của Postgres chỉ cần tra siêu tốc: `(auth.jwt()->'app_metadata'->>'tenant_id')::uuid = tenant_id`.
+
+3. THIẾT KẾ RLS (ROW LEVEL SECURITY) CHO TỪNG BẢNG
+----------------------------------------------------------------------------------------------------
+* Bảng `tournament` (Cấu hình giải):
+  - SELECT: Khán giả không danh tính (Anon) xem được với trạng thái Active.
+  - UPDATE: Chỉ `role == 'admin1'` hoặc người dùng có `tenant_id` khớp ID giải đấu.
+
+* Bảng nghiệp vụ trung tâm (`events`, `groups`, `teams`):
+  - SELECT: Công khai không rào cản (`USING (true)`).
+  - INSERT/UPDATE/DELETE: Chỉ có hiệu lực với `role == 'admin1'` HOẶC (`role == 'admin2'` AND JWT.tenant_id = Table.tenant_id).
+
+* Bảng siêu nhạy cảm (`matches` - Nhập điểm):
+  - SELECT: Công khai.
+  - UPDATE: 
+    + Nếu là Admin 2: JWT.tenant_id = matches.tenant_id.
+    + Nếu là Admin 3 (Trọng tài): Phải thỏa 2 điều kiện: JWT.tenant_id = matches.tenant_id VÀ trận đấu đó thuộc event có nằm trong bảng hệ `account_event_permissions` cho user hiện tại. (Viết subquery EXIST trong RLS).
+
+* Bảng `audit_logs`:
+  - SELECT: Chặn hoàn toàn khán giả. Admin 1 xem tất cả. Admin 2 xem log thuộc Tenant mình quản lý.
+  - INSERT: Mọi Admin2/Admin3 đều được lưu log (với điều kiện log phải ghi gán đúng tenant_id của họ).
+
+* Bảng quản trị người dùng (`accounts`, `active_sessions`, `login_logs`):
+  - SELECT & UPDATE: Users bị cự tuyệt xem hồ sơ và session thiết bị của người khác. Chỉ mở chốt với cấu trúc: `auth.uid() = accounts.user_id`.
+
+4. THIẾT KẾ QUYỀN TRUY CẬP (ROLE-BASED DESIGN)
+----------------------------------------------------------------------------------------------------
+- ADMIN 1 (Root): Kích hoạt bypass trong tất cả biểu thức RLS. `if JWT.role == 'admin1' then Allow All`.
+- ADMIN 2 (Tenant Owner): Biểu thức RLS neo chặt vào giới hạn không gian dữ liệu `WHERE tenant_id = JWT.tenant_id`. Chủ quyền thêm xóa sửa toàn bộ dữ liệu nội bộ.
+- ADMIN 3 (Referee): Chặn thao tác sửa xóa giải đấu, nhóm, đội bóng. Chỉ được SELECT. Quyền UPDATE duy nhất nằm trên bảng `matches` với điều kiện kiểm tra tồn tại khoá uỷ quyền từ `account_event_permissions`.
+
+5. THIẾT KẾ QUYỀN XEM CÔNG KHAI CHO KHÁN GIẢ (VIEWER)
+----------------------------------------------------------------------------------------------------
+- Khách truy cập web Supabase gắn Role Database mặc định là `anon`.
+- RLS Policy: Các bảng `matches`, `teams`, `groups`, `events` sẽ tạo một chính sách riêng biệt. Tên chính sách: `Cho phép khán giả xem`. Biểu thức thực thi: `FOR SELECT USING (true)`. Mọi lệnh Cập nhật điểm sẽ bị PostgreSQL chủ động từ chối bằng lỗi Permission Denied cho lớp anon.
+
+6. THIẾT KẾ MIGRATION TỪ HỆ THỐNG HIỆN TẠI (ZERO DOWNTIME)
+----------------------------------------------------------------------------------------------------
+- B1. (Schema): Khởi tạo cột `tenant_id` kiểu UUID/VARCHAR trên tất cả các bảng.
+- B2. (Backfill): Script SQL chạy ngầm, bóc tách chuỗi cột id hiện tại (dùng hàm split '__') để lấp đầy giá trị cột `tenant_id` vừa tạo cho hàng nghìn dòng.
+- B3. (Claims Hook): Triển khai Supabase Custom Auth Hook để tự động nhúng `tenant_id` và `role` vào JWT từ bảng `accounts_config` json khi đăng nhập.
+- B4. (Policies): ENABLE RLS toàn tập. Đẩy bộ qui tắc Policy vừa thiết kế ở bước 3 đè lên DB mà không làm ảnh hưởng phiên Frontend.
+- B5. (Clean-up): Gỡ vòng lặp băm chuỗi Like() tại code Client đi lấy thành tích tuyệt đối về tốc độ truy vấn.
+
+7. LIỆT KÊ TOÀN BỘ RỦI RO (SECURITY/OPERATION RISKS)
+----------------------------------------------------------------------------------------------------
+- Rủi ro JWT Stale (Medium): Ban tổ chức xoá quyền một Trọng tài, nhưng Trọng tài đó đang chạy token sống (thường tồn tại 1h trên Supabase Auth). Vẫn có thể phá hoại trong khung giờ đó nếu thiết kế chỉ dựa vào JWT claim tĩnh. -> Khắc phục: Policy matches của Admin 3 phải join live xuống bảng DB chứ không tin 100% JWT tĩnh.
+- Rủi ro Performance RLS (Low): Tính năng Subquery ngầm trong RLS admin3 nếu viết không cẩn thận sẽ sinh ra N+1 làm tê liệt truy vấn bảng trận. -> Khắc phục: Tạo Index siêu khóa ngoại cho các cặp tra cứu RLS.
+- Thiếu hụt Tenant ID Insert (High): Bug code app nếu khi insert thiếu gán cột `tenant_id`, lệnh sẽ bị văng mã lõi 42501 Insufficient Privilege do RLS chặn. -> Khắc phục: Dùng Database default / Trigger Before Insert tự tiêm `tenant_id` từ JWT xuống Row.
+
+8. SƠ ĐỒ ERD BẢO MẬT (SECURITY ISOLATION ERD)
+----------------------------------------------------------------------------------------------------
+   [ WEB CLIENT ] ------ JWT (role=admin2, tenant=ABC) ------> [ SUPABASE API ]
+                                                                       |
+  +--------------------------------------------------------------------+
+  | DATABASE POSTGREST LAYER (Kiểm tra RLS Firewall trước khi vào Row) |
+  | -> Policy "Admin2 Edit": (auth.jwt()->>'tenant_id' == row.tenant_id)|
+  +--------------------------------------------------------------------+
+                                 | (ALLOW)
+           +---------------------+-------------------+ 
+           |                     |                   |
+    [ bảng events ]       [ bảng teams ]      [ bảng matches ]
+   (tenant_id=ABC)       (tenant_id=ABC)     (tenant_id=ABC)
+
+9. CHECKLIST TRIỂN KHAI (DEPLOYMENT CHECKLIST)
+----------------------------------------------------------------------------------------------------
+[ ] Backup Database 100% trước 0h00.
+[ ] Alter Tables tạo cấu trúc cột phân lô `tenant_id`.
+[ ] Chạy Migration Data gán giá trị tự động cho `tenant_id`.
+[ ] Triển khai Code cấp Supabase Auth Hooks.
+[ ] Bật `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` đồng loạt.
+[ ] Commit hàng chục hàm `CREATE POLICY`.
+[ ] Giả lập Token test (Unit Test RLS API) với vai `anon`, `admin2`, `admin3`.
+[ ] Bật luồng Frontend phiên bản mới.
+
+10. CHECKLIST ROLLBACK (ROLLBACK PROCEDURE)
+----------------------------------------------------------------------------------------------------
+[ ] Phát tín hiệu khẩn cấp hạ hồi nếu API trả lỗi hàng loạt về phía vận hành 500/403.
+[ ] Tắt cờ RLS toàn cầu (Cực hạn): `ALTER TABLE ... DISABLE ROW LEVEL SECURITY`.
+[ ] Trả lại phân vùng chính sách cũ ở trạng thái public r/w thông thường.
+[ ] Huy động tắt Supabase Custom Auth Hooks.
+[ ] Reverse deploy lại code front-end Zustand cũ lập tức trong vòng 2 phút.
+
+====================================================================================================
+Báo cáo thiết kế giải pháp RLS (Row Level Security) cho hệ thống chuẩn Enterprise SaaS hoàn tất.
+====================================================================================================

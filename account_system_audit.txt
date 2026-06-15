@@ -338,7 +338,7 @@ BƯỚC 4: THIẾT LẬP RLS CHẶT CHẼ TRÊN POSTGRESQL (Hardened PostgreSQL 
 BƯỚC 5: CHUYỂN ĐỔI CHỈ GHI AUDIT LOG Ở CƠ SỞ DỮ LIỆU (DB-Authoritative Audit Logs)
   - Hành động: Xóa bỏ luồng INSERT log thủ công từ client-side Javascript.
   - Cài đặt Postgres Triggers trên các bảng `matches` và `tournament`. Bất cứ khi nào 
-    có hành vi INSERT, UPDATE hay DELETE kết quả điểm, trigger tự động ghi lại lịch sử 
+    comit hành vi INSERT, UPDATE hay DELETE kết quả điểm, trigger tự động ghi lại lịch sử 
     vào bảng `audit_logs` cùng định danh được bảo chứng từ hàm `auth.uid()`.
   - Kết quả: Đạt tiêu chuẩn chối bỏ (non-repudiation) của Enterprise SaaS, đảm bảo toàn 
     vẹn dữ liệu đối soát giải đấu Pickleball quốc gia.

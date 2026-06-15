@@ -1,0 +1,162 @@
+KIẾN TRÚC DATABASE ENTERPRISE: ACCOUNTS SANG MÔ HÌNH QUAN HỆ (MULTI-TENANT SAAS)
+====================================================================================================
+Dự án: Hệ thống Quản lý Giải đấu Pickleball Đa Tenant (PIC_HUU)
+Mục tiêu: Quy mô trên 10.000+ tài khoản, SaaS chuẩn Enterprise, Single Login ổn định, Audit Log chặt chẽ.
+Trạng thái: BẢN THIẾT KẾ KIẾN TRÚC - KHÔNG SINH SQL, KHÔNG SỬA CODE
+====================================================================================================
+
+1. SƠ ĐỒ THỰC THỂ LIÊN KẾT (ERD DIAGRAM)
+----------------------------------------------------------------------------------------------------
+  +------------------+       +------------------+       +---------------------------+
+  |     tenants      | 1   N |     accounts     | 1   N | account_event_permissions |
+  |------------------|-------|------------------|-------|---------------------------|
+  | id (PK)          |       | id (PK)          |       | id (PK)                   |
+  | name             |       | user_id (FK)     |       | account_id (FK)           |
+  | slug (UK)        |       | tenant_id (FK)   |       | event_id                  |
+  | status           |       | role_id (FK)     |       | created_at                |
+  | created_at       |       | username (UK)    |       +---------------------------+
+  +------------------+       | display_name     |
+                             | status           |
+  +------------------+       | created_at       |       +------------------+
+  |  account_roles   | 1   N | updated_at       | 1   N | active_sessions  |
+  |------------------|-------|------------------|-------|------------------|
+  | id (PK)          |       +------------------+       | id (PK)          |
+  | name             |                |                 | account_id (FK)  |
+  | description      |                | 1               | session_token(UK)|
+  +------------------+                |                 | ip_address       |
+                                      | N               | user_agent       |
+                             +------------------+       | expires_at       |
+                             |   login_logs     |       | created_at       |
+                             |------------------|       +------------------+
+                             | id (PK)          |
+                             | account_id (FK)  |
+                             | login_time       |
+                             | ip_address       |
+                             | user_agent       |
+                             | status           |
+                             +------------------+
+
+----------------------------------------------------------------------------------------------------
+2 & 3. DANH SÁCH BẢNG VÀ CỘT DỮ LIỆU
+----------------------------------------------------------------------------------------------------
+A. Bảng: `tenants` (Quản lý các tổ chức/câu lạc bộ)
+- id (UUID)
+- name (VARCHAR) - Tên Đơn vị chủ quản/Giải đấu
+- slug (VARCHAR) - Tên thân thiện/Tiền tố sự kiện (VD: hanoipickleball)
+- status (VARCHAR) - Trạng thái: 'active', 'suspended'
+- created_at (TIMESTAMP)
+
+B. Bảng: `account_roles` (Vai trò quản trị)
+- id (INT)
+- name (VARCHAR) - VD: 'admin1', 'admin2', 'admin3'
+- description (TEXT)
+
+C. Bảng: `accounts` (Bảng trung tâm liên kết Supabase Auth với nghiệp vụ)
+- id (UUID)
+- user_id (UUID) - Liên kết khóa Supabase Auth
+- tenant_id (UUID)
+- role_id (INT)
+- username (VARCHAR)
+- display_name (VARCHAR)
+- status (VARCHAR) - Trạng thái: 'active', 'locked'
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
+D. Bảng: `account_event_permissions` (Quyền trọng tài cho sự kiện cụ thể)
+- id (UUID)
+- account_id (UUID)
+- event_id (VARCHAR)
+- created_at (TIMESTAMP)
+
+E. Bảng: `active_sessions` (Chống đăng nhập song song)
+- id (UUID)
+- account_id (UUID)
+- session_token (VARCHAR)
+- ip_address (VARCHAR)
+- user_agent (TEXT)
+- expires_at (TIMESTAMP)
+- created_at (TIMESTAMP)
+
+F. Bảng: `login_logs` (Nhật ký truy cập)
+- id (UUID)
+- account_id (UUID)
+- login_time (TIMESTAMP)
+- ip_address (VARCHAR)
+- user_agent (TEXT)
+- status (VARCHAR) - 'success', 'failed'
+
+----------------------------------------------------------------------------------------------------
+4, 5, 6, 7. CẤU TRÚC RÀNG BUỘC (PK, FK, INDEX, UNIQUE)
+----------------------------------------------------------------------------------------------------
+- Primary Keys (PK): `id` ở tất cả các bảng.
+- Foreign Keys (FK):
+  + accounts.user_id -> auth.users.id
+  + accounts.tenant_id -> tenants.id
+  + accounts.role_id -> account_roles.id
+  + account_event_permissions.account_id -> accounts.id
+  + active_sessions.account_id -> accounts.id
+  + login_logs.account_id -> accounts.id
+- Unique Constraints (UNIQUE):
+  + tenants: slug
+  + account_roles: name
+  + accounts: user_id (1 auth mapping duy nhất 1 business account), username
+  + account_event_permissions: (account_id, event_id) tránh trùng lặp quyền.
+  + active_sessions: account_id (Mỗi tài khoản chỉ cho phép 1 session phiên đăng nhập hợp lệ duy nhất).
+- Indexes:
+  + idx_tenants_slug (tốc độ routing dựa trên hash url)
+  + idx_accounts_tenant_id
+  + idx_accounts_username
+  + idx_event_permissions_event (Tốc độ query quyền khi Trọng tài thao tác)
+
+----------------------------------------------------------------------------------------------------
+8. THIẾT KẾ BẢO MẬT HÀNG RÀO CƠ SỞ (RLS DESIGN)
+----------------------------------------------------------------------------------------------------
+Áp dụng cơ chế ánh xạ Token (Custom Metadata ngầm định trong JWT bằng Database Triggers):
+- tenants: SELECT công khai. UPDATE chỉ do "admin1" hoặc chủ "admin2" thực thi.
+- accounts: Users chỉ có thể xem profile của chính mình. Admin 2 có thể xem và UPDATE tất cả profile trong cùng Tenant của mình. Admin 1 có toàn quyền vượt cấp.
+- account_event_permissions: Trọng tài (Admin 3) chỉ có quyền SELECT lịch sử của bản thân. Admin 2 toàn quyền với nhân viên mình tạo.
+- active_sessions: Chống Public đọc rò rỉ session token. Chỉ User chủ quan (auth.uid() = user_id) mới được đọc hoặc xóa để Kick Session.
+
+----------------------------------------------------------------------------------------------------
+9. THIẾT KẾ ĐĂNG NHẬP DUY NHẤT (SINGLE LOGIN DESIGN)
+----------------------------------------------------------------------------------------------------
+- Database Level: Cấu trúc UNIQUE trên cột `account_id` trong `active_sessions`.
+- Hành vi đăng nhập: Khi Account login, backend xử lý UPSERT (Thay thế phiên). Session token cũ trên client khác bị bốc hơi tại DB.
+- Cảnh báo thời gian thực: Client sử dụng Supabase WebSockets subscribes (lắng nghe) biến đổi trên dòng user_id của mình trong bảng `active_sessions`. 
+- Nếu nhận thông điệp INSERT/UPDATE nhưng token khác với local -> Cảnh báo "Tài khoản đăng nhập nơi khác" -> Tự động xoá RAM -> Ép force logout tự động. Khai tử hoàn toàn mô hình Polling chậm chạp.
+
+----------------------------------------------------------------------------------------------------
+10. CHIẾN LƯỢC MIGRATION (MIGRATION STRATEGY)
+----------------------------------------------------------------------------------------------------
+Tiến trình đạt độ mượt mà không có thời gian chết (Zero Downtime Migration):
+- Phase 1 (Schema Init): Tạo lập bộ 6 tables trên và gán RLS chuẩn cấu hình cao. Bỏ trống dữ liệu, hoạt động ngầm.
+- Phase 2 (ETL - Trích xuất đồng bộ): Script background duyệt lấy thô dòng accounts_config cũ (JSON). Tách cấu trúc tự động đổ vào `tenants` và `accounts`. Phân rã mảng Array đổ vào `account_event_permissions`.
+- Phase 3 (Double Write): Cập nhật mã nguồn Zustand. Khi Add/Update Admin, viết kép cho cả mảng JSON và bảng Quan hệ SQL để đồng bộ mạch đôi.
+- Phase 4 (Cut-over): Sau 3 ngày kiểm nghiệm logic rẽ nhánh DB không lỗi (Error rate 0%), tiến hành hard-code chuyển 100% về hệ SQL mới, dọn sạch (Drop) dữ liệu JSON lịch sử ở DB.
+
+----------------------------------------------------------------------------------------------------
+11. PHÂN TÍCH RỦI RO (RISK ANALYSIS)
+----------------------------------------------------------------------------------------------------
+- Lỗi ánh xạ người dùng (Medium): Thất lạc Account mapping với Auth UUID lúc khởi tạo hàng nghìn dữ liệu. Kế hoạch phòng ngừa: Giữ nguyên JSON cũ lúc khởi chạy làm màng lọc an toàn.
+- Race Condition WebSockets (Low): Lỗi ping liên tục ngắt kết nối cục bộ do thiết kế kênh. Khắc phục bằng debounce.
+- Kẻ tấn công băm Tenant (Low): Việc tách bảng và gán RLS bảo vệ thông qua Custom JWT dẹp bỏ 99% khả năng Fake client RAM của kẻ xâm nhập.
+
+----------------------------------------------------------------------------------------------------
+12 & 13. ƯỚC TÍNH DỮ LIỆU ĐIỀU CHỈNH TRÊN RESOURCE
+----------------------------------------------------------------------------------------------------
+- Số File Thay Đối: Xấp xỉ 6 tệp trọng điểm (`src/store.ts`, `AuthModal.tsx`, `AccountManager.tsx`, `ScoreEntry.tsx`, `types.ts`, `App.tsx`).
+- Số Dòng Code Mới/Biến Động (LOC changes): Dao động sửa/xóa 900 - 1300 dòng (Loại bỏ các đoạn query JSON phình to, thay bằng các query Postgres trực quan tối giản, mạch quản trị RAM cắt bỏ để DB gánh logic quyền).
+
+----------------------------------------------------------------------------------------------------
+14. CHIẾN LƯỢC ROLLBACK (ROLLBACK STRATEGY)
+----------------------------------------------------------------------------------------------------
+- Chiến thuật: Không bao giờ thực hiện "DELETE accounts_config JSON" trong giai đoạn từ 1 đến 3.
+- Nếu ứng dụng văng lỗi Authentication Crash cho người dùng, Kỹ thuật viên CI/CD chỉ việc Revert lại bản Commit mã nguồn Frontend ngay lập tức. Client sẽ truy cập lại chuỗi JSON vốn dĩ hoàn toàn được giữ nguyên khối dữ liệu. Mọi hoạt động phục hồi trong vòng 3 giây triển khai.
+
+----------------------------------------------------------------------------------------------------
+15. PHÂN TÍCH KHẢ NĂNG MỞ RỘNG (SCALABILITY ANALYSIS)
+----------------------------------------------------------------------------------------------------
+- Quy mô: Mô hình này dỡ bỏ bài toán Race Condition JSON. Ngay cả khi có 10,000 Tài khoản Ban tổ chức thao tác cùng một phần nghìn giây củng cố điểm số hay sửa giải, PostgreSQL xử lý Row level record chuẩn xác bằng Row Lock hoàn toàn siêu tốc.
+- B-Tree Index: Tốc độ kiểm tra Role và Fetch Account vọt từ truy vấn mảng tốn N(ms) thành truy xuất Indexed (dưới 1ms).
+- Sẵn sàng tích hợp ISO/SOC 2: Audit Logs login phân biệt người thao tác rành mạch, bảo đảm an ninh thương mại SaaS tuyệt đối cho Doanh nghiệp.
+====================================================================================================
