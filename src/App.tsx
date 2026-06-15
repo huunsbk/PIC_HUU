@@ -21,6 +21,8 @@ import EventBar from './components/EventBar';
 import ExportManager from './components/ExportManager';
 import AuthModal from './components/AuthModal';
 
+import AccountManager from './components/AccountManager';
+
 import {
   Trophy,
   Users,
@@ -39,7 +41,8 @@ import {
   ShieldAlert,
   User,
   Settings,
-  RefreshCw
+  RefreshCw,
+  UserCog
 } from 'lucide-react';
 
 export default function App() {
@@ -55,6 +58,7 @@ export default function App() {
   const currentUser = useTournamentStore((state) => state.currentUser);
   const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
   const userRole = useTournamentStore((state) => state.userRole);
+  const permissions = useTournamentStore((state) => state.permissions);
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const setAuthStatus = useTournamentStore((state) => state.setAuthStatus);
   const setTenantId = useTournamentStore((state) => state.setTenantId);
@@ -242,6 +246,7 @@ export default function App() {
       { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv, permission: 'view_live' },
       { id: 'export', label: 'Xuất file', icon: FileDown, permission: 'export_data' },
       { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList, permission: 'view_logs' },
+      { id: 'accounts', label: 'Quản lý tài khoản', icon: UserCog, permission: 'manage_users' },
     ];
     
     // Always show live for guest if they don't have explicit permissions but userRole is guest. 
@@ -250,8 +255,8 @@ export default function App() {
       return allNavItems.filter(item => item.id === 'live');
     }
 
-    return allNavItems.filter(item => useTournamentStore.getState().hasPermission(item.permission));
-  }, [useTournamentStore.getState().permissions, userRole]);
+    return allNavItems.filter(item => hasPermission(item.permission));
+  }, [permissions, userRole, hasPermission]);
 
   useEffect(() => {
     if (!navItems.find(item => item.id === selectedTab)) {
@@ -410,7 +415,7 @@ export default function App() {
 
           {/* Outer Wrapper cho màn hình chính - Mở rộng toàn bộ chiều rộng (Full Width) */}
           <main className="flex-1 p-4 lg:p-6 w-full print:p-0 print:w-full" id="main-content-panel">
-            {selectedTab !== 'live' && selectedTab !== 'logs' && selectedTab !== 'export' && selectedTab !== 'scoreEntry' && <EventBar />}
+            {selectedTab !== 'live' && selectedTab !== 'logs' && selectedTab !== 'export' && selectedTab !== 'scoreEntry' && selectedTab !== 'accounts' && <EventBar />}
             
             <div className="animate-fade-in">
               {selectedTab === 'dashboard' && <Dashboard />}
@@ -423,6 +428,7 @@ export default function App() {
               {selectedTab === 'live' && <LiveDashboard />}
               {selectedTab === 'export' && <ExportManager />}
               {selectedTab === 'logs' && <AuditLogger />}
+              {selectedTab === 'accounts' && <AccountManager />}
             </div>
           </main>
 

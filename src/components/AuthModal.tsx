@@ -115,6 +115,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       console.log("ACTIVE_SESSION_PAYLOAD", payloadActiveSession);
 
       // 1. Ghi active_sessions
+      // Để tránh lỗi duplicate do unique constraint, xoá session bị kẹt trên csdl đi trước
+      await supabase.from("active_sessions").delete().eq("account_id", accountData.account_id);
+      
       const sessionInsert = await supabase.from("active_sessions").insert(payloadActiveSession);
       console.log('Session insert:', sessionInsert);
       
@@ -127,7 +130,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
       const payloadLoginLog = {
         account_id: accountData.account_id,
-        action: "LOGIN",
+        action: "login",
         ip_address: "127.0.0.1",
         browser_info: navigator.userAgent,
         device_info: navigator.platform || "Unknown"
@@ -139,8 +142,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       const logInsert = await supabase.from("login_logs").insert(payloadLoginLog);
       
       if (logInsert.error) {
-        console.error('Login log insert failed:', logInsert.error);
-        setErrorMsg('Lỗi hệ thống: Không thể ghi log đăng nhập.');
+        console.error('Login log insert failed:', JSON.stringify(logInsert.error, null, 2));
+        setErrorMsg('Lỗi hệ thống: Không thể ghi log đăng nhập. Bật F12 tab Console để xem nguyên nhân chi tiết.');
         await supabase.auth.signOut();
         return;
       }

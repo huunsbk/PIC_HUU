@@ -640,7 +640,7 @@ export const useTournamentStore = create<AppState>()(
         permissions: [],
         hasPermission: (permissionName) => {
           const state = get();
-          return state.permissions.includes(permissionName) || state.permissions.includes('*');
+          return state.userRole === 'SUPER_ADMIN' || state.userRole === 'TENANT_ADMIN' || state.permissions.includes(permissionName) || state.permissions.includes('*');
         },
         currentEventId: 'event-default',
         currentUser: null,
