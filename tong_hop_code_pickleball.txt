@@ -82,6 +82,39 @@ export default defineConfig(() => {
 ```
 
 ==================================================
+📁 FILE: tsconfig.json
+==================================================
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "module": "ESNext",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "allowJs": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    },
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  }
+}
+
+```
+
+==================================================
 📁 FILE: eslint.config.js
 ==================================================
 ```js
@@ -4700,7 +4733,7 @@ export default function KnockoutBracket() {
                                         }}
                                         className="font-black flex items-center justify-between rounded-lg border-2 border-dashed border-zinc-400 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs min-w-[200px]"
                                       >
-                                        <span className="px-2 py-1.5">{m.teamAId ? resolveSlotName(m.teamAId) : 'Thả đội vào đây'}</span>
+                                        <span className="px-2 py-1.5">{m.teamAId ? (teams[m.teamAId]?.name || m.placeholderA || m.teamAId) : (m.placeholderA || 'Thả đội vào đây')}</span>
                                         {m.teamAId && (
                                           <button 
                                             title="Xoá khỏi nhánh"
@@ -4720,11 +4753,11 @@ export default function KnockoutBracket() {
                                         style={m.id === 'ko-QF1-ww7imxn' ? { width: '300px', maxWidth: 'none' } : undefined}
                                       >
                                         {/* Thêm option placeholder nếu chưa nằm trong list đội giải */}
-                                        {!teamNames.includes(m.teamAId) && (
-                                          <option value={m.teamAId || ''}>{resolveSlotName(m.teamAId)}</option>
+                                        {!m.teamAId && (
+                                          <option value={m.teamAId || ''}>{(m.teamAId ? (teams[m.teamAId]?.name || m.placeholderA || m.teamAId) : (m.placeholderA || 'Chờ...'))}</option>
                                         )}
-                                        {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamAId === t.name).map((t) => (
-                                          <option key={t.id} value={t.name}>
+                                        {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamAId === t.id).map((t) => (
+                                          <option key={t.id} value={t.id}>
                                             {t.name}
                                           </option>
                                         ))}
@@ -4737,9 +4770,9 @@ export default function KnockoutBracket() {
                                           ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
                                           : 'text-zinc-800 dark:text-zinc-200'
                                       }`}
-                                      title={resolveSlotName(m.teamAId)}
+                                      title={(m.teamAId ? (teams[m.teamAId]?.name || m.placeholderA || m.teamAId) : (m.placeholderA || 'Chờ...'))}
                                     >
-                                      {resolveSlotName(m.teamAId)}
+                                      {(m.teamAId ? (teams[m.teamAId]?.name || m.placeholderA || m.teamAId) : (m.placeholderA || 'Chờ...'))}
                                     </span>
                                   )}
                                 </div>
@@ -4771,7 +4804,7 @@ export default function KnockoutBracket() {
                                         }}
                                         className="font-black flex items-center justify-between rounded-lg border-2 border-dashed border-zinc-400 bg-white dark:bg-zinc-900 text-[#111c30] dark:text-zinc-105 text-xs min-w-[200px]"
                                       >
-                                        <span className="px-2 py-1.5">{m.teamBId ? resolveSlotName(m.teamBId) : 'Thả đội vào đây'}</span>
+                                        <span className="px-2 py-1.5">{m.teamBId ? (teams[m.teamBId]?.name || m.placeholderB || m.teamBId) : (m.placeholderB || 'Thả đội vào đây')}</span>
                                         {m.teamBId && (
                                           <button 
                                             title="Xoá khỏi nhánh"
@@ -4790,11 +4823,11 @@ export default function KnockoutBracket() {
                                         className="px-2 py-1.5 font-black rounded-lg border border-zinc-250 bg-white dark:bg-zinc-900 text-[#111c30] dark:text-zinc-105 text-xs focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-[230px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                         style={m.id === 'ko-QF1-ww7imxn' ? { width: '300px', maxWidth: 'none' } : undefined}
                                       >
-                                        {!teamNames.includes(m.teamBId) && (
-                                          <option value={m.teamBId || ''}>{resolveSlotName(m.teamBId)}</option>
+                                        {!m.teamBId && (
+                                          <option value={m.teamBId || ''}>{(m.teamBId ? (teams[m.teamBId]?.name || m.placeholderB || m.teamBId) : (m.placeholderB || 'Chờ...'))}</option>
                                         )}
-                                        {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamBId === t.name).map((t) => (
-                                          <option key={t.id} value={t.name}>
+                                        {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamBId === t.id).map((t) => (
+                                          <option key={t.id} value={t.id}>
                                             {t.name}
                                           </option>
                                         ))}
@@ -4807,9 +4840,9 @@ export default function KnockoutBracket() {
                                           ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
                                           : 'text-zinc-800 dark:text-zinc-200'
                                       }`}
-                                      title={resolveSlotName(m.teamBId)}
+                                      title={(m.teamBId ? (teams[m.teamBId]?.name || m.placeholderB || m.teamBId) : (m.placeholderB || 'Chờ...'))}
                                     >
-                                      {resolveSlotName(m.teamBId)}
+                                      {(m.teamBId ? (teams[m.teamBId]?.name || m.placeholderB || m.teamBId) : (m.placeholderB || 'Chờ...'))}
                                     </span>
                                   )}
                                 </div>
@@ -4905,48 +4938,57 @@ interface LiveBracketProps {
   currentEvt: EventData;
 }
 
-const findFeedingMatches = (match: Match, roundsMap: Record<number, Match[]>): [Match | null, Match | null] => {
-  const prevRoundMatches = roundsMap[match.round - 1];
-  if (!prevRoundMatches) return [null, null];
+const findFeedingMatches = (match: Match, koMatches: Match[]): [Match | null, Match | null] => {
+  if (!match || !match.id) return [null, null];
   
-  const currentRoundMatches = roundsMap[match.round].filter(m => !m.knockoutRoundName?.includes('Hạng 3'));
-  
-  const idx = currentRoundMatches.findIndex(m => m.id === match.id);
-  if (idx === -1) {
-    return [null, null];
-  }
+  // Find matches where nextMatchId (or next_match_id) matches this node's ID
+  const feeding = koMatches.filter(m => {
+    const nextId = m.nextMatchId !== undefined ? m.nextMatchId : (m as any).next_match_id;
+    return nextId === match.id;
+  });
 
-  const child1 = prevRoundMatches[idx * 2] || null;
-  const child2 = prevRoundMatches[idx * 2 + 1] || null;
-  return [child1, child2];
+  const childA = feeding.find(m => {
+    const slot = m.nextMatchSlot !== undefined ? m.nextMatchSlot : (m as any).next_match_slot;
+    return slot === 'A' || slot === 'teamA';
+  }) || null;
+
+  const childB = feeding.find(m => {
+    const slot = m.nextMatchSlot !== undefined ? m.nextMatchSlot : (m as any).next_match_slot;
+    return slot === 'B' || slot === 'teamB';
+  }) || null;
+
+  return [childA, childB];
 }
 
 interface MatchNodeProps {
   match: Match;
-  roundsMap: Record<number, Match[]>;
+  koMatches: Match[];
   currentEvt: EventData;
   isBronze?: boolean;
 }
 
-const MatchNode: React.FC<MatchNodeProps> = ({ match, roundsMap, currentEvt, isBronze }) => {
+const MatchNode: React.FC<MatchNodeProps> = ({ match, koMatches, currentEvt, isBronze }) => {
   if (!match) return null;
 
-  const [childA, childB] = isBronze ? [null, null] : findFeedingMatches(match, roundsMap);
+  const [childA, childB] = isBronze ? [null, null] : findFeedingMatches(match, koMatches);
   const hasChildren = childA !== null || childB !== null;
 
-  const teamAName = currentEvt.teams[match.teamAId]?.name || getReadableTeamName(match.teamAId);
-  const teamBName = currentEvt.teams[match.teamBId]?.name || getReadableTeamName(match.teamBId);
+  const tA_str = match.teamAId || match.placeholderA || null;
+  const tB_str = match.teamBId || match.placeholderB || null;
+  
+  const teamAName = match.teamAId && currentEvt.teams[match.teamAId] ? currentEvt.teams[match.teamAId].name : getReadableTeamName(tA_str);
+  const teamBName = match.teamBId && currentEvt.teams[match.teamBId] ? currentEvt.teams[match.teamBId].name : getReadableTeamName(tB_str);
 
   return (
     <div className="flex flex-row items-stretch">
       {hasChildren && (
         <div className="flex flex-col justify-around">
           <div className="relative flex flex-row items-center justify-end flex-1">
-             <MatchNode match={childA as Match} roundsMap={roundsMap} currentEvt={currentEvt} />
+             <MatchNode match={childA as Match} koMatches={koMatches} currentEvt={currentEvt} />
              <div className="absolute right-0 top-1/2 w-6 h-[calc(50%_+_1px)] border-t-[2px] border-r-[2px] border-zinc-300 dark:border-zinc-700 rounded-tr-lg pointer-events-none translate-x-[100%] z-0"></div>
           </div>
           <div className="relative flex flex-row items-center justify-end flex-1">
-             <MatchNode match={childB as Match} roundsMap={roundsMap} currentEvt={currentEvt} />
+             <MatchNode match={childB as Match} koMatches={koMatches} currentEvt={currentEvt} />
              <div className="absolute right-0 bottom-1/2 w-6 h-[calc(50%_+_1px)] border-b-[2px] border-r-[2px] border-zinc-300 dark:border-zinc-700 rounded-br-lg pointer-events-none translate-x-[100%] z-0"></div>
           </div>
         </div>
@@ -4961,11 +5003,11 @@ const MatchNode: React.FC<MatchNodeProps> = ({ match, roundsMap, currentEvt, isB
              {match.knockoutRoundName} - {getReadableKoMatchName(match.knockoutMatchId || '')}
           </div>
           <div className="flex justify-between items-center rounded-md px-1.5 py-1 bg-zinc-50 dark:bg-zinc-900">
-             <span className={`text-[11px] font-bold truncate max-w-[120px] ${match.winnerId === match.teamAId ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-700 dark:text-zinc-300'}`}>{teamAName}</span>
+             <span className={`text-[11px] font-bold truncate max-w-[120px] ${match.winnerId === match.teamAId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-750 dark:text-zinc-300'}`}>{teamAName}</span>
              <span className="font-mono text-[11px] font-black">{match.status === 'finished' ? match.scoreA : '-'}</span>
           </div>
           <div className="flex justify-between items-center rounded-md px-1.5 py-1 bg-zinc-50 dark:bg-zinc-900">
-             <span className={`text-[11px] font-bold truncate max-w-[120px] ${match.winnerId === match.teamBId ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-700 dark:text-zinc-300'}`}>{teamBName}</span>
+             <span className={`text-[11px] font-bold truncate max-w-[120px] ${match.winnerId === match.teamBId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-750 dark:text-zinc-300'}`}>{teamBName}</span>
              <span className="font-mono text-[11px] font-black">{match.status === 'finished' ? match.scoreB : '-'}</span>
           </div>
         </div>
@@ -4979,20 +5021,17 @@ export const LiveBracket: React.FC<LiveBracketProps> = ({ koMatches, currentEvt 
     return <div className="py-20 text-center text-zinc-500 border border-dashed border-zinc-200 rounded-3xl bg-zinc-50/50">Chưa lập sơ đồ Knockout cho nội dung này.</div>;
   }
 
-  const roundsMap: Record<number, Match[]> = {};
-  koMatches.forEach((m) => {
-    if (!roundsMap[m.round]) {
-      roundsMap[m.round] = [];
-    }
-    roundsMap[m.round].push(m);
-  });
+  // Find final match (no next match and not a bronze match)
+  const finalMatch = koMatches.find(m => {
+    const nextId = m.nextMatchId !== undefined ? m.nextMatchId : (m as any).next_match_id;
+    const isBronze = m.knockoutRoundName?.includes('3') || m.knockoutRoundName?.includes('Hạng 3') || false;
+    return !nextId && !isBronze;
+  }) || koMatches[koMatches.length - 1];
 
-  const roundsKeys = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
-  const finalRoundIndex = roundsKeys[roundsKeys.length - 1];
-  const finalRoundMatches = roundsMap[finalRoundIndex] || [];
-  
-  const finalMatch = finalRoundMatches.find(m => !m.knockoutRoundName?.includes('Hạng 3')) || finalRoundMatches[0];
-  const bronzeMatch = finalRoundMatches.find(m => m.knockoutRoundName?.includes('Hạng 3'));
+  // Find bronze match
+  const bronzeMatch = koMatches.find(m => {
+    return m.knockoutRoundName?.includes('3') || m.knockoutRoundName?.includes('Hạng 3') || false;
+  });
 
   return (
     <div className="bg-[#f8f9fa] dark:bg-zinc-900/50 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden relative w-full h-full min-h-[600px]" style={{ width: '100%', height: '100%' }}>
@@ -5027,13 +5066,13 @@ export const LiveBracket: React.FC<LiveBracketProps> = ({ koMatches, currentEvt 
             <TransformComponent wrapperClass="w-full h-full" wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '3840px', height: '2160px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div className="p-12 flex flex-col items-center justify-center w-full h-full">
                 <div className="flex gap-12 items-center scale-150 transform origin-center">
-                  <MatchNode match={finalMatch} roundsMap={roundsMap} currentEvt={currentEvt} />
+                  <MatchNode match={finalMatch} koMatches={koMatches} currentEvt={currentEvt} />
                   
                   {bronzeMatch && (
                     <div className="flex flex-col justify-end">
                       <div className="pl-8 relative opacity-85 mt-20">
                          <div className="text-[10px] font-black text-amber-600/80 uppercase mb-2 absolute -top-4 left-10">Tranh Hạng 3</div>
-                         <MatchNode match={bronzeMatch} roundsMap={roundsMap} currentEvt={currentEvt} isBronze={true} />
+                         <MatchNode match={bronzeMatch} koMatches={koMatches} currentEvt={currentEvt} isBronze={true} />
                       </div>
                     </div>
                   )}
@@ -5145,6 +5184,253 @@ function AutoScrollList({ children, className = '', maxHeight = '350px' }: AutoS
     </div>
   );
 }
+
+// ==========================================
+// OPTIMIZED MEMOIZED SUB-COMPONENTS TO PREVENT RENDER PROPS LEAKS & RE-CREATION HELL
+// ==========================================
+
+interface EventFilterButtonProps {
+  evtId: string;
+  name: string;
+  isSelected: boolean;
+  onClick: (id: string) => void;
+}
+
+const EventFilterButton = React.memo(({ 
+  evtId, 
+  name, 
+  isSelected, 
+  onClick 
+}: EventFilterButtonProps) => {
+  const handleClick = React.useCallback(() => {
+    onClick(evtId);
+  }, [onClick, evtId]);
+
+  return (
+    <button
+      onClick={handleClick}
+      className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all cursor-pointer select-none ${
+        isSelected
+          ? 'bg-blue-600 text-white shadow-xs'
+          : 'text-zinc-650 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-amber-200'
+      }`}
+    >
+      {name}
+    </button>
+  );
+});
+EventFilterButton.displayName = 'EventFilterButton';
+
+interface StandingGroupCardProps {
+  group: any;
+  std: any[];
+}
+
+const StandingGroupCard = React.memo(({ 
+  group, 
+  std 
+}: StandingGroupCardProps) => {
+  return (
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-805 overflow-hidden shadow-sm mb-4">
+      {/* Header Bar */}
+      <div className="bg-blue-600 text-white py-2 px-2 sm:px-3 flex items-center justify-between">
+        <span className="text-[10px] sm:text-[11px] font-extrabold flex items-center gap-1.5 tracking-tight uppercase">
+          <Award size={13} /> BẢNG XẾP HẠNG - {group.name}
+        </span>
+        <span className="text-[9px] font-bold bg-white/20 px-2 py-0.5 rounded-full border border-white/20 select-none hidden sm:inline-block">
+          Bảng {group.teamIds?.length || std.length} đội
+        </span>
+      </div>
+      {/* Table Data */}
+      <div className="overflow-x-auto overflow-y-hidden">
+        <table className="w-full text-left text-[9px] sm:text-[11px] table-fixed">
+          <thead>
+            <tr className="bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 font-bold text-[9px] sm:text-[10px] md:text-[11px] leading-tight">
+              <th className="py-1.5 px-0 text-center w-6 sm:w-8">Hạng</th>
+              <th className="py-1.5 px-0.5 text-center min-w-[50px] w-auto">Đội</th>
+              <th className="py-1.5 px-0 text-center w-6 sm:w-8">Trận</th>
+              <th className="py-1.5 px-0 text-center text-emerald-600 w-4 sm:w-6">T</th>
+              <th className="py-1.5 px-0 text-center text-red-500 w-4 sm:w-6">B</th>
+              <th className="py-1.5 px-0 text-center text-zinc-500 w-6 sm:w-8">H/S</th>
+              <th className="py-1.5 px-0.5 text-center text-blue-600 w-8 sm:w-10">Điểm</th>
+            </tr>
+          </thead>
+          <tbody>
+            {std.map((s, idx) => {
+              let rankBadge = null;
+              if (idx === 0) {
+                rankBadge = <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full inline-flex items-center justify-center font-bold text-[9px] sm:text-[10px] bg-amber-100 text-amber-800 border border-amber-200/40">1</span>;
+              } else if (idx === 1) {
+                rankBadge = <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full inline-flex items-center justify-center font-bold text-[9px] sm:text-[10px] bg-zinc-150 text-zinc-700 border border-zinc-200/40">2</span>;
+              } else {
+                rankBadge = <span className="text-zinc-400 font-bold block">{idx + 1}</span>;
+              }
+
+              return (
+                <tr key={s.teamId} className="border-b border-zinc-100 dark:border-zinc-850/60 hover:bg-zinc-50 dark:hover:bg-zinc-850/10">
+                  <td className="py-1.5 px-0 text-center font-bold text-[10px] sm:text-[11px]">
+                    <span className="flex justify-center items-center">{rankBadge}</span>
+                  </td>
+                  <td className="py-1.5 px-0.5 text-center font-extrabold text-zinc-700 dark:text-zinc-300 truncate text-[10px] sm:text-[12px]">{s.teamName}</td>
+                  <td className="py-1.5 px-0 text-center text-zinc-600 dark:text-zinc-400 font-medium">{s.matchesPlayed}</td>
+                  <td className="py-1.5 px-0 text-center text-emerald-600 font-bold">{s.matchesWon}</td>
+                  <td className="py-1.5 px-0 text-center text-red-500 font-bold">{s.matchesLost}</td>
+                  <td className="py-1.5 px-0 text-center text-zinc-500 font-medium tracking-tighter">{s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff === 0 ? 'Ø' : s.pointDiff}</td>
+                  <td className="py-1.5 px-0.5 text-center font-extrabold text-blue-600 text-[11px] sm:text-[13px]">{s.points}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+});
+StandingGroupCard.displayName = 'StandingGroupCard';
+
+interface LiveMatchRowProps {
+  m: any;
+  teams: any;
+  groups: any;
+  absoluteIndex: number;
+}
+
+const LiveMatchRow = React.memo(({
+  m,
+  teams,
+  groups,
+  absoluteIndex
+}: LiveMatchRowProps) => {
+  const teamA = teams[m.teamAId]?.name || m.placeholderA || getReadableTeamName(m.teamAId);
+  const teamB = teams[m.teamBId]?.name || m.placeholderB || getReadableTeamName(m.teamBId);
+  const group = groups[m.groupId];
+  const isFinished = m.status === 'finished';
+  const isPlaying = m.status === 'playing';
+
+  let roundClass = "border-zinc-200 dark:border-zinc-800";
+  let roundLabel = "";
+  if (group) {
+    roundClass = isFinished ? "border-emerald-300 dark:border-emerald-800" : isPlaying ? "border-blue-300 dark:border-blue-800" : "border-[#5b9e38] dark:border-[#4c842f]";
+    const groupNameUpper = group.name.toUpperCase();
+    roundLabel = groupNameUpper.startsWith('BẢNG') ? groupNameUpper : `BẢNG ${groupNameUpper}`;
+  } else {
+    const rName = (m.knockoutRoundName || "").toLowerCase();
+    if (rName.includes("32")) { roundClass = "border-[#20b2aa] dark:border-[#1a8e88]"; roundLabel = "VÒNG 32"; }
+    else if (rName.includes("16")) { roundClass = "border-[#3cb371] dark:border-[#308f5a]"; roundLabel = "VÒNG 16"; }
+    else if (rName.includes("tứ kết")) { roundClass = "border-[#9370db] dark:border-[#7559af]"; roundLabel = "TỨ KẾT"; }
+    else if (rName.includes("bán kết")) { roundClass = "border-[#ff8c00] dark:border-[#cc7000]"; roundLabel = "BÁN KẾT"; }
+    else if (rName.includes("chung kết")) { roundClass = "border-[#dc143c] dark:border-[#b01030]"; roundLabel = "CHUNG KẾT"; }
+    else { roundClass = "border-[#4169e1] dark:border-[#3454b4]"; roundLabel = rName ? rName.toUpperCase() : `VÒNG KO ${m.round}`; }
+    if (isFinished) {
+      roundClass = "border-emerald-300 dark:border-emerald-800";
+    } else if (isPlaying) {
+      roundClass = "border-blue-300 dark:border-blue-800";
+    }
+  }
+
+  const bgClass = isFinished ? "bg-emerald-50/40 dark:bg-emerald-950/20" : isPlaying ? "bg-blue-50/40 dark:bg-blue-950/20" : "bg-white dark:bg-zinc-950";
+
+  return (
+    <div className={`flex items-center gap-2 ${bgClass} py-1.5 px-2 rounded-lg border-[1.5px] ${roundClass} text-[11px]`}>
+      <div className={`w-[36px] h-[32px] rounded flex flex-col items-center justify-center font-bold shrink-0 shadow-sm border ${isFinished ? 'bg-emerald-600 text-white border-emerald-700' : isPlaying ? 'bg-blue-600 text-white border-blue-700' : 'bg-[#114666] text-white border-[#0d344d]'}`}>
+        <span className="text-[14px] leading-none">{absoluteIndex}</span>
+      </div>
+      <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
+        <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 flex flex-col gap-0.5">
+          <span className={`font-semibold truncate block ${isFinished && m.winnerId === m.teamAId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-800 dark:text-zinc-200'}`} style={{ fontSize: '13px' }}>{teamA}</span>
+          <span className={`font-semibold truncate block ${isFinished && m.winnerId === m.teamBId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-800 dark:text-zinc-200'}`} style={{ fontSize: '13px' }}>{teamB}</span>
+        </div>
+      </div>
+      <div className="flex flex-col items-end shrink-0">
+        <span className="text-[7.5px] font-bold text-zinc-500 uppercase pb-0.5">{roundLabel}</span>
+        {isFinished ? (
+          <span className="text-[12px] font-black tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded leading-none shrink-0 border border-emerald-200/50 dark:border-emerald-800 shadow-sm">
+            {m.scoreA} - {m.scoreB}
+          </span>
+        ) : isPlaying ? (
+          <span className="text-[9px] font-bold text-blue-100 bg-blue-600 dark:bg-blue-600 px-1.5 py-1 rounded leading-none shrink-0 border border-blue-700 shadow-sm">
+            ĐANG ĐẤU
+          </span>
+        ) : (
+          <span className="text-[9px] font-bold text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-1.5 py-1 rounded leading-none shrink-0 border border-zinc-200/50 dark:border-zinc-850 shadow-sm">
+            CHỜ
+          </span>
+        )}
+      </div>
+    </div>
+  );
+});
+LiveMatchRow.displayName = 'LiveMatchRow';
+
+interface KoRoundCardProps {
+  round: number;
+  roundMatches: any[];
+  teams: any;
+  roundName: string;
+}
+
+const KoRoundCard = React.memo(({
+  round,
+  roundMatches,
+  teams,
+  roundName
+}: KoRoundCardProps) => {
+  return (
+    <div className="space-y-1 bg-white dark:bg-zinc-950 py-1.5 px-2.5 rounded-xl border border-zinc-100 dark:border-zinc-850">
+      <h6 className="text-[9px] font-black text-zinc-400 border-b pb-1 mb-1.5 uppercase select-none" style={{ fontSize: '13px', color: '#c61a8b' }}>{roundName}</h6>
+      <div className="grid grid-cols-1 gap-1">
+        {roundMatches.map((m) => {
+          const teamAName = teams[m.teamAId]?.name || m.placeholderA || getReadableTeamName(m.teamAId);
+          const teamBName = teams[m.teamBId]?.name || m.placeholderB || getReadableTeamName(m.teamBId);
+          return (
+            <div key={m.id} className="text-[10px] space-y-1 p-1.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800 rounded-lg">
+              <div className="text-[8px] font-black text-zinc-450 border-b border-zinc-200/30 dark:border-zinc-805 pb-0.5 mb-1 select-none" style={{ fontSize: '13px', color: '#992371' }}>
+                {getReadableKoMatchName(m.knockoutMatchId || '')}
+              </div>
+              <div className="flex justify-between items-center">
+                <span className={`font-bold truncate max-w-[85%] ${m.winnerId === m.teamAId ? 'text-blue-600 font-extrabold' : 'text-zinc-500'}`} style={{ fontSize: '15px' }}>{teamAName}</span>
+                <strong className="font-mono text-zinc-650 dark:text-zinc-350 shrink-0">{m.status === 'finished' ? m.scoreA : '-'}</strong>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className={`font-bold truncate max-w-[85%] ${m.winnerId === m.teamBId ? 'text-blue-600 font-extrabold' : 'text-zinc-500'}`} style={{ fontSize: '15px' }}>{teamBName}</span>
+                <strong className="font-mono text-zinc-650 dark:text-zinc-350 shrink-0">{m.status === 'finished' ? m.scoreB : '-'}</strong>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+KoRoundCard.displayName = 'KoRoundCard';
+
+interface FullscreenButtonProps {
+  elementId: string;
+}
+
+const FullscreenButton = React.memo(({ elementId }: { elementId: string }) => {
+  const handleToggle = React.useCallback(() => {
+    const el = document.getElementById(elementId);
+    if (el) {
+      if (!document.fullscreenElement) {
+        el.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  }, [elementId]);
+
+  return (
+    <button
+      onClick={handleToggle}
+      className="flex items-center gap-2 px-3 py-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-sm border border-zinc-200 dark:border-zinc-700 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-sm transition-all pointer-events-auto"
+    >
+      <Maximize size={16} />
+      <span className="text-xs font-bold leading-none">Toàn màn hình</span>
+    </button>
+  );
+});
+FullscreenButton.displayName = 'FullscreenButton';
 
 export default function LiveDashboard() {
   const teams = useTournamentStore(state => state.teams);
@@ -5639,59 +5925,11 @@ export default function LiveDashboard() {
                         {evtGroups.map((group) => {
                           const std = stdByGrp[group.id] || [];
                           return (
-                            <div key={group.id} className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-805 overflow-hidden shadow-sm mb-4">
-                              {/* Header Bar */}
-                              <div className="bg-blue-600 text-white py-2 px-2 sm:px-3 flex items-center justify-between">
-                                <span className="text-[10px] sm:text-[11px] font-extrabold flex items-center gap-1.5 tracking-tight uppercase">
-                                  <Award size={13} /> BẢNG XẾP HẠNG - {group.name}
-                                </span>
-                                <span className="text-[9px] font-bold bg-white/20 px-2 py-0.5 rounded-full border border-white/20 select-none hidden sm:inline-block">
-                                  Bảng {group.teamIds?.length || std.length} đội
-                                </span>
-                              </div>
-                              {/* Table Data */}
-                              <div className="overflow-x-auto overflow-y-hidden">
-                                <table className="w-full text-left text-[9px] sm:text-[11px] table-fixed">
-                                  <thead>
-                                    <tr className="bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 font-bold text-[9px] sm:text-[10px] md:text-[11px] leading-tight">
-                                      <th className="py-1.5 px-0 text-center w-6 sm:w-8">Hạng</th>
-                                      <th className="py-1.5 px-0.5 text-center min-w-[50px] w-auto">Đội</th>
-                                      <th className="py-1.5 px-0 text-center w-6 sm:w-8">Trận</th>
-                                      <th className="py-1.5 px-0 text-center text-emerald-600 w-4 sm:w-6">T</th>
-                                      <th className="py-1.5 px-0 text-center text-red-500 w-4 sm:w-6">B</th>
-                                      <th className="py-1.5 px-0 text-center text-zinc-500 w-6 sm:w-8">H/S</th>
-                                      <th className="py-1.5 px-0.5 text-center text-blue-600 w-8 sm:w-10">Điểm</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {std.map((s, idx) => {
-                                      let rankBadge = null;
-                                      if (idx === 0) {
-                                        rankBadge = <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full inline-flex items-center justify-center font-bold text-[9px] sm:text-[10px] bg-amber-100 text-amber-800 border border-amber-200/40">1</span>;
-                                      } else if (idx === 1) {
-                                        rankBadge = <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full inline-flex items-center justify-center font-bold text-[9px] sm:text-[10px] bg-zinc-150 text-zinc-700 border border-zinc-200/40">2</span>;
-                                      } else {
-                                        rankBadge = <span className="text-zinc-400 font-bold block">{idx + 1}</span>;
-                                      }
-
-                                      return (
-                                        <tr key={s.teamId} className="border-b border-zinc-100 dark:border-zinc-850/60 hover:bg-zinc-50 dark:hover:bg-zinc-850/10">
-                                          <td className="py-1.5 px-0 text-center font-bold text-[10px] sm:text-[11px]">
-                                            <span className="flex justify-center items-center">{rankBadge}</span>
-                                          </td>
-                                          <td className="py-1.5 px-0.5 text-center font-extrabold text-zinc-700 dark:text-zinc-300 truncate text-[10px] sm:text-[12px]">{s.teamName}</td>
-                                          <td className="py-1.5 px-0 text-center text-zinc-600 dark:text-zinc-400 font-medium">{s.matchesPlayed}</td>
-                                          <td className="py-1.5 px-0 text-center text-emerald-600 font-bold">{s.matchesWon}</td>
-                                          <td className="py-1.5 px-0 text-center text-red-500 font-bold">{s.matchesLost}</td>
-                                          <td className="py-1.5 px-0 text-center text-zinc-500 font-medium tracking-tighter">{s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff === 0 ? 'Ø' : s.pointDiff}</td>
-                                          <td className="py-1.5 px-0.5 text-center font-extrabold text-blue-600 text-[11px] sm:text-[13px]">{s.points}</td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
+                            <StandingGroupCard
+                              key={group.id}
+                              group={group}
+                              std={std}
+                            />
                           );
                         })}
                       </AutoScrollList>
@@ -5710,67 +5948,14 @@ export default function LiveDashboard() {
                       ) : (
                         <div className="space-y-1">
                           {balanceMatchesRestTime(evtMatches).map((m, idx) => {
-                            const teamA = evt.teams[m.teamAId]?.name || m.teamAId;
-                            const teamB = evt.teams[m.teamBId]?.name || m.teamBId;
-                            const group = evt.groups[m.groupId];
-                            const absoluteIndex = idx + 1;
-                            const isFinished = m.status === 'finished';
-                            const isPlaying = m.status === 'playing';
-                            
-                            let roundClass = "border-zinc-200 dark:border-zinc-800";
-                            let roundLabel = "";
-                            if (group) {
-                              roundClass = isFinished ? "border-emerald-300 dark:border-emerald-800" : isPlaying ? "border-blue-300 dark:border-blue-800" : "border-[#5b9e38] dark:border-[#4c842f]";
-                              const groupNameUpper = group.name.toUpperCase();
-                              roundLabel = groupNameUpper.startsWith('BẢNG') ? groupNameUpper : `BẢNG ${groupNameUpper}`;
-                            } else {
-                              const rName = (m.knockoutRoundName || "").toLowerCase();
-                              if (rName.includes("32")) { roundClass = "border-[#20b2aa] dark:border-[#1a8e88]"; roundLabel = "VÒNG 32"; }
-                              else if (rName.includes("16")) { roundClass = "border-[#3cb371] dark:border-[#308f5a]"; roundLabel = "VÒNG 16"; }
-                              else if (rName.includes("tứ kết")) { roundClass = "border-[#9370db] dark:border-[#7559af]"; roundLabel = "TỨ KẾT"; }
-                              else if (rName.includes("bán kết")) { roundClass = "border-[#ff8c00] dark:border-[#cc7000]"; roundLabel = "BÁN KẾT"; }
-                              else if (rName.includes("chung kết")) { roundClass = "border-[#dc143c] dark:border-[#b01030]"; roundLabel = "CHUNG KẾT"; }
-                              else { roundClass = "border-[#4169e1] dark:border-[#3454b4]"; roundLabel = rName ? rName.toUpperCase() : `VÒNG KO ${m.round}`; }
-                              if (isFinished) {
-                                roundClass = "border-emerald-300 dark:border-emerald-800";
-                              } else if (isPlaying) {
-                                roundClass = "border-blue-300 dark:border-blue-800";
-                              }
-                            }
-
-                            const bgClass = isFinished ? "bg-emerald-50/40 dark:bg-emerald-950/20" : isPlaying ? "bg-blue-50/40 dark:bg-blue-950/20" : "bg-white dark:bg-zinc-950";
-
                             return (
-                              <div key={m.id} className={`flex items-center gap-2 ${bgClass} py-1.5 px-2 rounded-lg border-[1.5px] ${roundClass} text-[11px]`}>
-                                <div className={`w-[36px] h-[32px] rounded flex flex-col items-center justify-center font-bold shrink-0 shadow-sm border ${isFinished ? 'bg-emerald-600 text-white border-emerald-700' : isPlaying ? 'bg-blue-600 text-white border-blue-700' : 'bg-[#114666] text-white border-[#0d344d]'}`}>
-                                  <span className="text-[14px] leading-none">{absoluteIndex}</span>
-                                </div>
-                                <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
-                                  <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700">
-                                    <span className={`font-semibold ${isFinished && m.winnerId === m.teamAId ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-800 dark:text-zinc-200'}`} style={{ fontSize: '13px' }}>{teamA}</span>
-                                  </div>
-                                  <div className="w-0.5 h-2.5 bg-orange-400 mx-2 my-0.5 shrink-0"></div>
-                                  <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700">
-                                    <span className={`font-semibold ${isFinished && m.winnerId === m.teamBId ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-800 dark:text-zinc-200'}`} style={{ fontSize: '13px' }}>{teamB}</span>
-                                  </div>
-                                </div>
-                                <div className="flex flex-col items-end shrink-0">
-                                  <span className="text-[7.5px] font-bold text-zinc-500 uppercase pb-0.5">{roundLabel}</span>
-                                  {isFinished ? (
-                                    <span className="text-[12px] font-black tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded leading-none shrink-0 border border-emerald-200/50 dark:border-emerald-800 shadow-sm">
-                                      {m.scoreA} - {m.scoreB}
-                                    </span>
-                                  ) : isPlaying ? (
-                                    <span className="text-[9px] font-bold text-blue-100 bg-blue-600 dark:bg-blue-600 px-1.5 py-1 rounded leading-none shrink-0 border border-blue-700 shadow-sm">
-                                      ĐANG ĐẤU
-                                    </span>
-                                  ) : (
-                                    <span className="text-[9px] font-bold text-zinc-400 bg-zinc-50 dark:bg-zinc-900 px-1.5 py-1 rounded leading-none shrink-0 border border-zinc-200/50 dark:border-zinc-850 shadow-sm">
-                                      CHỜ
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
+                              <LiveMatchRow
+                                key={m.id}
+                                m={m}
+                                teams={evt.teams || {}}
+                                groups={evt.groups || {}}
+                                absoluteIndex={idx + 1}
+                              />
                             );
                           })}
                         </div>
@@ -5792,30 +5977,13 @@ export default function LiveDashboard() {
                           const roundMatches = koMatches.filter((m) => m.round === round);
                           const roundName = roundMatches[0]?.knockoutRoundName || 'Vòng';
                           return (
-                            <div key={round} className="space-y-1 bg-white dark:bg-zinc-950 py-1.5 px-2.5 rounded-xl border border-zinc-100 dark:border-zinc-850">
-                              <h6 className="text-[9px] font-black text-zinc-400 border-b pb-1 mb-1.5 uppercase select-none" style={{ fontSize: '13px', color: '#c61a8b' }}>{roundName}</h6>
-                              <div className="grid grid-cols-1 gap-1">
-                                {roundMatches.map((m) => {
-                                  const teamAName = evt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
-                                  const teamBName = evt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
-                                  return (
-                                    <div key={m.id} className="text-[10px] space-y-1 p-1.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800 rounded-lg">
-                                      <div className="text-[8px] font-black text-zinc-450 border-b border-zinc-200/30 dark:border-zinc-805 pb-0.5 mb-1 select-none" style={{ fontSize: '13px', color: '#992371' }}>
-                                        {getReadableKoMatchName(m.knockoutMatchId || '')}
-                                      </div>
-                                      <div className="flex justify-between items-center">
-                                        <span className={`font-bold truncate max-w-[85%] ${m.winnerId === m.teamAId ? 'text-blue-600' : 'text-zinc-500'}`} style={{ fontSize: '15px', color: '#0f0fb1' }}>{teamAName}</span>
-                                        <strong className="font-mono text-zinc-650 dark:text-zinc-350 shrink-0">{m.status === 'finished' ? m.scoreA : '-'}</strong>
-                                      </div>
-                                      <div className="flex justify-between items-center">
-                                        <span className={`font-bold truncate max-w-[85%] ${m.winnerId === m.teamBId ? 'text-blue-600' : 'text-zinc-500'}`} style={{ fontSize: '15px', color: '#0f0fb1' }}>{teamBName}</span>
-                                        <strong className="font-mono text-zinc-650 dark:text-zinc-350 shrink-0">{m.status === 'finished' ? m.scoreB : '-'}</strong>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
+                            <KoRoundCard
+                              key={round}
+                              round={round}
+                              roundMatches={roundMatches}
+                              teams={evt.teams || {}}
+                              roundName={roundName}
+                            />
                           );
                         })}
                       </AutoScrollList>
@@ -6897,21 +7065,28 @@ export default function ScoreEntry() {
   const { events, updateMatchScore, updateMatchStatus, currentEventId, setCurrentEvent, userRole, currentUser, accounts } = useTournamentStore();
 
   const [localScores, setLocalScores] = useState<Record<string, { a: string, b: string }>>({});
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const triggerError = (msg: string) => {
+    setErrorMsg(msg);
+    setTimeout(() => setErrorMsg(null), 4000);
+  };
 
   const eventList = Object.values(events);
   
-  if (eventList.length === 0) {
-    return <div className="text-center py-20 text-zinc-500 font-bold bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">Chưa có nội dung thi đấu nào. Vui lòng tạo nội dung trước.</div>;
-  }
-
   // Safe checks for currentEventId
   const currentEvt = currentEventId && events[currentEventId] ? events[currentEventId] : eventList[0];
   
   const isPermitted = React.useMemo(() => {
     if (userRole !== 'admin3') return true;
+    if (!currentEvt) return false;
     const admin3Acc = accounts.find(a => a.username === currentUser);
     return admin3Acc?.permittedEventIds?.includes(currentEvt.id) || false;
-  }, [userRole, accounts, currentUser, currentEvt.id]);
+  }, [userRole, accounts, currentUser, currentEvt?.id]);
+
+  if (eventList.length === 0) {
+    return <div className="text-center py-20 text-zinc-500 font-bold bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">Chưa có nội dung thi đấu nào. Vui lòng tạo nội dung trước.</div>;
+  }
 
   if (!currentEvt.matches || currentEvt.matches.length === 0) {
      return (
@@ -6970,7 +7145,12 @@ export default function ScoreEntry() {
   const saveScore = (matchId: string) => {
     const scores = localScores[matchId];
     if (!scores || scores.a === '' || scores.b === '') {
-        alert('Vui lòng nhập đầy đủ điểm số cho cả hai đội!');
+        try {
+            alert('Vui lòng nhập đầy đủ điểm số cho cả hai đội!');
+        } catch (e) {
+            console.warn('Alert blocked by browser sandboxing:', e);
+        }
+        triggerError('Vui lòng nhập đầy đủ điểm số cho cả hai đội!');
         return;
     }
     updateMatchScore(matchId, parseInt(scores.a, 10), parseInt(scores.b, 10));
@@ -6978,6 +7158,11 @@ export default function ScoreEntry() {
 
   return (
     <div className="space-y-6">
+      {errorMsg && (
+        <div className="fixed top-5 right-5 z-50 bg-red-650 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 font-bold animate-pulse text-xs border border-red-500/30">
+          <span>⚠️ {errorMsg}</span>
+        </div>
+      )}
       <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 overflow-x-auto whitespace-nowrap hide-scrollbar">
         {eventList.map(evt => (
             <button
@@ -7003,8 +7188,8 @@ export default function ScoreEntry() {
             
             <div className="flex-1 overflow-y-auto p-3 space-y-2 h-[500px]">
                 {evtMatches.map((m, idx) => {
-                    const teamA = currentEvt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
-                    const teamB = currentEvt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
+                    const teamA = m.teamAId && currentEvt.teams[m.teamAId] ? currentEvt.teams[m.teamAId].name : (m.placeholderA || getReadableTeamName(m.teamAId));
+                    const teamB = m.teamBId && currentEvt.teams[m.teamBId] ? currentEvt.teams[m.teamBId].name : (m.placeholderB || getReadableTeamName(m.teamBId));
                     const group = currentEvt.groups[m.groupId];
                     const absoluteIndex = idx + 1;
                     const isFinished = m.status === 'finished';
@@ -7046,8 +7231,8 @@ export default function ScoreEntry() {
                         btnJsx = (
                             <button
                                 onClick={() => handleSetPlaying(m.id)}
-                                disabled={!isPermitted}
-                                className={`text-[9px] font-bold px-2.5 py-1.5 rounded leading-none shrink-0 shadow-sm transition-colors mt-1 text-center ${!isPermitted ? 'text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 cursor-not-allowed' : 'text-zinc-600 bg-zinc-150 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer'}`}
+                            disabled={!isPermitted || !m.teamAId || !m.teamBId}
+                            className={`text-[9px] font-bold px-2.5 py-1.5 rounded leading-none shrink-0 shadow-sm transition-colors mt-1 text-center ${(!isPermitted || !m.teamAId || !m.teamBId) ? 'text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 cursor-not-allowed' : 'text-zinc-600 bg-zinc-150 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer'}`}
                             >
                                 CHỜ
                             </button>
@@ -7096,8 +7281,8 @@ export default function ScoreEntry() {
            ) : (
                <div className="grid grid-cols-1 gap-6">
                    {playingMatches.map(m => {
-                       const teamA = currentEvt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
-                       const teamB = currentEvt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
+                       const teamA = m.teamAId && currentEvt.teams[m.teamAId] ? currentEvt.teams[m.teamAId].name : (m.placeholderA || getReadableTeamName(m.teamAId));
+                       const teamB = m.teamBId && currentEvt.teams[m.teamBId] ? currentEvt.teams[m.teamBId].name : (m.placeholderB || getReadableTeamName(m.teamBId));
                        const group = currentEvt.groups[m.groupId];
                        
                        let roundLabel = "";
@@ -8575,6 +8760,7 @@ interface AppState {
   updateMatchStatus: (matchId: string, status: 'pending' | 'playing' | 'finished') => void;
   resetMatchScore: (matchId: string) => void;
   generateAllSchedules: () => void;
+  
 
   // Knockout Actions
   generateKnockoutBracket: (size: 4 | 8 | 16 | 32) => void;
@@ -8681,11 +8867,22 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
         if (evt.matches) {
           evt.matches.forEach(m => {
             matchIdsInState.push(m.id);
+
+            // Tự động detect nếu teamAId/teamBId thực chất là dạng CŨ (lưu text đại diện như "Thắng Vòng 32"), chuyển nó sang placeholder.
+            const isTeamANotReal = m.teamAId && !evt.teams[m.teamAId];
+            const isTeamBNotReal = m.teamBId && !evt.teams[m.teamBId];
+
+            const realTeamAId = isTeamANotReal ? null : (m.teamAId || null);
+            const realTeamBId = isTeamBNotReal ? null : (m.teamBId || null);
+            
+            const pH_A = isTeamANotReal ? m.teamAId : (m.placeholderA || null);
+            const pH_B = isTeamBNotReal ? m.teamBId : (m.placeholderB || null);
+
             allMatches.push({
               id: m.id,
               group_id: m.groupId || null,
-              team_a_id: m.teamAId || null,
-              team_b_id: m.teamBId || null,
+              team_a_id: realTeamAId,
+              team_b_id: realTeamBId,
               score_a: m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : null,
               score_b: m.scoreB !== undefined && m.scoreB !== null ? m.scoreB : null,
               winner_id: m.winnerId || null,
@@ -8695,6 +8892,8 @@ const syncStateToSupabase = async (state: AppState, originalSet?: any) => {
               knockout_match_id: m.knockoutMatchId || null,
               next_match_id: m.nextMatchId || null,
               next_match_slot: m.nextMatchSlot || null,
+              placeholder_a: pH_A,
+              placeholder_b: pH_B,
               event_id: evtId,
               tenant_id: activeTenantId,
               tournament_id: tournamentId
@@ -9970,7 +10169,6 @@ export const useTournamentStore = create<AppState>()(
                 return { ...m, scoreA: null, scoreB: null, winnerId: null, status: 'pending' as const };
               }
 
-              // Xác định người thắng dựa trên ai điểm cao hơn
               let winnerId: string | null = null;
               if (scoreA > scoreB) {
                 winnerId = m.teamAId;
@@ -9987,13 +10185,38 @@ export const useTournamentStore = create<AppState>()(
               };
             });
 
-            return { matches: matchesCopy };
+            const eventUpdates: Record<string, any> = {};
+            let targetEventId: string | undefined;
+            Object.values(state.events).forEach(evt => {
+              if (evt.matches?.some(em => em.id === matchId)) {
+                targetEventId = evt.id;
+              }
+            });
+            
+            if (targetEventId) {
+              const evt = state.events[targetEventId];
+              eventUpdates[targetEventId] = {
+                ...evt,
+                matches: evt.matches.map((em: any) => em.id === matchId ? { 
+                  ...em,
+                  scoreA: scoreA,
+                  scoreB: scoreB,
+                  winnerId: (scoreA !== null && scoreB !== null) ? (scoreA > scoreB ? em.teamAId : (scoreB > scoreA ? em.teamBId : null)) : null,
+                  status: (scoreA !== null && scoreB !== null) ? 'finished' : 'pending'
+                } : em)
+              };
+            }
+
+            return { 
+                matches: matchesCopy,
+                events: { ...state.events, ...eventUpdates }
+            };
           });
 
           const m = get().matches.find((x) => x.id === matchId);
           if (m && scoreA !== null && scoreB !== null) {
-            const tA = get().teams[m.teamAId]?.name || 'Đội A';
-            const tB = get().teams[m.teamBId]?.name || 'Đội B';
+            const tA = m.teamAId ? get().teams[m.teamAId]?.name : (m.placeholderA || 'Đội A');
+            const tB = m.teamBId ? get().teams[m.teamBId]?.name : (m.placeholderB || 'Đội B');
             logToStore('Cập Nhật Điểm', `Cập nhật kết quả trận đấu: [${tA}] ${scoreA} - ${scoreB} [${tB}].`);
           }
         },
@@ -10009,53 +10232,14 @@ export const useTournamentStore = create<AppState>()(
             return { matches: matchesCopy };
           });
           if (m) {
-            const tA = get().teams[m.teamAId]?.name || 'Đội A';
-            const tB = get().teams[m.teamBId]?.name || 'Đội B';
+            const tA = m.teamAId ? get().teams[m.teamAId]?.name : (m.placeholderA || 'Đội A');
+            const tB = m.teamBId ? get().teams[m.teamBId]?.name : (m.placeholderB || 'Đội B');
             logToStore('Hủy Kết Quả', `Đặt lại trận đấu về trạng thái chưa diễn ra: ${tA} gặp ${tB}.`);
           }
         },
 
         generateAllSchedules: () => {
           if (!get().isAdmin) return;
-          set((state) => {
-            const nextEvents = { ...state.events };
-            const settings = state.tournament.settings;
-
-            Object.keys(nextEvents).forEach((evtId) => {
-              const evt = nextEvents[evtId];
-              const groupList = Object.values(evt.groups || {});
-              
-              if (groupList.length > 0) {
-                const knockoutMatches = (evt.matches || []).filter((m) => m.groupId === 'knockout');
-                let groupMatches: Match[] = [];
-                
-                groupList.forEach((group) => {
-                  if (group.teamIds.length >= 2) {
-                    const generated = generateRoundRobinMatches(group.id, group.teamIds, settings);
-                    groupMatches = [...groupMatches, ...generated];
-                  }
-                });
-                
-                // Cân bằng khoảng nghỉ tối ưu giữa các vòng/trận đấu bảng
-                const balancedMatches = balanceMatchesRestTime(groupMatches);
-                
-                nextEvents[evtId] = {
-                  ...evt,
-                  matches: [...balancedMatches, ...knockoutMatches],
-                };
-              }
-            });
-
-            const activeEvent = nextEvents[state.currentEventId];
-            const nextMatches = activeEvent ? activeEvent.matches : [];
-
-            return {
-              events: nextEvents,
-              matches: nextMatches,
-            };
-          });
-
-          logToStore('Khởi Tạo Toàn Giải', `Khởi tạo nhanh toàn bộ lịch thi đấu vòng bảng cho tất cả các nội dung.`);
         },
 
         generateKnockoutBracket: (size) => {
@@ -10250,6 +10434,7 @@ export const useTournamentStore = create<AppState>()(
 
         updateKnockoutScore: (matchId, scoreA, scoreB) => {
           if (!get().isAdmin) return;
+          
           set((state) => {
             // Tìm trận đấu và cập nhật kết quả
             const updatedMatches = state.matches.map((m) => {
@@ -10260,6 +10445,7 @@ export const useTournamentStore = create<AppState>()(
               }
 
               const winner = scoreA > scoreB ? m.teamAId : m.teamBId;
+              
 
               return {
                 ...m,
@@ -10270,42 +10456,18 @@ export const useTournamentStore = create<AppState>()(
               };
             });
 
-            // Tiến hành đẩy Đội thắng vào vòng trong (Auto-progression)
-            const targetMatch = updatedMatches.find((m) => m.id === matchId);
-            if (targetMatch && targetMatch.status === 'finished' && targetMatch.winnerId) {
-              const winnerName = targetMatch.winnerId; // Có thể là tên đội hoặc ID
-
-              if (targetMatch.nextMatchId) {
-                const slot = targetMatch.nextMatchSlot;
-                
-                // Cập nhật trận đấu tiếp theo
-                for (let i = 0; i < updatedMatches.length; i++) {
-                  if (updatedMatches[i].id === targetMatch.nextMatchId) {
-                    if (slot === 'A') {
-                      updatedMatches[i].teamAId = winnerName;
-                    } else {
-                      updatedMatches[i].teamBId = winnerName;
-                    }
-                    // Nếu trận đấy đã đấu, phải reset điểm vì đối thủ thay đổi (Bảo toàn đồng bộ dữ liệu)
-                    updatedMatches[i].scoreA = null;
-                    updatedMatches[i].scoreB = null;
-                    updatedMatches[i].winnerId = null;
-                    updatedMatches[i].status = 'pending';
-                    break;
-                  }
-                }
-              }
-            }
-
             return { matches: updatedMatches };
           });
 
           // Log
           const updatedTarget = get().matches.find((x) => x.id === matchId);
           if (updatedTarget && scoreA !== null && scoreB !== null) {
+            const tA = updatedTarget.teamAId ? get().teams[updatedTarget.teamAId]?.name : 'Đội A';
+            const tB = updatedTarget.teamBId ? get().teams[updatedTarget.teamBId]?.name : 'Đội B';
+
             logToStore(
               'Điểm Loại Trực Tiếp',
-              `Trận [${updatedTarget.knockoutRoundName} - ${updatedTarget.knockoutMatchId}]: ${updatedTarget.teamAId} ${scoreA} - ${scoreB} ${updatedTarget.teamBId}.`
+              `Trận [${updatedTarget.knockoutRoundName} - ${updatedTarget.knockoutMatchId}]: ${tA} ${scoreA} - ${scoreB} ${tB}.`
             );
           }
         },
@@ -10842,7 +11004,9 @@ export const useTournamentStore = create<AppState>()(
                   knockoutRoundName: m.knockout_round_name !== undefined ? m.knockout_round_name : (m.knockoutRoundName || null),
                   knockoutMatchId: m.knockout_match_id !== undefined ? m.knockout_match_id : (m.knockoutMatchId || null),
                   nextMatchId: m.next_match_id !== undefined ? m.next_match_id : (m.nextMatchId || null),
-                  nextMatchSlot: m.next_match_slot !== undefined ? m.next_match_slot : (m.nextMatchSlot || null)
+                  nextMatchSlot: m.next_match_slot !== undefined ? m.next_match_slot : (m.nextMatchSlot || null),
+                  placeholderA: m.placeholder_a !== undefined ? m.placeholder_a : (m.placeholderA || null),
+                  placeholderB: m.placeholder_b !== undefined ? m.placeholder_b : (m.placeholderB || null)
                 });
               }
             });
@@ -10997,8 +11161,8 @@ export interface Group {
 export interface Match {
   id: string;
   groupId: string; // ID bảng đấu, hoặc "knockout" nếu ở vòng đấu loại trực tiếp
-  teamAId: string;
-  teamBId: string;
+  teamAId: string | null;
+  teamBId: string | null;
   scoreA: number | null; // Điểm đội A (null nếu chưa đấu)
   scoreB: number | null; // Điểm đội B (null nếu chưa đấu)
   winnerId: string | null; // ID đội thắng (null nếu chưa đấu hoặc hòa)
@@ -11406,8 +11570,10 @@ export function generateKnockoutMatchesSchema(
     const bronzeMatch: Match = {
       id: bronzeMatchId,
       groupId: 'knockout',
-      teamAId: 'Thua Bán Kết 1',
-      teamBId: 'Thua Bán Kết 2',
+      teamAId: null,
+      teamBId: null,
+      placeholderA: 'Thua Bán Kết 1',
+      placeholderB: 'Thua Bán Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11420,8 +11586,10 @@ export function generateKnockoutMatchesSchema(
     const finalMatch: Match = {
       id: finalMatchId,
       groupId: 'knockout',
-      teamAId: 'Thắng Bán Kết 1',
-      teamBId: 'Thắng Bán Kết 2',
+      teamAId: null,
+      teamBId: null,
+      placeholderA: 'Thắng Bán Kết 1',
+      placeholderB: 'Thắng Bán Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11434,8 +11602,10 @@ export function generateKnockoutMatchesSchema(
     const sf1: Match = {
       id: `ko-SF1-${randomId()}`,
       groupId: 'knockout',
-      teamAId: advancingTeams[0] ? advancingTeams[0].placeholder : 'Nhất Bảng A',
-      teamBId: advancingTeams[1] ? advancingTeams[1].placeholder : 'Nhì Bảng B',
+      teamAId: null,
+      teamBId: null,
+      placeholderA: advancingTeams[0] ? advancingTeams[0].placeholder : 'Nhất Bảng A',
+      placeholderB: advancingTeams[1] ? advancingTeams[1].placeholder : 'Nhì Bảng B',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11450,8 +11620,10 @@ export function generateKnockoutMatchesSchema(
     const sf2: Match = {
       id: `ko-SF2-${randomId()}`,
       groupId: 'knockout',
-      teamAId: advancingTeams[2] ? advancingTeams[2].placeholder : 'Nhất Bảng B',
-      teamBId: advancingTeams[3] ? advancingTeams[3].placeholder : 'Nhì Bảng A',
+      teamAId: null,
+      teamBId: null,
+      placeholderA: advancingTeams[2] ? advancingTeams[2].placeholder : 'Nhất Bảng B',
+      placeholderB: advancingTeams[3] ? advancingTeams[3].placeholder : 'Nhì Bảng A',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11486,8 +11658,8 @@ export function generateKnockoutMatchesSchema(
     const bronzeMatch: Match = {
       id: `ko-${bronzeId}-${randomId()}`,
       groupId: 'knockout',
-      teamAId: 'L-SF1', // Nhãn giữ chỗ cho đội thua SF1
-      teamBId: 'L-SF2', // Thua SF2
+      teamAId: null, placeholderA: 'L-SF1', // Nhãn giữ chỗ cho đội thua SF1
+      teamBId: null, placeholderB: 'L-SF2', // Thua SF2
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11500,8 +11672,8 @@ export function generateKnockoutMatchesSchema(
     const finalMatch: Match = {
       id: `ko-${finalId}-${randomId()}`,
       groupId: 'knockout',
-      teamAId: 'W-SF1', // Thắng SF1
-      teamBId: 'W-SF2', // Thắng SF2
+      teamAId: null, placeholderA: 'W-SF1', // Thắng SF1
+      teamBId: null, placeholderB: 'W-SF2', // Thắng SF2
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11515,8 +11687,8 @@ export function generateKnockoutMatchesSchema(
     const sf1: Match = {
       id: `ko-${sfIds[0]}-${randomId()}`,
       groupId: 'knockout',
-      teamAId: 'W-QF1',
-      teamBId: 'W-QF2',
+      teamAId: null, placeholderA: 'W-QF1',
+      teamBId: null, placeholderB: 'W-QF2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11531,8 +11703,8 @@ export function generateKnockoutMatchesSchema(
     const sf2: Match = {
       id: `ko-${sfIds[1]}-${randomId()}`,
       groupId: 'knockout',
-      teamAId: 'W-QF3',
-      teamBId: 'W-QF4',
+      teamAId: null, placeholderA: 'W-QF3',
+      teamBId: null, placeholderB: 'W-QF4',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11557,8 +11729,8 @@ export function generateKnockoutMatchesSchema(
       qfMatches.push({
         id: `ko-${qfIds[i]}-${randomId()}`,
         groupId: 'knockout',
-        teamAId: tA,
-        teamBId: tB,
+        teamAId: null, placeholderA: tA,
+        teamBId: null, placeholderB: tB,
         scoreA: null,
         scoreB: null,
         winnerId: null,
@@ -11587,8 +11759,8 @@ export function generateKnockoutMatchesSchema(
     const bronzeMatch: Match = {
       id: bronzeMatchId,
       groupId: 'knockout',
-      teamAId: 'Thua Bán Kết 1',
-      teamBId: 'Thua Bán Kết 2',
+      teamAId: null, placeholderA: 'Thua Bán Kết 1',
+      teamBId: null, placeholderB: 'Thua Bán Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11601,8 +11773,8 @@ export function generateKnockoutMatchesSchema(
     const finalMatch: Match = {
       id: finalMatchId,
       groupId: 'knockout',
-      teamAId: 'Thắng Bán Kết 1',
-      teamBId: 'Thắng Bán Kết 2',
+      teamAId: null, placeholderA: 'Thắng Bán Kết 1',
+      teamBId: null, placeholderB: 'Thắng Bán Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11618,8 +11790,8 @@ export function generateKnockoutMatchesSchema(
     const sf1: Match = {
       id: sf1Id,
       groupId: 'knockout',
-      teamAId: 'Thắng Tứ Kết 1',
-      teamBId: 'Thắng Tứ Kết 2',
+      teamAId: null, placeholderA: 'Thắng Tứ Kết 1',
+      teamBId: null, placeholderB: 'Thắng Tứ Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11634,8 +11806,8 @@ export function generateKnockoutMatchesSchema(
     const sf2: Match = {
       id: sf2Id,
       groupId: 'knockout',
-      teamAId: 'Thắng Tứ Kết 3',
-      teamBId: 'Thắng Tứ Kết 4',
+      teamAId: null, placeholderA: 'Thắng Tứ Kết 3',
+      teamBId: null, placeholderB: 'Thắng Tứ Kết 4',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11659,8 +11831,8 @@ export function generateKnockoutMatchesSchema(
       qfMatches.push({
         id: qfIdStr,
         groupId: 'knockout',
-        teamAId: `Thắng Vòng 1/8 (Trận ${i * 2 + 1})`,
-        teamBId: `Thắng Vòng 1/8 (Trận ${i * 2 + 2})`,
+        teamAId: null, placeholderA: `Thắng Vòng 1/8 (Trận ${i * 2 + 1})`,
+        teamBId: null, placeholderB: `Thắng Vòng 1/8 (Trận ${i * 2 + 2})`,
         scoreA: null,
         scoreB: null,
         winnerId: null,
@@ -11685,8 +11857,8 @@ export function generateKnockoutMatchesSchema(
       r16Matches.push({
         id: r16IdStr,
         groupId: 'knockout',
-        teamAId: `Thắng Vòng 32 (Trận ${i * 2 + 1})`,
-        teamBId: `Thắng Vòng 32 (Trận ${i * 2 + 2})`,
+        teamAId: null, placeholderA: `Thắng Vòng 32 (Trận ${i * 2 + 1})`,
+        teamBId: null, placeholderB: `Thắng Vòng 32 (Trận ${i * 2 + 2})`,
         scoreA: null,
         scoreB: null,
         winnerId: null,
@@ -11711,8 +11883,8 @@ export function generateKnockoutMatchesSchema(
       r32Matches.push({
         id: `ko-R32-${i + 1}-${randomId()}`,
         groupId: 'knockout',
-        teamAId: tA,
-        teamBId: tB,
+        teamAId: null, placeholderA: tA,
+        teamBId: null, placeholderB: tB,
         scoreA: null,
         scoreB: null,
         winnerId: null,
@@ -11742,8 +11914,8 @@ export function generateKnockoutMatchesSchema(
     const bronzeMatch: Match = {
       id: bronzeMatchId,
       groupId: 'knockout',
-      teamAId: 'Thua Bán Kết 1',
-      teamBId: 'Thua Bán Kết 2',
+      teamAId: null, placeholderA: 'Thua Bán Kết 1',
+      teamBId: null, placeholderB: 'Thua Bán Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11756,8 +11928,8 @@ export function generateKnockoutMatchesSchema(
     const finalMatch: Match = {
       id: finalMatchId,
       groupId: 'knockout',
-      teamAId: 'Thắng Bán Kết 1',
-      teamBId: 'Thắng Bán Kết 2',
+      teamAId: null, placeholderA: 'Thắng Bán Kết 1',
+      teamBId: null, placeholderB: 'Thắng Bán Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11773,8 +11945,8 @@ export function generateKnockoutMatchesSchema(
     const sf1: Match = {
       id: sf1Id,
       groupId: 'knockout',
-      teamAId: 'Thắng Tứ Kết 1',
-      teamBId: 'Thắng Tứ Kết 2',
+      teamAId: null, placeholderA: 'Thắng Tứ Kết 1',
+      teamBId: null, placeholderB: 'Thắng Tứ Kết 2',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11789,8 +11961,8 @@ export function generateKnockoutMatchesSchema(
     const sf2: Match = {
       id: sf2Id,
       groupId: 'knockout',
-      teamAId: 'Thắng Tứ Kết 3',
-      teamBId: 'Thắng Tứ Kết 4',
+      teamAId: null, placeholderA: 'Thắng Tứ Kết 3',
+      teamBId: null, placeholderB: 'Thắng Tứ Kết 4',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -11814,8 +11986,8 @@ export function generateKnockoutMatchesSchema(
       qfMatches.push({
         id: qfIdStr,
         groupId: 'knockout',
-        teamAId: `Thắng Vòng 16 (Trận ${i * 2 + 1})`,
-        teamBId: `Thắng Vòng 16 (Trận ${i * 2 + 2})`,
+        teamAId: null, placeholderA: `Thắng Vòng 16 (Trận ${i * 2 + 1})`,
+        teamBId: null, placeholderB: `Thắng Vòng 16 (Trận ${i * 2 + 2})`,
         scoreA: null,
         scoreB: null,
         winnerId: null,
@@ -11840,8 +12012,8 @@ export function generateKnockoutMatchesSchema(
       r16Matches.push({
         id: `ko-R16-${i + 1}-${randomId()}`,
         groupId: 'knockout',
-        teamAId: tA,
-        teamBId: tB,
+        teamAId: null, placeholderA: tA,
+        teamBId: null, placeholderB: tB,
         scoreA: null,
         scoreB: null,
         winnerId: null,

@@ -19,6 +19,7 @@ appendFile('package.json');
 appendFile('vite.config.ts');
 appendFile('tailwind.config.js');
 appendFile('tailwind.config.ts');
+appendFile('tsconfig.json');
 appendFile('eslint.config.js');
 
 function walkDir(dir: string) {
