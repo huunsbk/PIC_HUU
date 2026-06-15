@@ -1471,7 +1471,88 @@ export const useTournamentStore = create<AppState>()(
           });
         },
 
-        
+        updateMatchScore: (matchId, scoreA, scoreB) => {
+          if (!get().isAdmin) return;
+          set((state) => {
+            const matchesCopy = state.matches.map((m) => {
+              if (m.id !== matchId) return m;
+
+              if (scoreA === null || scoreB === null) {
+                return { ...m, scoreA: null, scoreB: null, winnerId: null, status: 'pending' as const };
+              }
+
+              let winnerId: string | null = null;
+              if (scoreA > scoreB) {
+                winnerId = m.teamAId;
+              } else if (scoreB > scoreA) {
+                winnerId = m.teamBId;
+              }
+
+              return {
+                ...m,
+                scoreA,
+                scoreB,
+                winnerId,
+                status: 'finished' as const,
+              };
+            });
+
+            const eventUpdates: Record<string, any> = {};
+            let targetEventId: string | undefined;
+            Object.values(state.events).forEach(evt => {
+              if (evt.matches?.some(em => em.id === matchId)) {
+                targetEventId = evt.id;
+              }
+            });
+            
+            if (targetEventId) {
+              const evt = state.events[targetEventId];
+              eventUpdates[targetEventId] = {
+                ...evt,
+                matches: evt.matches.map((em: any) => em.id === matchId ? { 
+                  ...em,
+                  scoreA: scoreA,
+                  scoreB: scoreB,
+                  winnerId: (scoreA !== null && scoreB !== null) ? (scoreA > scoreB ? em.teamAId : (scoreB > scoreA ? em.teamBId : null)) : null,
+                  status: (scoreA !== null && scoreB !== null) ? 'finished' : 'pending'
+                } : em)
+              };
+            }
+
+            return { 
+                matches: matchesCopy,
+                events: { ...state.events, ...eventUpdates }
+            };
+          });
+
+          const m = get().matches.find((x) => x.id === matchId);
+          if (m && scoreA !== null && scoreB !== null) {
+            const tA = m.teamAId ? get().teams[m.teamAId]?.name : (m.placeholderA || 'Đội A');
+            const tB = m.teamBId ? get().teams[m.teamBId]?.name : (m.placeholderB || 'Đội B');
+            logToStore('Cập Nhật Điểm', `Cập nhật kết quả trận đấu: [${tA}] ${scoreA} - ${scoreB} [${tB}].`);
+          }
+        },
+
+        resetMatchScore: (matchId) => {
+          if (!get().isAdmin) return;
+          const m = get().matches.find((x) => x.id === matchId);
+          set((state) => {
+            const matchesCopy = state.matches.map((x) => {
+              if (x.id !== matchId) return x;
+              return { ...x, scoreA: null, scoreB: null, winnerId: null, status: 'pending' as const };
+            });
+            return { matches: matchesCopy };
+          });
+          if (m) {
+            const tA = m.teamAId ? get().teams[m.teamAId]?.name : (m.placeholderA || 'Đội A');
+            const tB = m.teamBId ? get().teams[m.teamBId]?.name : (m.placeholderB || 'Đội B');
+            logToStore('Hủy Kết Quả', `Đặt lại trận đấu về trạng thái chưa diễn ra: ${tA} gặp ${tB}.`);
+          }
+        },
+
+        generateAllSchedules: () => {
+          if (!get().isAdmin) return;
+        },
 
         generateKnockoutBracket: (size) => {
           if (!get().isAdmin) return;

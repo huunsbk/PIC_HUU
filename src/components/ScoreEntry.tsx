@@ -10,18 +10,19 @@ export default function ScoreEntry() {
 
   const eventList = Object.values(events);
   
-  if (eventList.length === 0) {
-    return <div className="text-center py-20 text-zinc-500 font-bold bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">Chưa có nội dung thi đấu nào. Vui lòng tạo nội dung trước.</div>;
-  }
-
   // Safe checks for currentEventId
   const currentEvt = currentEventId && events[currentEventId] ? events[currentEventId] : eventList[0];
   
   const isPermitted = React.useMemo(() => {
     if (userRole !== 'admin3') return true;
+    if (!currentEvt) return false;
     const admin3Acc = accounts.find(a => a.username === currentUser);
     return admin3Acc?.permittedEventIds?.includes(currentEvt.id) || false;
-  }, [userRole, accounts, currentUser, currentEvt.id]);
+  }, [userRole, accounts, currentUser, currentEvt?.id]);
+
+  if (eventList.length === 0) {
+    return <div className="text-center py-20 text-zinc-500 font-bold bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">Chưa có nội dung thi đấu nào. Vui lòng tạo nội dung trước.</div>;
+  }
 
   if (!currentEvt.matches || currentEvt.matches.length === 0) {
      return (
@@ -113,8 +114,8 @@ export default function ScoreEntry() {
             
             <div className="flex-1 overflow-y-auto p-3 space-y-2 h-[500px]">
                 {evtMatches.map((m, idx) => {
-                    const teamA = currentEvt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
-                    const teamB = currentEvt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
+                    const teamA = m.teamAId && currentEvt.teams[m.teamAId] ? currentEvt.teams[m.teamAId].name : (m.placeholderA || getReadableTeamName(m.teamAId));
+                    const teamB = m.teamBId && currentEvt.teams[m.teamBId] ? currentEvt.teams[m.teamBId].name : (m.placeholderB || getReadableTeamName(m.teamBId));
                     const group = currentEvt.groups[m.groupId];
                     const absoluteIndex = idx + 1;
                     const isFinished = m.status === 'finished';
@@ -156,8 +157,8 @@ export default function ScoreEntry() {
                         btnJsx = (
                             <button
                                 onClick={() => handleSetPlaying(m.id)}
-                                disabled={!isPermitted}
-                                className={`text-[9px] font-bold px-2.5 py-1.5 rounded leading-none shrink-0 shadow-sm transition-colors mt-1 text-center ${!isPermitted ? 'text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 cursor-not-allowed' : 'text-zinc-600 bg-zinc-150 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer'}`}
+                            disabled={!isPermitted || !m.teamAId || !m.teamBId}
+                            className={`text-[9px] font-bold px-2.5 py-1.5 rounded leading-none shrink-0 shadow-sm transition-colors mt-1 text-center ${(!isPermitted || !m.teamAId || !m.teamBId) ? 'text-zinc-400 bg-zinc-100 dark:bg-zinc-800/50 cursor-not-allowed' : 'text-zinc-600 bg-zinc-150 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer'}`}
                             >
                                 CHỜ
                             </button>
@@ -206,8 +207,8 @@ export default function ScoreEntry() {
            ) : (
                <div className="grid grid-cols-1 gap-6">
                    {playingMatches.map(m => {
-                       const teamA = currentEvt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
-                       const teamB = currentEvt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
+                       const teamA = m.teamAId && currentEvt.teams[m.teamAId] ? currentEvt.teams[m.teamAId].name : (m.placeholderA || getReadableTeamName(m.teamAId));
+                       const teamB = m.teamBId && currentEvt.teams[m.teamBId] ? currentEvt.teams[m.teamBId].name : (m.placeholderB || getReadableTeamName(m.teamBId));
                        const group = currentEvt.groups[m.groupId];
                        
                        let roundLabel = "";
