@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import ExcelJS from 'exceljs';
 import { useTournamentStore } from '../store';
 import { calculateGroupStandings, balanceMatchesRestTime } from '../utils/tournamentEngine';
+import { supabase } from '../supabaseClient';
 import { 
   Printer, 
   RefreshCw, 
@@ -54,6 +55,7 @@ export default function SchedulerAndScoreKeeper() {
   // Confirmations dialogs
   const [showRegenConfirm, setShowRegenConfirm] = useState(false);
   const [showResetScoresConfirm, setShowResetScoresConfirm] = useState(false);
+  const [regenLoading, setRegenLoading] = useState(false);
 
   // Sync state whenever activeGroup or score values change
   useEffect(() => {
@@ -106,12 +108,32 @@ export default function SchedulerAndScoreKeeper() {
     }
   };
 
-  // Perform whole group regeneration
-  const handleRegenSubmit = () => {
+  // Perform whole group regeneration via Backend RPC
+  const handleRegenSubmit = async () => {
     if (!activeGroup) return;
-    generateMatchesForGroup(activeGroup.id);
+    
+    setRegenLoading(true);
+    const tenantId = useTournamentStore.getState().activeTenantId || 'default';
+    
+    const { data, error } = await supabase.rpc('generate_round_robin_schedule', { 
+      p_tenant_id: tenantId, 
+      p_group_id: activeGroup.id 
+    });
+    
+    setRegenLoading(false);
+
+    if (error) {
+      alert(`Lỗi khởi tạo từ Backend: ${error.message}`);
+      return;
+    }
+
+    if (data && data.success === false) {
+      alert(`Cảnh báo: ${data.message}`);
+      return;
+    }
+
     setShowRegenConfirm(false);
-    addLog('Thiết Lập Lịch', `Tái tạo toàn bộ lịch đấu cho bảng [${activeGroup.name}].`);
+    addLog('Thiết Lập Lịch', `Tái tạo toàn bộ lịch đấu cho bảng [${activeGroup.name}] qua Backend.`);
   };
 
   // Reset scores for active group matches only
@@ -727,10 +749,11 @@ export default function SchedulerAndScoreKeeper() {
               
               <button
                 onClick={handleRegenSubmit}
-                className="px-6 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow-md cursor-pointer uppercase tracking-wider"
+                disabled={regenLoading}
+                className="px-6 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow-md cursor-pointer uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
                 id="btn-confirm-regen-submit"
               >
-                Đồng ý khởi tạo
+                {regenLoading ? 'Đang tạo...' : 'Đồng ý khởi tạo'}
               </button>
             </div>
           </div>
