@@ -158,28 +158,33 @@ export default function App() {
     };
   }, []);
 
-  // Âm thầm tự động kéo dữ liệu (Polling) từ Supabase mỗi 10 giây đối với khách xem (không phải Admin)
-  // để cập nhật điểm số, lịch đấu và bảng xếp hạng trực tuyến tức thì bất cứ lúc nào Admin chỉnh sửa.
+  // Sử dụng Supabase Realtime WebSockets thay vì setInterval (Polling)
+  // Chỉ nhận lượng dữ liệu đúng bằng 1 trận đấu thay vì toàn bộ DB
   useEffect(() => {
-    // Kéo dữ liệu sau mỗi 10 giây cho guest
-    const guestInterval = setInterval(() => {
-      if (!isAdmin) {
-        initSupabase();
-      }
-    }, 10000); 
+    let debounceTimer: number;
+    const triggerFullSync = () => {
+       window.clearTimeout(debounceTimer);
+       debounceTimer = window.setTimeout(() => {
+          useTournamentStore.getState().initSupabase();
+       }, 2500); // Gộp các thay đổi cấu trúc (tránh spam)
+    };
 
-    // Kiểm tra đăng nhập song song mỗi 2 giây cực nhanh cho admin
-    const adminInterval = setInterval(() => {
-      if (isAdmin) {
-        useTournamentStore.getState().checkAdminSession();
-      }
-    }, 2000);
+    const realtimeChannel = supabase.channel('public_db_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (payload) => {
+          // Tối ưu RAM và CPU: Cập nhật trực tiếp 1 trận đấu vào Store mà không cần Reload
+          useTournamentStore.getState().syncRealtimeMatch(payload);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, triggerFullSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, triggerFullSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, triggerFullSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament' }, triggerFullSync)
+      .subscribe();
 
     return () => {
-      clearInterval(guestInterval);
-      clearInterval(adminInterval);
+      supabase.removeChannel(realtimeChannel);
+      window.clearTimeout(debounceTimer);
     };
-  }, [isAdmin, initSupabase]);
+  }, []);
 
   // Bảo mật phiên làm việc: Auto-Logout và xóa cache khi đóng trình duyệt
   useEffect(() => {

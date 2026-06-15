@@ -92,6 +92,7 @@ interface AppState {
   clearLogs: () => void;
   resetAll: () => void;
   initSupabase: () => Promise<void>;
+  syncRealtimeMatch: (payload: any) => void;
 }
 
 const DEFAULT_SETTINGS: TournamentSettings = {
@@ -1904,6 +1905,73 @@ export const useTournamentStore = create<AppState>()(
             currentEventId: 'event-default',
           });
           logToStore('Hệ Thống', 'Đã thiết lập lại toàn bộ dữ liệu ứng dụng về trạng thái mặc định ban đầu.');
+        },
+
+        syncRealtimeMatch: (payload) => {
+          let m: any = null;
+          if (payload.eventType === 'DELETE') {
+             m = payload.old;
+          } else {
+             m = payload.new;
+          }
+          if (!m || !m.id) return;
+
+          set((state) => {
+            // Sự kiện Xóa có thể không chứa event_id trong old, ta quét tất cả matches của tất cả events
+            if (payload.eventType === 'DELETE') {
+              const nextEvents = { ...state.events };
+              Object.keys(nextEvents).forEach(eventId => {
+                const matchesList = nextEvents[eventId].matches.filter(oldM => oldM.id !== m.id);
+                nextEvents[eventId] = { ...nextEvents[eventId], matches: matchesList };
+              });
+              const activeMatches = nextEvents[state.currentEventId]?.matches || [];
+              return { events: nextEvents, matches: activeMatches };
+            }
+
+            const eventId = m.event_id || m.eventId;
+            if (!eventId || !state.events[eventId]) return state;
+
+            let finalGroupId = m.group_id !== undefined ? m.group_id : (m.groupId || null);
+            if (finalGroupId && finalGroupId !== 'knockout' && !finalGroupId.endsWith(`-${eventId}`)) {
+              finalGroupId = `${finalGroupId}-${eventId}`;
+            }
+
+            const updatedMatch: Match = {
+              id: m.id,
+              groupId: finalGroupId,
+              teamAId: m.team_a_id !== undefined ? m.team_a_id : (m.teamAId || null),
+              teamBId: m.team_b_id !== undefined ? m.team_b_id : (m.teamBId || null),
+              scoreA: m.score_a !== undefined && m.score_a !== null ? m.score_a : (m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : null),
+              scoreB: m.score_b !== undefined && m.score_b !== null ? m.score_b : (m.scoreB !== undefined && m.scoreB !== null ? m.scoreB : null),
+              winnerId: m.winner_id !== undefined ? m.winner_id : (m.winnerId || null),
+              status: m.status,
+              round: m.round,
+              knockoutRoundName: m.knockout_round_name !== undefined ? m.knockout_round_name : (m.knockoutRoundName || null),
+              knockoutMatchId: m.knockout_match_id !== undefined ? m.knockout_match_id : (m.knockoutMatchId || null),
+              nextMatchId: m.next_match_id !== undefined ? m.next_match_id : (m.nextMatchId || null),
+              nextMatchSlot: m.next_match_slot !== undefined ? m.next_match_slot : (m.nextMatchSlot || null)
+            };
+
+            const nextEvents = { ...state.events };
+            let matchesList = [...nextEvents[eventId].matches];
+            
+            const existingIdx = matchesList.findIndex(oldM => oldM.id === updatedMatch.id);
+            if (existingIdx >= 0) {
+              matchesList[existingIdx] = { ...matchesList[existingIdx], ...updatedMatch };
+            } else {
+              matchesList.push(updatedMatch);
+            }
+
+            nextEvents[eventId] = {
+              ...nextEvents[eventId],
+              matches: matchesList
+            };
+
+            return {
+              events: nextEvents,
+              matches: state.currentEventId === eventId ? matchesList : state.matches
+            };
+          });
         },
 
         initSupabase: async () => {
