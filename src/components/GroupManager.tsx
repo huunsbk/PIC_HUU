@@ -34,7 +34,11 @@ export default function GroupManager() {
 
   const handleAutoGroup = (method: 'random' | 'seed') => {
     if (teamList.length === 0) {
-      alert('Vui lòng đăng ký đội bóng trước khi thực hiện chia bảng để tránh bảng đấu trống.');
+      try {
+        alert('Vui lòng đăng ký đội bóng trước khi thực hiện chia bảng để tránh bảng đấu trống.');
+      } catch (e) {
+        console.warn('Alert blocked by browser sandboking:', e);
+      }
       return;
     }
     autoGroupTeams(method, numGroups);

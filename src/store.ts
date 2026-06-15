@@ -1418,9 +1418,21 @@ export const useTournamentStore = create<AppState>()(
             
             // Sơ đồ sắp xếp toàn bộ trận đấu vòng bảng tối ưu khoảng nghỉ
             const balancedAllGroupMatches = balanceMatchesRestTime([...otherGroupMatches, ...generated]);
+            const finalMatchesList = [...balancedAllGroupMatches, ...knockoutMatches];
+
+            // Cập nhật cả trong events của currentEventId
+            const curEvtId = state.currentEventId;
+            const updatedEvents = { ...state.events };
+            if (updatedEvents[curEvtId]) {
+              updatedEvents[curEvtId] = {
+                ...updatedEvents[curEvtId],
+                matches: finalMatchesList
+              };
+            }
 
             return {
-              matches: [...balancedAllGroupMatches, ...knockoutMatches],
+              matches: finalMatchesList,
+              events: updatedEvents,
             };
           });
 
@@ -1430,9 +1442,24 @@ export const useTournamentStore = create<AppState>()(
         clearMatchesForGroup: (groupId) => {
           if (!get().isAdmin) return;
           const group = get().groups[groupId];
-          set((state) => ({
-            matches: state.matches.filter((m) => m.groupId !== groupId),
-          }));
+          set((state) => {
+            const finalMatchesList = state.matches.filter((m) => m.groupId !== groupId);
+
+            // Cập nhật cả trong events của currentEventId
+            const curEvtId = state.currentEventId;
+            const updatedEvents = { ...state.events };
+            if (updatedEvents[curEvtId]) {
+              updatedEvents[curEvtId] = {
+                ...updatedEvents[curEvtId],
+                matches: finalMatchesList
+              };
+            }
+
+            return {
+              matches: finalMatchesList,
+              events: updatedEvents,
+            };
+          });
           if (group) {
             logToStore('Dọn Lịch', `Hủy toàn bộ lịch thi đấu và điểm số của bảng [${group.name}].`);
           }
@@ -1550,8 +1577,48 @@ export const useTournamentStore = create<AppState>()(
           }
         },
 
-        generateAllSchedules: () => {
+         generateAllSchedules: () => {
           if (!get().isAdmin) return;
+          const groupsMap = get().groups;
+          const groupIdsList = Object.keys(groupsMap);
+          if (groupIdsList.length === 0) return;
+
+          const settings = get().tournament.settings;
+          let allGeneratedMatches: Match[] = [];
+
+          groupIdsList.forEach((groupId) => {
+            const group = groupsMap[groupId];
+            if (group && group.teamIds && group.teamIds.length > 0) {
+              const generated = generateRoundRobinMatches(groupId, group.teamIds, settings);
+              allGeneratedMatches = [...allGeneratedMatches, ...generated];
+            }
+          });
+
+          set((state) => {
+            // Giữ lại các trận knockout
+            const knockoutMatches = state.matches.filter((m) => m.groupId === 'knockout');
+            
+            // Cân bằng khoảng nghỉ cho các trận vòng bảng mới tạo
+            const balancedAllGroupMatches = balanceMatchesRestTime(allGeneratedMatches);
+            const finalMatchesList = [...balancedAllGroupMatches, ...knockoutMatches];
+
+            // Cập nhật vào event hiện tại
+            const currentEventId = state.currentEventId;
+            const updatedEvents = { ...state.events };
+            if (updatedEvents[currentEventId]) {
+              updatedEvents[currentEventId] = {
+                ...updatedEvents[currentEventId],
+                matches: finalMatchesList,
+              };
+            }
+
+            return {
+              matches: finalMatchesList,
+              events: updatedEvents,
+            };
+          });
+
+          logToStore('Lập Lịch', `Khởi tạo nhanh lịch toàn giải thành công.`);
         },
 
         generateKnockoutBracket: (size) => {

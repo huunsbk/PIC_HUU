@@ -108,32 +108,23 @@ export default function SchedulerAndScoreKeeper() {
     }
   };
 
-  // Perform whole group regeneration via Backend RPC
+  // Perform whole group regeneration via Store Action
   const handleRegenSubmit = async () => {
     if (!activeGroup) return;
     
     setRegenLoading(true);
-    const tenantId = useTournamentStore.getState().activeTenantId || 'default';
-    
-    const { data, error } = await supabase.rpc('generate_round_robin_schedule', { 
-      p_tenant_id: tenantId, 
-      p_group_id: activeGroup.id 
-    });
-    
-    setRegenLoading(false);
-
-    if (error) {
-      alert(`Lỗi khởi tạo từ Backend: ${error.message}`);
-      return;
+    try {
+      generateMatchesForGroup(activeGroup.id);
+      addLog('Thiết Lập Lịch', `Tái tạo toàn bộ lịch đấu cho bảng [${activeGroup.name}] thành công.`);
+    } catch (err: any) {
+      console.error(err);
+      try {
+        alert(`Gặp vấn đề khi tạo lịch đấu: ${err.message || err}`);
+      } catch (ae) {}
+    } finally {
+      setRegenLoading(false);
+      setShowRegenConfirm(false);
     }
-
-    if (data && data.success === false) {
-      alert(`Cảnh báo: ${data.message}`);
-      return;
-    }
-
-    setShowRegenConfirm(false);
-    addLog('Thiết Lập Lịch', `Tái tạo toàn bộ lịch đấu cho bảng [${activeGroup.name}] qua Backend.`);
   };
 
   // Reset scores for active group matches only
