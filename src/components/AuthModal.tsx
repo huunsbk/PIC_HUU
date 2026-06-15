@@ -100,22 +100,50 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     };
 
     if (sessionData?.session) {
-      // 1. Ghi active_sessions
-      const sessionInsert = await supabase.from("active_sessions").insert({
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+
+      const payloadActiveSession = {
         account_id: accountData.account_id,
         session_token: sessionData.session.access_token,
         ip_address: "127.0.0.1",
-        user_agent: navigator.userAgent
-      });
+        browser_info: navigator.userAgent,
+        device_info: navigator.platform || "Unknown",
+        expires_at: expiresAt.toISOString()
+      };
+      
+      console.log("ACTIVE_SESSION_PAYLOAD", payloadActiveSession);
+
+      // 1. Ghi active_sessions
+      const sessionInsert = await supabase.from("active_sessions").insert(payloadActiveSession);
       console.log('Session insert:', sessionInsert);
+      
+      if (sessionInsert.error) {
+        console.error('Session insert failed:', sessionInsert.error);
+        setErrorMsg('Lỗi hệ thống: Không thể ghi nhận phiên đăng nhập.');
+        await supabase.auth.signOut();
+        return;
+      }
+
+      const payloadLoginLog = {
+        account_id: accountData.account_id,
+        action: "LOGIN",
+        ip_address: "127.0.0.1",
+        browser_info: navigator.userAgent,
+        device_info: navigator.platform || "Unknown"
+      };
+
+      console.log("LOGIN_LOG_PAYLOAD", payloadLoginLog);
 
       // 2. Ghi login_logs
-      await supabase.from("login_logs").insert({
-        account_id: accountData.account_id,
-        ip_address: "127.0.0.1",
-        user_agent: navigator.userAgent,
-        status: "SUCCESS"
-      });
+      const logInsert = await supabase.from("login_logs").insert(payloadLoginLog);
+      
+      if (logInsert.error) {
+        console.error('Login log insert failed:', logInsert.error);
+        setErrorMsg('Lỗi hệ thống: Không thể ghi log đăng nhập.');
+        await supabase.auth.signOut();
+        return;
+      }
     }
 
     setSuccessMsg(`Đăng nhập thành công! Chào mừng đại diện ${accountData.display_name}.`);
