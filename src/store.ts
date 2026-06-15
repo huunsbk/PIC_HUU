@@ -78,6 +78,7 @@ interface AppState {
   generateKnockoutBracket: (size: 4 | 8 | 16 | 32) => void;
   updateKnockoutScore: (matchId: string, scoreA: number | null, scoreB: number | null) => void;
   updateKnockoutParticipant: (matchId: string, slot: 'A' | 'B', teamNameOrId: string) => void;
+  propagateKnockoutResets: (changedMatchIds: string[]) => void;
   clearKnockout: () => void;
 
   // UI Actions
@@ -1568,7 +1569,20 @@ export const useTournamentStore = create<AppState>()(
               if (x.id !== matchId) return x;
               return { ...x, scoreA: null, scoreB: null, winnerId: null, status: 'pending' as const };
             });
-            return { matches: matchesCopy };
+
+            const curEvtId = state.currentEventId;
+            const updatedEvents = { ...state.events };
+            if (updatedEvents[curEvtId]) {
+              updatedEvents[curEvtId] = {
+                ...updatedEvents[curEvtId],
+                matches: matchesCopy,
+              };
+            }
+
+            return {
+              matches: matchesCopy,
+              events: updatedEvents,
+            };
           });
           if (m) {
             const tA = m.teamAId ? get().teams[m.teamAId]?.name : (m.placeholderA || 'Đội A');
@@ -1800,8 +1814,20 @@ export const useTournamentStore = create<AppState>()(
 
           set((state) => {
             const filtered = state.matches.filter((m) => m.groupId !== 'knockout');
+            const finalMatchesList = [...filtered, ...koMatches];
+
+            const curEvtId = state.currentEventId;
+            const updatedEvents = { ...state.events };
+            if (updatedEvents[curEvtId]) {
+              updatedEvents[curEvtId] = {
+                ...updatedEvents[curEvtId],
+                matches: finalMatchesList,
+              };
+            }
+
             return {
-              matches: [...filtered, ...koMatches],
+              matches: finalMatchesList,
+              events: updatedEvents,
             };
           });
 
@@ -1815,27 +1841,89 @@ export const useTournamentStore = create<AppState>()(
           if (!get().isAdmin) return;
           
           set((state) => {
-            // Tìm trận đấu và cập nhật kết quả
-            const updatedMatches = state.matches.map((m) => {
-              if (m.id !== matchId) return m;
-
-              if (scoreA === null || scoreB === null) {
-                return { ...m, scoreA: null, scoreB: null, winnerId: null, status: 'pending' as const };
-              }
-
-              const winner = scoreA > scoreB ? m.teamAId : m.teamBId;
-              
-
-              return {
-                ...m,
-                scoreA,
-                scoreB,
-                winnerId: winner,
-                status: 'finished' as const,
-              };
+            const matchesMap = new Map<string, Match>();
+            state.matches.forEach((m) => {
+              matchesMap.set(m.id, { ...m });
             });
 
-            return { matches: updatedMatches };
+            const currentMatch = matchesMap.get(matchId);
+            if (!currentMatch) return state;
+
+            if (scoreA === null || scoreB === null) {
+              currentMatch.scoreA = null;
+              currentMatch.scoreB = null;
+              currentMatch.winnerId = null;
+              currentMatch.status = 'pending';
+            } else {
+              const winner = scoreA > scoreB ? currentMatch.teamAId : currentMatch.teamBId;
+              currentMatch.scoreA = scoreA;
+              currentMatch.scoreB = scoreB;
+              currentMatch.winnerId = winner;
+              currentMatch.status = 'finished';
+            }
+
+            // Propagate winner / null recursively down the tree
+            const queue = [matchId];
+            const visited = new Set<string>();
+
+            while (queue.length > 0) {
+              const currentId = queue.shift()!;
+              if (visited.has(currentId)) continue;
+              visited.add(currentId);
+
+              const m = matchesMap.get(currentId);
+              if (!m) continue;
+
+              const nextId = m.nextMatchId;
+              if (nextId) {
+                const nextMatch = matchesMap.get(nextId);
+                if (nextMatch) {
+                  const winnerOfCurrent = m.winnerId;
+                  const slot = m.nextMatchSlot || 'A';
+
+                  if (slot === 'A') {
+                    nextMatch.teamAId = winnerOfCurrent;
+                  } else {
+                    nextMatch.teamBId = winnerOfCurrent;
+                  }
+
+                  // If winner is null, we must also reset the downstream match and queue it
+                  if (!winnerOfCurrent) {
+                    nextMatch.scoreA = null;
+                    nextMatch.scoreB = null;
+                    nextMatch.winnerId = null;
+                    nextMatch.status = 'pending';
+                    queue.push(nextId);
+                  } else {
+                    // If nextMatch was finished, reset if winner is no longer compatible
+                    if (nextMatch.status === 'finished') {
+                      if (nextMatch.winnerId !== nextMatch.teamAId && nextMatch.winnerId !== nextMatch.teamBId) {
+                        nextMatch.scoreA = null;
+                        nextMatch.scoreB = null;
+                        nextMatch.winnerId = null;
+                        nextMatch.status = 'pending';
+                        queue.push(nextId);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            const updatedMatches = Array.from(matchesMap.values());
+            const curEvtId = state.currentEventId;
+            const updatedEvents = { ...state.events };
+            if (updatedEvents[curEvtId]) {
+              updatedEvents[curEvtId] = {
+                ...updatedEvents[curEvtId],
+                matches: updatedMatches,
+              };
+            }
+
+            return {
+              matches: updatedMatches,
+              events: updatedEvents,
+            };
           });
 
           // Log
@@ -1869,7 +1957,20 @@ export const useTournamentStore = create<AppState>()(
               nextM.status = 'pending';
               return nextM;
             });
-            return { matches: updated };
+
+            const curEvtId = state.currentEventId;
+            const updatedEvents = { ...state.events };
+            if (updatedEvents[curEvtId]) {
+              updatedEvents[curEvtId] = {
+                ...updatedEvents[curEvtId],
+                matches: updated,
+              };
+            }
+
+            return {
+              matches: updated,
+              events: updatedEvents,
+            };
           });
           const m = get().matches.find((x) => x.id === matchId);
           if (m) {
@@ -1880,11 +1981,87 @@ export const useTournamentStore = create<AppState>()(
           }
         },
 
+        propagateKnockoutResets: (changedMatchIds) => {
+          if (!get().isAdmin) return;
+          if (changedMatchIds.length === 0) return;
+
+          set((state) => {
+            const matchesMap = new Map<string, Match>();
+            state.matches.forEach((m) => {
+              matchesMap.set(m.id, { ...m });
+            });
+
+            const queue = [...changedMatchIds];
+            const visited = new Set<string>();
+
+            while (queue.length > 0) {
+              const currentId = queue.shift()!;
+              if (visited.has(currentId)) continue;
+              visited.add(currentId);
+
+              const currentMatch = matchesMap.get(currentId);
+              if (!currentMatch) continue;
+
+              // 1. Reset current match scores, winner, and status
+              currentMatch.scoreA = null;
+              currentMatch.scoreB = null;
+              currentMatch.winnerId = null;
+              currentMatch.status = 'pending';
+
+              // 2. Find downstream match and reset/propagate
+              const nextId = currentMatch.nextMatchId;
+              if (nextId) {
+                const nextMatch = matchesMap.get(nextId);
+                if (nextMatch) {
+                  const slot = currentMatch.nextMatchSlot || 'A';
+                  if (slot === 'A') {
+                    nextMatch.teamAId = null;
+                  } else {
+                    nextMatch.teamBId = null;
+                  }
+                  queue.push(nextId);
+                }
+              }
+            }
+
+            const updatedMatchesList = Array.from(matchesMap.values());
+            const curEvtId = state.currentEventId;
+            const updatedEvents = { ...state.events };
+            if (updatedEvents[curEvtId]) {
+              updatedEvents[curEvtId] = {
+                ...updatedEvents[curEvtId],
+                matches: updatedMatchesList,
+              };
+            }
+
+            return {
+              matches: updatedMatchesList,
+              events: updatedEvents,
+            };
+          });
+
+          logToStore('Điều Chỉnh Trực Tiếp', `Đã dọn dẹp các nhánh hạ nguồn bị ảnh hưởng do thay đổi sơ đồ thi đấu.`);
+        },
+
         clearKnockout: () => {
           if (!get().isAdmin) return;
-          set((state) => ({
-            matches: state.matches.filter((m) => m.groupId !== 'knockout'),
-          }));
+          set((state) => {
+            const finalMatchesList = state.matches.filter((m) => m.groupId !== 'knockout');
+
+            const curEvtId = state.currentEventId;
+            const updatedEvents = { ...state.events };
+            if (updatedEvents[curEvtId]) {
+              updatedEvents[curEvtId] = {
+                ...updatedEvents[curEvtId],
+                matches: finalMatchesList,
+              };
+            }
+
+            return {
+              matches: finalMatchesList,
+              events: updatedEvents,
+            };
+          });
           logToStore('Xóa Nhánh', 'Đã xóa bỏ toàn bộ sơ đồ đấu loại trực tiếp (Knockout).');
         },
 

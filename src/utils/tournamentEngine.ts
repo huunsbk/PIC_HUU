@@ -787,9 +787,76 @@ export function generateKnockoutMatchesSchema(
 /**
  * Chuyển đổi tên đội giữ chỗ / mã vòng đấu loại trực tiếp sang tiếng Việt rõ nghĩa theo yêu cầu của BTC.
  */
-export function getReadableTeamName(teamName: string): string {
+export function getReadableTeamName(teamName: string, groups?: Record<string, any>): string {
   if (!teamName) return '';
-  const nameUpper = teamName.toUpperCase().trim();
+  
+  let clean = teamName.trim();
+  
+  // Dọn dẹp đuôi __e hoặc dấu __ dư thừa do hệ thống ghép/chuẩn hóa mã phòng
+  clean = clean.replace(/__e$/, '');
+  
+  if (clean.startsWith('__1st_')) {
+    const gid = clean.replace('__1st_', '').replace(/__$/, '');
+    if (groups && groups[gid]) {
+      return `Nhất ${groups[gid].name}`;
+    }
+    if (groups) {
+      const found = Object.values(groups).find(
+        (g: any) => g.id === gid || g.id === gid.replace(/__e$/, '') || g.id.startsWith(gid + '-') || gid.startsWith(g.id + '-')
+      );
+      if (found) return `Nhất ${found.name}`;
+    }
+    // Parse dự phòng số thứ tự group
+    const numMatch = gid.match(/group-(\d+)/i) || gid.match(/-(\d+)/);
+    if (numMatch) {
+      const idx = parseInt(numMatch[1], 10);
+      const letter = String.fromCharCode(64 + idx);
+      return `Nhất Bảng ${letter}`;
+    }
+    return `Nhất ${gid.replace('group-', 'Bảng ').toUpperCase()}`;
+  }
+
+  if (clean.startsWith('__2nd_')) {
+    const gid = clean.replace('__2nd_', '').replace(/__$/, '');
+    if (groups && groups[gid]) {
+      return `Nhì ${groups[gid].name}`;
+    }
+    if (groups) {
+      const found = Object.values(groups).find(
+        (g: any) => g.id === gid || g.id === gid.replace(/__e$/, '') || g.id.startsWith(gid + '-') || gid.startsWith(g.id + '-')
+      );
+      if (found) return `Nhì ${found.name}`;
+    }
+    const numMatch = gid.match(/group-(\d+)/i) || gid.match(/-(\d+)/);
+    if (numMatch) {
+      const idx = parseInt(numMatch[1], 10);
+      const letter = String.fromCharCode(64 + idx);
+      return `Nhì Bảng ${letter}`;
+    }
+    return `Nhì ${gid.replace('group-', 'Bảng ').toUpperCase()}`;
+  }
+
+  if (clean.startsWith('__3rd_')) {
+    const gid = clean.replace('__3rd_', '').replace(/__$/, '');
+    if (groups && groups[gid]) {
+      return `Ba ${groups[gid].name}`;
+    }
+    if (groups) {
+      const found = Object.values(groups).find(
+        (g: any) => g.id === gid || g.id === gid.replace(/__e$/, '') || g.id.startsWith(gid + '-') || gid.startsWith(g.id + '-')
+      );
+      if (found) return `Ba ${found.name}`;
+    }
+    const numMatch = gid.match(/group-(\d+)/i) || gid.match(/-(\d+)/);
+    if (numMatch) {
+      const idx = parseInt(numMatch[1], 10);
+      const letter = String.fromCharCode(64 + idx);
+      return `Ba Bảng ${letter}`;
+    }
+    return `Ba XS ${gid}`;
+  }
+
+  const nameUpper = clean.toUpperCase().trim();
 
   // Handle QF winners / losers
   if (nameUpper === 'W-QF1' || nameUpper === 'W_QF1') return 'W-QF1 (Thắng Tứ Kết 1)';
@@ -813,31 +880,31 @@ export function getReadableTeamName(teamName: string): string {
   if (nameUpper === 'THẮNG TỨ KẾT 3' || nameUpper === 'THANG TU KET 3') return 'W-QF3 (Thắng Tứ Kết 3)';
   if (nameUpper === 'THẮNG TỨ KẾT 4' || nameUpper === 'THANG TU KET 4') return 'W-QF4 (Thắng Tứ Kết 4)';
 
-                                const r16WinnerMatch = nameUpper.match(/THẮNG VÒNG 16 \(TRẬN (\d+)\)/) || nameUpper.match(/THANG VONG 16 \(TRAN (\d+)\)/) || teamName.match(/Thắng Vòng 1\/8 \(Trận (\d+)\)/i) || teamName.match(/Thắng Vòng 16 \(Trận (\d+)\)/i);
+  const r16WinnerMatch = nameUpper.match(/THẮNG VÒNG 16 \(TRẬN (\d+)\)/) || nameUpper.match(/THANG VONG 16 \(TRAN (\d+)\)/) || clean.match(/Thắng Vòng 1\/8 \(Trận (\d+)\)/i) || clean.match(/Thắng Vòng 16 \(Trận (\d+)\)/i);
   if (r16WinnerMatch) {
     const num = r16WinnerMatch[1];
     return `W16 (Trận ${num})`;
   }
 
-  const r32WinnerMatch = nameUpper.match(/THẮNG VÒNG 32 \(TRẬN (\d+)\)/) || nameUpper.match(/THANG VONG 32 \(TRAN (\d+)\)/) || teamName.match(/Thắng Vòng 32 \(Trận (\d+)\)/i);
+  const r32WinnerMatch = nameUpper.match(/THẮNG VÒNG 32 \(TRẬN (\d+)\)/) || nameUpper.match(/THANG VONG 32 \(TRAN (\d+)\)/) || clean.match(/Thắng Vòng 32 \(Trận (\d+)\)/i);
   if (r32WinnerMatch) {
     const num = r32WinnerMatch[1];
     return `W32 (Trận ${num})`;
   }
 
-  const qfWinnerMatch = nameUpper.match(/THẮNG TỨ KẾT (\d+)/) || nameUpper.match(/THANG TU KET (\d+)/) || teamName.match(/Thắng Tứ Kết (\d+)/i) || nameUpper.match(/W-QF(\d+)/) || nameUpper.match(/W_QF(\d+)/);
+  const qfWinnerMatch = nameUpper.match(/THẮNG TỨ KẾT (\d+)/) || nameUpper.match(/THANG TU KET (\d+)/) || clean.match(/Thắng Tứ Kết (\d+)/i) || nameUpper.match(/W-QF(\d+)/) || nameUpper.match(/W_QF(\d+)/);
   if (qfWinnerMatch) {
      const num = qfWinnerMatch[1];
      return `W Tứ Kết (Trận ${num})`;
   }
 
-  const sfWinnerMatch = nameUpper.match(/THẮNG BÁN KẾT (\d+)/) || nameUpper.match(/THANG BAN KET (\d+)/) || teamName.match(/Thắng Bán Kết (\d+)/i) || nameUpper.match(/W-SF(\d+)/) || nameUpper.match(/W_SF(\d+)/);
+  const sfWinnerMatch = nameUpper.match(/THẮNG BÁN KẾT (\d+)/) || nameUpper.match(/THANG BAN KET (\d+)/) || clean.match(/Thắng Bán Kết (\d+)/i) || nameUpper.match(/W-SF(\d+)/) || nameUpper.match(/W_SF(\d+)/);
   if (sfWinnerMatch) {
      const num = sfWinnerMatch[1];
      return `W Bán Kết (Trận ${num})`;
   }
 
-  const sfLoserMatch = nameUpper.match(/THUA BÁN KẾT (\d+)/) || nameUpper.match(/THUA BAN KET (\d+)/) || teamName.match(/Thua Bán Kết (\d+)/i) || nameUpper.match(/L-SF(\d+)/) || nameUpper.match(/L_SF(\d+)/);
+  const sfLoserMatch = nameUpper.match(/THUA BÁN KẾT (\d+)/) || nameUpper.match(/THUA BAN KET (\d+)/) || clean.match(/Thua Bán Kết (\d+)/i) || nameUpper.match(/L-SF(\d+)/) || nameUpper.match(/L_SF(\d+)/);
   if (sfLoserMatch) {
      const num = sfLoserMatch[1];
      return `L Bán Kết (Trận ${num})`;
@@ -845,16 +912,16 @@ export function getReadableTeamName(teamName: string): string {
 
   // Handle placeholders like Nhất Bảng A, Nhì Bảng B
   if (nameUpper.startsWith('NHẤT BẢNG ')) {
-      return teamName;
+      return clean;
   }
   if (nameUpper.startsWith('NHÌ BẢNG ')) {
-      return teamName;
+      return clean;
   }
   if (nameUpper.startsWith('BA BẢNG ')) {
-      return teamName;
+      return clean;
   }
 
-  return teamName;
+  return clean;
 }
 
 export function getReadableKoMatchName(knockoutMatchId: string): string {

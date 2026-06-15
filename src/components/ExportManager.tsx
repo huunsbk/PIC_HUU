@@ -267,8 +267,8 @@ export default function ExportManager() {
           const sortedAllList = [...balancedGroupMatches, ...koMtch];
 
           sortedAllList.forEach((m: any, mIdx: number) => {
-            const tAName = evt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
-            const tBName = evt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
+            const tAName = evt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId, evt.groups);
+            const tBName = evt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId, evt.groups);
 
             let gLabel = 'Vòng loại trực tiếp';
             if (m.groupId !== 'knockout') {
@@ -709,8 +709,8 @@ export default function ExportManager() {
                             </thead>
                             <tbody>
                               {evtMatches.map((m, mIdx) => {
-                                const tAName = evt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
-                                const tBName = evt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
+                                const tAName = evt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId, evt.groups);
+                                const tBName = evt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId, evt.groups);
                                 let gLabel = 'Vòng loại trực tiếp';
                                 if (m.groupId !== 'knockout') {
                                   const grpo = evt.groups[m.groupId];

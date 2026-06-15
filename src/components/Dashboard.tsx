@@ -48,14 +48,10 @@ export default function Dashboard() {
   const [notification, setNotification] = useState<string | null>(null);
   const [isCheckingConn, setIsCheckingConn] = useState(false);
 
-  // Auto check and monitor connection in real-time
+  // Check connection once on mount
   React.useEffect(() => {
     checkConnection();
-    const interval = setInterval(() => {
-      checkConnection();
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [checkConnection]);
+  }, []);
 
   const handleManualCheck = async () => {
     if (isCheckingConn) return;

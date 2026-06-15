@@ -227,21 +227,22 @@ export default function App() {
     }
   }, [darkMode]);
 
-  const allNavItems = [
-    { id: 'dashboard', label: 'Trang chủ', icon: Trophy, roles: ['admin1', 'admin2'] },
-    { id: 'teams', label: 'Quản lý đội', icon: Users, roles: ['admin1', 'admin2'] },
-    { id: 'groups', label: 'Chia bảng', icon: Layers, roles: ['admin1', 'admin2'] },
-    { id: 'scoreEntry', label: 'Nhập điểm', icon: Gamepad2, roles: ['admin1', 'admin2', 'admin3'] },
-    { id: 'matches', label: 'Lịch & Kết quả', icon: CalendarDays, roles: ['admin1', 'admin2'] },
-    { id: 'standings', label: 'Tuyển chọn vòng trong', icon: FileSpreadsheet, roles: ['admin1', 'admin2'] },
-    { id: 'knockout', label: 'Sơ đồ trực tiếp', icon: Network, roles: ['admin1', 'admin2'] },
-    { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv, roles: ['guest', 'admin1', 'admin2', 'admin3'] },
-    { id: 'export', label: 'Xuất file', icon: FileDown, roles: ['admin1', 'admin2'] },
-    { id: 'accounts', label: userRole === 'admin1' ? 'Quản trị đơn vị' : 'Tạo tài khoản', icon: Settings, roles: ['admin1', 'admin2'] },
-    { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList, roles: ['admin1', 'admin2'] },
-  ];
-
-  const navItems = allNavItems.filter(item => item.roles.includes(userRole));
+  const navItems = React.useMemo(() => {
+    const allNavItems = [
+      { id: 'dashboard', label: 'Trang chủ', icon: Trophy, roles: ['admin1', 'admin2'] },
+      { id: 'teams', label: 'Quản lý đội', icon: Users, roles: ['admin1', 'admin2'] },
+      { id: 'groups', label: 'Chia bảng', icon: Layers, roles: ['admin1', 'admin2'] },
+      { id: 'scoreEntry', label: 'Nhập điểm', icon: Gamepad2, roles: ['admin1', 'admin2', 'admin3'] },
+      { id: 'matches', label: 'Lịch & Kết quả', icon: CalendarDays, roles: ['admin1', 'admin2'] },
+      { id: 'standings', label: 'Tuyển chọn vòng trong', icon: FileSpreadsheet, roles: ['admin1', 'admin2'] },
+      { id: 'knockout', label: 'Sơ đồ trực tiếp', icon: Network, roles: ['admin1', 'admin2'] },
+      { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv, roles: ['guest', 'admin1', 'admin2', 'admin3'] },
+      { id: 'export', label: 'Xuất file', icon: FileDown, roles: ['admin1', 'admin2'] },
+      { id: 'accounts', label: userRole === 'admin1' ? 'Quản trị đơn vị' : 'Tạo tài khoản', icon: Settings, roles: ['admin1', 'admin2'] },
+      { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList, roles: ['admin1', 'admin2'] },
+    ];
+    return allNavItems.filter(item => item.roles.includes(userRole));
+  }, [userRole]);
 
   useEffect(() => {
     if (!navItems.find(item => item.id === selectedTab)) {

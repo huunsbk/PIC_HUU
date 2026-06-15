@@ -78,7 +78,7 @@ function AutoScrollList({ children, className = '', maxHeight = '350px' }: AutoS
     timer = setTimeout(scroll, 1500);
 
     return () => clearTimeout(timer);
-  }, [children]);
+  }, []);
 
   return (
     <div
@@ -207,8 +207,8 @@ const LiveMatchRow = React.memo(({
   groups,
   absoluteIndex
 }: LiveMatchRowProps) => {
-  const teamA = teams[m.teamAId]?.name || m.placeholderA || getReadableTeamName(m.teamAId);
-  const teamB = teams[m.teamBId]?.name || m.placeholderB || getReadableTeamName(m.teamBId);
+  const teamA = teams[m.teamAId]?.name || m.placeholderA || getReadableTeamName(m.teamAId, groups);
+  const teamB = teams[m.teamBId]?.name || m.placeholderB || getReadableTeamName(m.teamBId, groups);
   const group = groups[m.groupId];
   const isFinished = m.status === 'finished';
   const isPlaying = m.status === 'playing';
@@ -272,6 +272,7 @@ interface KoRoundCardProps {
   round: number;
   roundMatches: any[];
   teams: any;
+  groups?: any;
   roundName: string;
 }
 
@@ -279,6 +280,7 @@ const KoRoundCard = React.memo(({
   round,
   roundMatches,
   teams,
+  groups,
   roundName
 }: KoRoundCardProps) => {
   return (
@@ -286,8 +288,8 @@ const KoRoundCard = React.memo(({
       <h6 className="text-[9px] font-black text-zinc-400 border-b pb-1 mb-1.5 uppercase select-none" style={{ fontSize: '13px', color: '#c61a8b' }}>{roundName}</h6>
       <div className="grid grid-cols-1 gap-1">
         {roundMatches.map((m) => {
-          const teamAName = teams[m.teamAId]?.name || m.placeholderA || getReadableTeamName(m.teamAId);
-          const teamBName = teams[m.teamBId]?.name || m.placeholderB || getReadableTeamName(m.teamBId);
+          const teamAName = teams[m.teamAId]?.name || m.placeholderA || getReadableTeamName(m.teamAId, groups);
+          const teamBName = teams[m.teamBId]?.name || m.placeholderB || getReadableTeamName(m.teamBId, groups);
           return (
             <div key={m.id} className="text-[10px] space-y-1 p-1.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800 rounded-lg">
               <div className="text-[8px] font-black text-zinc-450 border-b border-zinc-200/30 dark:border-zinc-805 pb-0.5 mb-1 select-none" style={{ fontSize: '13px', color: '#992371' }}>
@@ -616,8 +618,8 @@ export default function LiveDashboard() {
           const sortedAllList = [...balancedGroupMatches, ...koMtch];
 
           sortedAllList.forEach((m: any, mIdx: number) => {
-            const tAName = evt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId);
-            const tBName = evt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId);
+            const tAName = evt.teams[m.teamAId]?.name || getReadableTeamName(m.teamAId, evt.groups);
+            const tBName = evt.teams[m.teamBId]?.name || getReadableTeamName(m.teamBId, evt.groups);
 
             let gLabel = 'Vòng loại trực tiếp';
             if (m.groupId !== 'knockout') {
@@ -785,14 +787,11 @@ export default function LiveDashboard() {
           {eventList.map((evt) => {
             const stdByGrp = getEventStandings(evt);
             
-            const { evtGroups, evtMatches, koMatches, pendingMatches, finishedMatches } = React.useMemo(() => {
-              const groups = Object.values(evt.groups || {});
-              const matches = evt.matches || [];
-              const ko = matches.filter((m) => m.groupId === 'knockout');
-              const pending = balanceMatchesRestTime(matches.filter((m) => m.status === 'pending'));
-              const finished = matches.filter((m) => m.status === 'finished').slice(-4);
-              return { evtGroups: groups, evtMatches: matches, koMatches: ko, pendingMatches: pending, finishedMatches: finished };
-            }, [evt]);
+            const evtGroups = Object.values(evt.groups || {});
+            const evtMatches = evt.matches || [];
+            const koMatches = evtMatches.filter((m) => m.groupId === 'knockout');
+            const pendingMatches = balanceMatchesRestTime(evtMatches.filter((m) => m.status === 'pending'));
+            const finishedMatches = evtMatches.filter((m) => m.status === 'finished').slice(-4);
 
             return (
               <div 
@@ -888,6 +887,7 @@ export default function LiveDashboard() {
                               round={round}
                               roundMatches={roundMatches}
                               teams={evt.teams || {}}
+                              groups={evt.groups || {}}
                               roundName={roundName}
                             />
                           );
@@ -909,14 +909,11 @@ export default function LiveDashboard() {
             if (!currentEvt) return <div className="py-20 text-center text-zinc-550">Lỗi: Nội dung trống.</div>;
 
             const stdByGrp = getEventStandings(currentEvt);
-            const { evtGroups, evtMatches, koMatches, pendingMatches, finishedMatches } = React.useMemo(() => {
-              const groups = Object.values(currentEvt.groups || {});
-              const matches = currentEvt.matches || [];
-              const ko = matches.filter((m) => m.groupId === 'knockout');
-              const pending = balanceMatchesRestTime(matches.filter((m) => m.status === 'pending'));
-              const finished = matches.filter((m) => m.status === 'finished').slice(-10);
-              return { evtGroups: groups, evtMatches: matches, koMatches: ko, pendingMatches: pending, finishedMatches: finished };
-            }, [currentEvt]);
+            const evtGroups = Object.values(currentEvt.groups || {});
+            const evtMatches = currentEvt.matches || [];
+            const koMatches = evtMatches.filter((m) => m.groupId === 'knockout');
+            const pendingMatches = balanceMatchesRestTime(evtMatches.filter((m) => m.status === 'pending'));
+            const finishedMatches = evtMatches.filter((m) => m.status === 'finished').slice(-10);
 
             return (
               <>

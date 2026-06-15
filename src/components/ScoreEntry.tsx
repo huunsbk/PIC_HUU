@@ -130,8 +130,8 @@ export default function ScoreEntry() {
             
             <div className="flex-1 overflow-y-auto p-3 space-y-2 h-[500px]">
                 {evtMatches.map((m, idx) => {
-                    const teamA = m.teamAId && currentEvt.teams[m.teamAId] ? currentEvt.teams[m.teamAId].name : (m.placeholderA || getReadableTeamName(m.teamAId));
-                    const teamB = m.teamBId && currentEvt.teams[m.teamBId] ? currentEvt.teams[m.teamBId].name : (m.placeholderB || getReadableTeamName(m.teamBId));
+                    const teamA = m.teamAId && currentEvt.teams[m.teamAId] ? currentEvt.teams[m.teamAId].name : (m.placeholderA || getReadableTeamName(m.teamAId, currentEvt.groups));
+                    const teamB = m.teamBId && currentEvt.teams[m.teamBId] ? currentEvt.teams[m.teamBId].name : (m.placeholderB || getReadableTeamName(m.teamBId, currentEvt.groups));
                     const group = currentEvt.groups[m.groupId];
                     const absoluteIndex = idx + 1;
                     const isFinished = m.status === 'finished';
@@ -223,8 +223,8 @@ export default function ScoreEntry() {
            ) : (
                <div className="grid grid-cols-1 gap-6">
                    {playingMatches.map(m => {
-                       const teamA = m.teamAId && currentEvt.teams[m.teamAId] ? currentEvt.teams[m.teamAId].name : (m.placeholderA || getReadableTeamName(m.teamAId));
-                       const teamB = m.teamBId && currentEvt.teams[m.teamBId] ? currentEvt.teams[m.teamBId].name : (m.placeholderB || getReadableTeamName(m.teamBId));
+                       const teamA = m.teamAId && currentEvt.teams[m.teamAId] ? currentEvt.teams[m.teamAId].name : (m.placeholderA || getReadableTeamName(m.teamAId, currentEvt.groups));
+                       const teamB = m.teamBId && currentEvt.teams[m.teamBId] ? currentEvt.teams[m.teamBId].name : (m.placeholderB || getReadableTeamName(m.teamBId, currentEvt.groups));
                        const group = currentEvt.groups[m.groupId];
                        
                        let roundLabel = "";

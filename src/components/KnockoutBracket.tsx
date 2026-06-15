@@ -19,6 +19,7 @@ export default function KnockoutBracket() {
     clearKnockout,
     updateKnockoutScore,
     updateKnockoutParticipant,
+    propagateKnockoutResets,
     addLog,
     isAdmin,
   } = useTournamentStore();
@@ -26,6 +27,7 @@ export default function KnockoutBracket() {
   const [sz, setSz] = useState<4 | 8 | 16 | 32>(4);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [matchesSnapshot, setMatchesSnapshot] = useState<any[]>([]);
   const [numBestThirds, setNumBestThirds] = useState<number>(3);
 
   // Lấy danh sách đội thi đấu để làm dropdown chọn đội đi tiếp
@@ -70,15 +72,9 @@ export default function KnockoutBracket() {
   const calculatedBestThirds = calculateBestThirdPlaces(stdsOnlyMap as any, matches, tournament.settings, groupNamesMap);
 
   const sortedGroups = Object.values(groups).sort((a,b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
-  const firstPlaceSlots = sortedGroups.map(g => ({ key: `__1st_${g.id}`, label: `Nhất ${g.name.replace(/^Bảng\s+/i, '')}` }));
-  const secondPlaceSlots = sortedGroups.map(g => ({ key: `__2nd_${g.id}`, label: `Nhì ${g.name.replace(/^Bảng\s+/i, '')}` }));
+  const firstPlaceSlots = sortedGroups.map(g => ({ key: `__1st_${g.id}`, label: `Nhất Bảng ${g.name.replace(/^Bảng\s+/i, '')}` }));
+  const secondPlaceSlots = sortedGroups.map(g => ({ key: `__2nd_${g.id}`, label: `Nhì Bảng ${g.name.replace(/^Bảng\s+/i, '')}` }));
   const thirdPlaceSlots = Array.from({length: numBestThirds}).map((_, i) => ({ key: `__3rd_${i+1}`, label: `Ba XS ${i+1}` }));
-
-  const usedParticipants = new Set<string>();
-  koMatches.forEach(m => {
-    if (m.teamAId) usedParticipants.add(m.teamAId);
-    if (m.teamBId) usedParticipants.add(m.teamBId);
-  });
 
   const finishedGroupTeamNames: string[] = [];
   Object.values(groups).forEach(g => {
@@ -86,6 +82,81 @@ export default function KnockoutBracket() {
       finishedGroupTeamNames.push(...g.teamIds.map(tid => teams[tid]?.name));
     }
   });
+
+  // Web helper to resolve a team ID from a slot key or standard team ID
+  const getTeamIdOfSlot = (slotKey: string): string | null => {
+    if (!slotKey) return null;
+    if (slotKey.startsWith('__1st_')) {
+      const gid = slotKey.replace('__1st_', '');
+      const groupInfo = groupStandingsMap[gid];
+      if (groupInfo?.isFinished && groupInfo.standings[0]) {
+        return groupInfo.standings[0].teamId;
+      }
+      return null;
+    }
+    if (slotKey.startsWith('__2nd_')) {
+      const gid = slotKey.replace('__2nd_', '');
+      const groupInfo = groupStandingsMap[gid];
+      if (groupInfo?.isFinished && groupInfo.standings[1]) {
+        return groupInfo.standings[1].teamId;
+      }
+      return null;
+    }
+    if (slotKey.startsWith('__3rd_')) {
+      const rank = parseInt(slotKey.replace('__3rd_', ''), 10);
+      if (allGroupsFinished && calculatedBestThirds[rank - 1]) {
+        return calculatedBestThirds[rank - 1].teamId;
+      }
+      return null;
+    }
+    if (teams[slotKey]) return slotKey;
+    const foundTeam = Object.values(teams).find(t => t.name === slotKey || t.id === slotKey);
+    if (foundTeam) return foundTeam.id;
+    return null;
+  };
+
+  const placedSlotKeys = new Set<string>();
+  const placedRealTeamIds = new Set<string>();
+  const placedLabels = new Set<string>();
+
+  koMatches.forEach(m => {
+    if (m.teamAId && typeof m.teamAId === 'string') {
+      const val = m.teamAId.trim();
+      if (val.startsWith('__')) {
+        placedSlotKeys.add(val);
+      } else {
+        placedRealTeamIds.add(val);
+        const resolvedId = getTeamIdOfSlot(val);
+        if (resolvedId) {
+          placedRealTeamIds.add(resolvedId);
+        }
+      }
+      placedLabels.add(val);
+    }
+    if (m.teamBId && typeof m.teamBId === 'string') {
+      const val = m.teamBId.trim();
+      if (val.startsWith('__')) {
+        placedSlotKeys.add(val);
+      } else {
+        placedRealTeamIds.add(val);
+        const resolvedId = getTeamIdOfSlot(val);
+        if (resolvedId) {
+          placedRealTeamIds.add(resolvedId);
+        }
+      }
+      placedLabels.add(val);
+    }
+  });
+
+  const isSlotUsed = (slotKey: string, slotLabel?: string) => {
+    if (placedSlotKeys.has(slotKey)) return true;
+    if (slotLabel && (placedSlotKeys.has(slotLabel) || placedRealTeamIds.has(slotLabel) || placedLabels.has(slotLabel))) {
+      return true;
+    }
+    const resolvedId = getTeamIdOfSlot(slotKey);
+    if (resolvedId && (placedRealTeamIds.has(resolvedId) || placedLabels.has(resolvedId))) return true;
+    return false;
+  };
 
   const resolveSlotName = (slotKey: string) => {
     if (!slotKey) return '';
@@ -95,7 +166,7 @@ export default function KnockoutBracket() {
       if (groupInfo?.isFinished && groupInfo.standings[0]) {
         return groupInfo.standings[0].teamName;
       }
-      return `Nhất ${groupNamesMap[gid]?.replace(/^Bảng\s+/i, '') || ''}`;
+      return `Nhất Bảng ${groupNamesMap[gid]?.replace(/^Bảng\s+/i, '') || ''}`;
     }
     if (slotKey.startsWith('__2nd_')) {
       const gid = slotKey.replace('__2nd_', '');
@@ -103,7 +174,7 @@ export default function KnockoutBracket() {
       if (groupInfo?.isFinished && groupInfo.standings[1]) {
         return groupInfo.standings[1].teamName;
       }
-      return `Nhì ${groupNamesMap[gid]?.replace(/^Bảng\s+/i, '') || ''}`;
+      return `Nhì Bảng ${groupNamesMap[gid]?.replace(/^Bảng\s+/i, '') || ''}`;
     }
     if (slotKey.startsWith('__3rd_')) {
       const rank = parseInt(slotKey.replace('__3rd_', ''), 10);
@@ -116,11 +187,121 @@ export default function KnockoutBracket() {
     const foundTeam = Object.values(teams).find(t => t.name === slotKey);
     if (foundTeam) return foundTeam.name;
 
-    return getReadableTeamName(slotKey);
+    return getReadableTeamName(slotKey, groups);
+  };
+
+  const findSlotKeyForPlaceholder = (placeholder: string): string | null => {
+    if (!placeholder) return null;
+    const cleanPlaceholder = placeholder.trim().toLowerCase();
+
+    // 1. Check exact matches against configured place slots built from active groups
+    const foundFirst = firstPlaceSlots.find(s => s.label.trim().toLowerCase() === cleanPlaceholder);
+    if (foundFirst) return foundFirst.key;
+
+    const foundSecond = secondPlaceSlots.find(s => s.label.trim().toLowerCase() === cleanPlaceholder);
+    if (foundSecond) return foundSecond.key;
+
+    const foundThird = thirdPlaceSlots.find(
+      s => s.label.trim().toLowerCase() === cleanPlaceholder || 
+           s.label.toLowerCase().replace('xs', 'xuất sắc') === cleanPlaceholder ||
+           cleanPlaceholder.includes('hạng 3 xuất sắc ' + s.key.replace('__3rd_', '')) ||
+           cleanPlaceholder.includes('ba bảng xuất sắc ' + s.key.replace('__3rd_', '')) ||
+           cleanPlaceholder.includes('ba xs ' + s.key.replace('__3rd_', ''))
+    );
+    if (foundThird) return foundThird.key;
+
+    // 2. Fallback prefix parsing
+    for (const g of Object.values(groups)) {
+      const gNameClean = g.name.replace(/^Bảng\s+/i, '').trim().toLowerCase();
+      
+      const possible1stLabels = [
+        `nhất bảng ${gNameClean}`,
+        `nhất ${gNameClean}`,
+        `1st ${gNameClean}`,
+        `nhất bảng ${g.name.toLowerCase()}`
+      ];
+      if (possible1stLabels.includes(cleanPlaceholder) || cleanPlaceholder.includes(`nhất bảng ${gNameClean}`)) {
+        return `__1st_${g.id}`;
+      }
+      
+      const possible2ndLabels = [
+        `nhì bảng ${gNameClean}`,
+        `nhì ${gNameClean}`,
+        `2nd ${gNameClean}`,
+        `nhì bảng ${g.name.toLowerCase()}`
+      ];
+      if (possible2ndLabels.includes(cleanPlaceholder) || cleanPlaceholder.includes(`nhì bảng ${gNameClean}`)) {
+        return `__2nd_${g.id}`;
+      }
+    }
+
+    // 3. Last fallback: check if it's a real team name or ID
+    const foundTeam = Object.values(teams).find(
+      (t) => t.name.trim().toLowerCase() === cleanPlaceholder || t.id.toLowerCase() === cleanPlaceholder
+    );
+    if (foundTeam) return foundTeam.id;
+
+    return null;
   };
 
   const handleGenerateBracket = () => {
     generateKnockoutBracket(sz);
+  };
+
+  const handleToggleEditMode = () => {
+    if (!isAdmin) return;
+    if (!isEditMode) {
+      if (koMatches.length === 0) {
+        generateKnockoutBracket(sz);
+      }
+      
+      // Auto populate any null/empty round 1 slots with their matching placeholder slot keys
+      const currentKoMatches = useTournamentStore.getState().matches.filter((m) => m.groupId === 'knockout');
+      currentKoMatches.forEach((m) => {
+        if (m.round === 1) {
+          if (!m.teamAId && m.placeholderA) {
+            const mappedA = findSlotKeyForPlaceholder(m.placeholderA);
+            if (mappedA) {
+              updateKnockoutParticipant(m.id, 'A', mappedA);
+            }
+          }
+          if (!m.teamBId && m.placeholderB) {
+            const mappedB = findSlotKeyForPlaceholder(m.placeholderB);
+            if (mappedB) {
+              updateKnockoutParticipant(m.id, 'B', mappedB);
+            }
+          }
+        }
+      });
+
+      const latestKoMatches = useTournamentStore.getState().matches.filter((m) => m.groupId === 'knockout');
+      setMatchesSnapshot(JSON.parse(JSON.stringify(latestKoMatches)));
+      setIsEditMode(true);
+    } else {
+      handleFinishEditMode();
+    }
+  };
+
+  const handleFinishEditMode = () => {
+    const changedRound1MatchIds: string[] = [];
+    const currentKoMatches = matches.filter((m) => m.groupId === 'knockout');
+    currentKoMatches.forEach((m) => {
+      if (m.round === 1) {
+        const snapM = matchesSnapshot.find((sm) => sm.id === m.id);
+        if (snapM) {
+          if (snapM.teamAId !== m.teamAId || snapM.teamBId !== m.teamBId) {
+            changedRound1MatchIds.push(m.id);
+          }
+        }
+      }
+    });
+
+    if (changedRound1MatchIds.length > 0) {
+      propagateKnockoutResets(changedRound1MatchIds);
+    }
+
+    setIsEditMode(false);
+    setMatchesSnapshot([]);
   };
 
   const handleClearBracketConfirm = () => {
@@ -218,7 +399,7 @@ export default function KnockoutBracket() {
         </div>
       )}
       
-      {/* Thẻ điều khiển lập nhánh (To Rõ, Đầy Đủ Chức Năng) */}
+      {/* Thẻ điều khiển lập nhánh (To Rõ, Đầy Đủ Chức Năng, Tách Biệt 2 Chế Độ) */}
       <div className="bg-white dark:bg-zinc-900 p-7 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-md">
         <div className="space-y-1">
           <h3 className="text-xl font-extrabold text-[#111c30] dark:text-zinc-100 flex items-center gap-2 uppercase tracking-tight">
@@ -226,50 +407,58 @@ export default function KnockoutBracket() {
             Sơ Đồ Nhánh Knockout Loại Trực Tiếp
           </h3>
           <p className="text-xs text-zinc-400 font-semibold">
-            Tình huống khi đổi điểm số sẽ tự động đồng bộ đẩy đội thắng vào vòng tiếp theo.
+            {isEditMode 
+              ? "Sửa thủ công (Kéo thả): Kéo các đội hoặc các khe nhất/nhì/ba xuất sắc từ cột bên trái thả vào nhánh đấu ngoài cùng."
+              : "Tự động đấu bốc thăm theo luật định hoặc chỉnh sửa thủ công để tinh chỉnh theo nhu cầu."}
           </p>
         </div>
 
-        {koMatches.length === 0 ? (
-          <div className="flex items-center gap-4 shrink-0">
-            <select
-              value={sz}
-              onChange={(e) => setSz(Number(e.target.value) as 4 | 8 | 16 | 32)}
-              disabled={!isAdmin}
-              className="px-4 py-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-black text-zinc-800 dark:text-zinc-100 bg-zinc-55 dark:bg-zinc-950 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value={4}>Nhánh 4 đội (Bán Kết - 2 bảng)</option>
-              <option value={8}>Nhánh 8 đội (Tứ Kết)</option>
-              <option value={16}>Nhánh 16 đội (Vòng 1/8)</option>
-              <option value={32}>Nhánh 32 đội (Vòng 1/16)</option>
-            </select>
-            <button
-              onClick={handleGenerateBracket}
-              disabled={!isAdmin}
-              className="px-5 py-3 hover:bg-blue-500 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 bg-blue-600 text-white font-black rounded-xl text-xs transition-all flex items-center gap-2 shadow-md uppercase tracking-wider cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              id="btn-generate-knockout"
-            >
-              <PlayCircle size={16} /> Khởi tạo sơ đồ nhánh
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
+        {isAdmin && (
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Chọn số đội (Quy mô nhánh đấu) - Chỉ hiện khi ở chế độ khoá */}
+            {!isEditMode && (
+              <div className="flex items-center gap-2 bg-zinc-55 dark:bg-zinc-950 p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase px-2 select-none">Quy mô:</span>
+                <select
+                  value={sz}
+                  onChange={(e) => setSz(Number(e.target.value) as 4 | 8 | 16 | 32)}
+                  className="px-2 py-1 border-none rounded-lg text-xs font-black text-zinc-800 dark:text-zinc-100 bg-transparent cursor-pointer outline-none focus:ring-0"
+                >
+                  <option value={4}>4 đội (Bán Kết - 2 bảng)</option>
+                  <option value={8}>8 đội (Tứ Kết)</option>
+                  <option value={16}>16 đội (Vòng 1/8)</option>
+                  <option value={32}>32 đội (Vòng 1/16)</option>
+                </select>
+              </div>
+            )}
+
+            {/* Nút 1: Tạo nhánh tự động (Chỉ hiện khi isEditMode là false) */}
             {!isEditMode && (
               <button
-                onClick={() => setIsEditMode(true)}
-                disabled={!isAdmin}
-                className="px-5 py-3 text-xs font-black bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl cursor-pointer border border-zinc-250 dark:border-zinc-700 transition-colors uppercase tracking-wider shadow-xs disabled:opacity-50"
+                onClick={() => {
+                  if (koMatches.length > 0) {
+                    setShowClearConfirmModal(true);
+                  } else {
+                    handleGenerateBracket();
+                  }
+                }}
+                className="px-5 py-3 bg-blue-600 hover:bg-blue-500 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 text-white font-black rounded-xl text-xs transition-all flex items-center gap-2 shadow-md uppercase tracking-wider cursor-pointer"
+                id="btn-generate-knockout"
               >
-                Sửa Tên Các Đội Vào Nhánh
+                <PlayCircle size={16} /> Tạo nhánh tự động
               </button>
             )}
+
+            {/* Nút 2: Sửa thủ công / Hoàn tất */}
             <button
-              onClick={() => setShowClearConfirmModal(true)}
-              disabled={!isAdmin || isEditMode}
-              className="px-5 py-3 text-xs font-black bg-red-50 hover:bg-red-100 dark:bg-red-955/40 text-red-650 dark:text-red-400 rounded-xl cursor-pointer border border-red-250 transition-colors uppercase tracking-wider shadow-xs disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-55"
-              id="btn-delete-knockout"
+              onClick={handleToggleEditMode}
+              className={`px-5 py-3 text-xs font-black rounded-xl cursor-pointer border transition-all uppercase tracking-wider shadow-xs ${
+                isEditMode
+                  ? 'bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white'
+                  : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border-zinc-250 dark:border-zinc-700'
+              }`}
             >
-              Hủy & Tạo Lại Sơ Đồ
+              {isEditMode ? 'Hoàn tất' : 'Chỉnh sửa thủ công'}
             </button>
           </div>
         )}
@@ -291,10 +480,10 @@ export default function KnockoutBracket() {
                 <div className="flex justify-between items-center">
                   <h3 className="font-extrabold text-zinc-900 dark:text-zinc-100 text-sm uppercase tracking-wider">Đội Kéo-Thả</h3>
                   <button 
-                    onClick={() => setIsEditMode(false)}
-                    className="px-4 py-2 text-xs font-black bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-transform hover:scale-105 cursor-pointer shadow-md"
+                    onClick={handleFinishEditMode}
+                    className="px-4 py-2 text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-transform hover:scale-105 cursor-pointer shadow-md"
                   >
-                    XONG
+                    Hoàn tất
                   </button>
                 </div>
                 
@@ -316,7 +505,7 @@ export default function KnockoutBracket() {
                 <div className="space-y-3">
                   <div className="text-[11px] font-black uppercase text-amber-600 bg-amber-50 dark:bg-amber-950/40 text-center py-2.5 rounded-lg border border-amber-200 dark:border-amber-900/50 shadow-sm">Nhóm Nhất Bảng</div>
                   <div className="flex flex-col gap-2">
-                    {firstPlaceSlots.filter(s => !usedParticipants.has(s.key)).map((slot) => (
+                    {firstPlaceSlots.filter(s => !isSlotUsed(s.key, s.label)).map((slot) => (
                       <div 
                         key={slot.key}
                         draggable
@@ -326,7 +515,7 @@ export default function KnockoutBracket() {
                         {slot.label}
                       </div>
                     ))}
-                    {firstPlaceSlots.filter(s => !usedParticipants.has(s.key)).length === 0 && <div className="text-xs text-zinc-400 text-center py-4 italic font-medium bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">Hết / Đã xếp xong</div>}
+                    {firstPlaceSlots.filter(s => !isSlotUsed(s.key, s.label)).length === 0 && <div className="text-xs text-zinc-400 text-center py-4 italic font-medium bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">Hết / Đã xếp xong</div>}
                   </div>
                 </div>
                 
@@ -334,7 +523,7 @@ export default function KnockoutBracket() {
                 <div className="space-y-3">
                   <div className="text-[11px] font-black uppercase text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 text-center py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm">Nhóm Nhì Bảng</div>
                   <div className="flex flex-col gap-2">
-                    {secondPlaceSlots.filter(s => !usedParticipants.has(s.key)).map((slot) => (
+                    {secondPlaceSlots.filter(s => !isSlotUsed(s.key, s.label)).map((slot) => (
                       <div 
                         key={slot.key}
                         draggable
@@ -344,7 +533,7 @@ export default function KnockoutBracket() {
                         {slot.label}
                       </div>
                     ))}
-                    {secondPlaceSlots.filter(s => !usedParticipants.has(s.key)).length === 0 && <div className="text-xs text-zinc-400 text-center py-4 italic font-medium bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">Hết / Đã xếp xong</div>}
+                    {secondPlaceSlots.filter(s => !isSlotUsed(s.key, s.label)).length === 0 && <div className="text-xs text-zinc-400 text-center py-4 italic font-medium bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">Hết / Đã xếp xong</div>}
                   </div>
                 </div>
 
@@ -352,7 +541,7 @@ export default function KnockoutBracket() {
                 <div className="space-y-3">
                   <div className="text-[11px] font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-center py-2.5 rounded-lg border border-emerald-200 dark:border-emerald-900/50 shadow-sm">Nhóm Ba Xuất Sắc</div>
                   <div className="flex flex-col gap-2">
-                    {thirdPlaceSlots.filter(s => !usedParticipants.has(s.key)).map((slot) => (
+                    {thirdPlaceSlots.filter(s => !isSlotUsed(s.key, s.label)).map((slot) => (
                       <div 
                         key={slot.key}
                         draggable
@@ -362,7 +551,27 @@ export default function KnockoutBracket() {
                         {slot.label}
                       </div>
                     ))}
-                    {thirdPlaceSlots.filter(s => !usedParticipants.has(s.key)).length === 0 && <div className="text-xs text-zinc-400 text-center py-4 italic font-medium bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">Hết / Đã xếp xong</div>}
+                    {thirdPlaceSlots.filter(s => !isSlotUsed(s.key, s.label)).length === 0 && <div className="text-xs text-zinc-400 text-center py-4 italic font-medium bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">Hết / Đã xếp xong</div>}
+                  </div>
+                </div>
+
+                {/* Danh Sách Đội Tuyển Đánh Đồng Bộ */}
+                <div className="space-y-3">
+                  <div className="text-[11px] font-black uppercase text-blue-600 bg-blue-50 dark:bg-blue-950/40 text-center py-2.5 rounded-lg border border-blue-200 dark:border-blue-900/50 shadow-sm font-extrabold">Đội tuyển đơn lẻ</div>
+                  <div className="flex flex-col gap-2">
+                    {teamList.filter(t => !placedRealTeamIds.has(t.id) && !placedRealTeamIds.has(t.name) && !placedSlotKeys.has(t.id)).map((t) => (
+                      <div 
+                        key={t.id}
+                        draggable
+                        onDragStart={(e) => e.dataTransfer.setData('text/plain', t.id)}
+                        className="px-4 py-3 bg-white dark:bg-zinc-800 rounded-xl text-xs font-bold cursor-move border border-zinc-200 dark:border-zinc-700 hover:border-blue-500 hover:shadow-md hover:-translate-y-0.5 transition-all text-center"
+                      >
+                        {t.name}
+                      </div>
+                    ))}
+                    {teamList.filter(t => !placedRealTeamIds.has(t.id) && !placedRealTeamIds.has(t.name) && !placedSlotKeys.has(t.id)).length === 0 && (
+                      <div className="text-xs text-zinc-400 text-center py-4 italic font-medium bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">Không còn đội dự phòng</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -446,7 +655,7 @@ export default function KnockoutBracket() {
                               paddingBottom: '3px'
                             } : undefined}
                           >
-                            <div 
+                             <div 
                               className="flex items-center justify-between text-[10px] text-zinc-400 font-extrabold mb-3 pb-2 border-b border-zinc-200/55 dark:border-zinc-850/60 uppercase"
                               style={m.id === 'ko-QF2-3f2hlbu' ? { marginBottom: '0px' } : undefined}
                             >
@@ -455,49 +664,59 @@ export default function KnockoutBracket() {
                             </div>
 
                             <div className="space-y-4">
-                              {/* Hàng Đội A (Hạt giống / Cho phép lựa chọn qua dropdown select) */}
+                              {/* Hàng Đội A (Hạt giống) */}
                               <div className="flex items-center justify-between gap-3" style={(m.id === 'ko-QF1-ww7imxn' || m.id === 'ko-QF2-3f2hlbu') ? { marginBottom: '0px' } : undefined}>
                                 <div className="flex items-center gap-1.5 truncate max-w-[210px] sm:max-w-[250px]">
                                   {!isFinished && m.round === 1 ? (
                                     isEditMode ? (
                                       <div
+                                        draggable={!!m.teamAId}
+                                        onDragStart={(e) => {
+                                          if (m.teamAId) {
+                                            e.dataTransfer.setData('text/plain', m.teamAId);
+                                            e.dataTransfer.setData('sourceMatchId', m.id);
+                                            e.dataTransfer.setData('sourceSlot', 'A');
+                                          }
+                                        }}
                                         onDragOver={(e) => { e.preventDefault(); }}
                                         onDrop={(e) => {
                                           e.preventDefault();
                                           const teamId = e.dataTransfer.getData('text/plain');
-                                          if (teamId) updateKnockoutParticipant(m.id, 'A', teamId);
+                                          const sMatchId = e.dataTransfer.getData('sourceMatchId');
+                                          const sSlot = e.dataTransfer.getData('sourceSlot');
+                                          
+                                          if (teamId) {
+                                            const currentVal = m.teamAId || '';
+                                            updateKnockoutParticipant(m.id, 'A', teamId);
+                                            if (sMatchId && sSlot) {
+                                              updateKnockoutParticipant(sMatchId, sSlot as 'A' | 'B', currentVal);
+                                            }
+                                          }
                                         }}
-                                        className="font-black flex items-center justify-between rounded-lg border-2 border-dashed border-zinc-400 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs min-w-[200px]"
+                                        className="font-black flex items-center justify-between rounded-lg border-2 border-dashed border-zinc-400 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs min-w-[200px] cursor-grab active:cursor-grabbing hover:border-blue-500 hover:bg-blue-50/10 transition-all"
                                       >
-                                        <span className="px-2 py-1.5">{m.teamAId ? (teams[m.teamAId]?.name || m.placeholderA || m.teamAId) : (m.placeholderA || 'Thả đội vào đây')}</span>
+                                        <span className="px-2 py-1.5 truncate max-w-[160px]">{m.teamAId ? resolveSlotName(m.teamAId) : (m.placeholderA || 'Thả đội vào đây')}</span>
                                         {m.teamAId && (
                                           <button 
-                                            title="Xoá khỏi nhánh"
+                                            title="Gỡ đội"
                                             onClick={() => updateKnockoutParticipant(m.id, 'A', '')} 
-                                            className="px-2 py-1.5 hover:text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-r-lg"
+                                            className="px-2.5 py-1.5 text-red-500 hover:text-red-700 hover:bg-red-55/10 rounded-r-lg font-black transition-colors"
                                           >
                                             ✕
                                           </button>
                                         )}
                                       </div>
                                     ) : (
-                                      <select
-                                        value={m.teamAId || ''}
-                                        onChange={(e) => updateKnockoutParticipant(m.id, 'A', e.target.value)}
-                                        disabled={!isAdmin}
-                                        className="px-2 py-1.5 font-black rounded-lg border border-zinc-250 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-[230px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                        style={m.id === 'ko-QF1-ww7imxn' ? { width: '300px', maxWidth: 'none' } : undefined}
+                                      <span 
+                                        className={`font-black text-xs sm:text-sm truncate block max-w-[190px] sm:max-w-[230px] ${
+                                          isFinished && m.winnerId === m.teamAId 
+                                            ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
+                                            : 'text-zinc-800 dark:text-zinc-200'
+                                        }`}
+                                        title={(m.teamAId ? resolveSlotName(m.teamAId) : (m.placeholderA || 'Chờ...'))}
                                       >
-                                        {/* Thêm option placeholder nếu chưa nằm trong list đội giải */}
-                                        {!m.teamAId && (
-                                          <option value={m.teamAId || ''}>{(m.teamAId ? (teams[m.teamAId]?.name || m.placeholderA || m.teamAId) : (m.placeholderA || 'Chờ...'))}</option>
-                                        )}
-                                        {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamAId === t.id).map((t) => (
-                                          <option key={t.id} value={t.id}>
-                                            {t.name}
-                                          </option>
-                                        ))}
-                                      </select>
+                                        {(m.teamAId ? resolveSlotName(m.teamAId) : (m.placeholderA || 'Chờ...'))}
+                                      </span>
                                     )
                                   ) : (
                                     <span 
@@ -506,9 +725,9 @@ export default function KnockoutBracket() {
                                           ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
                                           : 'text-zinc-800 dark:text-zinc-200'
                                       }`}
-                                      title={(m.teamAId ? (teams[m.teamAId]?.name || m.placeholderA || m.teamAId) : (m.placeholderA || 'Chờ...'))}
+                                      title={(m.teamAId ? resolveSlotName(m.teamAId) : (m.placeholderA || 'Chờ...'))}
                                     >
-                                      {(m.teamAId ? (teams[m.teamAId]?.name || m.placeholderA || m.teamAId) : (m.placeholderA || 'Chờ...'))}
+                                      {(m.teamAId ? resolveSlotName(m.teamAId) : (m.placeholderA || 'Chờ...'))}
                                     </span>
                                   )}
                                 </div>
@@ -532,42 +751,55 @@ export default function KnockoutBracket() {
                                   {!isFinished && m.round === 1 ? (
                                     isEditMode ? (
                                       <div
+                                        draggable={!!m.teamBId}
+                                        onDragStart={(e) => {
+                                          if (m.teamBId) {
+                                            e.dataTransfer.setData('text/plain', m.teamBId);
+                                            e.dataTransfer.setData('sourceMatchId', m.id);
+                                            e.dataTransfer.setData('sourceSlot', 'B');
+                                          }
+                                        }}
                                         onDragOver={(e) => { e.preventDefault(); }}
                                         onDrop={(e) => {
                                           e.preventDefault();
                                           const teamId = e.dataTransfer.getData('text/plain');
-                                          if (teamId) updateKnockoutParticipant(m.id, 'B', teamId);
+                                          const sMatchId = e.dataTransfer.getData('sourceMatchId');
+                                          const sSlot = e.dataTransfer.getData('sourceSlot');
+                                          
+                                          if (teamId) {
+                                            const currentVal = m.teamBId || '';
+                                            updateKnockoutParticipant(m.id, 'B', teamId);
+                                            
+                                            // Handle swap if it came from another slot
+                                            if (sMatchId && sSlot) {
+                                              updateKnockoutParticipant(sMatchId, sSlot as 'A' | 'B', currentVal);
+                                            }
+                                          }
                                         }}
-                                        className="font-black flex items-center justify-between rounded-lg border-2 border-dashed border-zinc-400 bg-white dark:bg-zinc-900 text-[#111c30] dark:text-zinc-105 text-xs min-w-[200px]"
+                                        className="font-black flex items-center justify-between rounded-lg border-2 border-dashed border-zinc-400 bg-white dark:bg-zinc-900 text-[#111c30] dark:text-zinc-105 text-xs min-w-[200px] cursor-grab active:cursor-grabbing hover:border-blue-500 hover:bg-blue-50/10 transition-all"
                                       >
-                                        <span className="px-2 py-1.5">{m.teamBId ? (teams[m.teamBId]?.name || m.placeholderB || m.teamBId) : (m.placeholderB || 'Thả đội vào đây')}</span>
+                                        <span className="px-2 py-1.5 truncate max-w-[160px]">{m.teamBId ? resolveSlotName(m.teamBId) : (m.placeholderB || 'Thả đội vào đây')}</span>
                                         {m.teamBId && (
                                           <button 
-                                            title="Xoá khỏi nhánh"
+                                            title="Gỡ đội"
                                             onClick={() => updateKnockoutParticipant(m.id, 'B', '')} 
-                                            className="px-2 py-1.5 hover:text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-r-lg"
+                                            className="px-2.5 py-1.5 text-red-500 hover:text-red-700 hover:bg-red-55/10 rounded-r-lg font-black transition-colors"
                                           >
                                             ✕
                                           </button>
                                         )}
                                       </div>
                                     ) : (
-                                      <select
-                                        value={m.teamBId || ''}
-                                        onChange={(e) => updateKnockoutParticipant(m.id, 'B', e.target.value)}
-                                        disabled={!isAdmin}
-                                        className="px-2 py-1.5 font-black rounded-lg border border-zinc-250 bg-white dark:bg-zinc-900 text-[#111c30] dark:text-zinc-105 text-xs focus:ring-1 focus:ring-blue-500 max-w-[190px] sm:max-w-[230px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                        style={m.id === 'ko-QF1-ww7imxn' ? { width: '300px', maxWidth: 'none' } : undefined}
+                                      <span 
+                                        className={`font-black text-xs sm:text-sm truncate block max-w-[190px] sm:max-w-[230px] ${
+                                          isFinished && m.winnerId === m.teamBId 
+                                            ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
+                                            : 'text-zinc-800 dark:text-zinc-200'
+                                        }`}
+                                        title={(m.teamBId ? resolveSlotName(m.teamBId) : (m.placeholderB || 'Chờ...'))}
                                       >
-                                        {!m.teamBId && (
-                                          <option value={m.teamBId || ''}>{(m.teamBId ? (teams[m.teamBId]?.name || m.placeholderB || m.teamBId) : (m.placeholderB || 'Chờ...'))}</option>
-                                        )}
-                                        {teamList.filter(t => finishedGroupTeamNames.includes(t.name) || m.teamBId === t.id).map((t) => (
-                                          <option key={t.id} value={t.id}>
-                                            {t.name}
-                                          </option>
-                                        ))}
-                                      </select>
+                                        {(m.teamBId ? resolveSlotName(m.teamBId) : (m.placeholderB || 'Chờ...'))}
+                                      </span>
                                     )
                                   ) : (
                                     <span 
@@ -576,9 +808,9 @@ export default function KnockoutBracket() {
                                           ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
                                           : 'text-zinc-800 dark:text-zinc-200'
                                       }`}
-                                      title={(m.teamBId ? (teams[m.teamBId]?.name || m.placeholderB || m.teamBId) : (m.placeholderB || 'Chờ...'))}
+                                      title={(m.teamBId ? resolveSlotName(m.teamBId) : (m.placeholderB || 'Chờ...'))}
                                     >
-                                      {(m.teamBId ? (teams[m.teamBId]?.name || m.placeholderB || m.teamBId) : (m.placeholderB || 'Chờ...'))}
+                                      {(m.teamBId ? resolveSlotName(m.teamBId) : (m.placeholderB || 'Chờ...'))}
                                     </span>
                                   )}
                                 </div>

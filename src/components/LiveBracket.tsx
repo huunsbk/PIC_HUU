@@ -47,8 +47,8 @@ const MatchNode: React.FC<MatchNodeProps> = ({ match, koMatches, currentEvt, isB
   const tA_str = match.teamAId || match.placeholderA || null;
   const tB_str = match.teamBId || match.placeholderB || null;
   
-  const teamAName = match.teamAId && currentEvt.teams[match.teamAId] ? currentEvt.teams[match.teamAId].name : getReadableTeamName(tA_str);
-  const teamBName = match.teamBId && currentEvt.teams[match.teamBId] ? currentEvt.teams[match.teamBId].name : getReadableTeamName(tB_str);
+  const teamAName = match.teamAId && currentEvt.teams[match.teamAId] ? currentEvt.teams[match.teamAId].name : getReadableTeamName(tA_str, currentEvt.groups);
+  const teamBName = match.teamBId && currentEvt.teams[match.teamBId] ? currentEvt.teams[match.teamBId].name : getReadableTeamName(tB_str, currentEvt.groups);
 
   return (
     <div className="flex flex-row items-stretch">

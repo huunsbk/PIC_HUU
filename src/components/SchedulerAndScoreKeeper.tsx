@@ -39,7 +39,7 @@ export default function SchedulerAndScoreKeeper() {
     isAdmin,
   } = useTournamentStore();
 
-  const groupList = Object.values(groups);
+  const groupList = React.useMemo(() => Object.values(groups), [groups]);
   const activeGroup = activeGroupId ? groups[activeGroupId] : groupList[0];
 
   // Set default active group on mount if not set
