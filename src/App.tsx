@@ -22,6 +22,8 @@ import ExportManager from './components/ExportManager';
 import AuthModal from './components/AuthModal';
 
 import AccountManager from './components/AccountManager';
+import EventManagementPage from './components/event-management-page';
+import EventSwitcher from './components/event-switcher';
 
 import {
   Trophy,
@@ -128,6 +130,19 @@ export default function App() {
     };
 
     const processUrlTenant = async () => {
+      const state = useTournamentStore.getState();
+      
+      // RBAC: Nếu user đã đăng nhập, luôn luôn dùng tenant của user
+      if (state.userRole !== 'guest' && state.currentEnterpriseUser?.tenant_id) {
+         const userTenant = state.currentEnterpriseUser.tenant_id;
+         if (userTenant !== activeTenantId) {
+             await setTenantId(userTenant);
+         } else {
+             await initSupabase();
+         }
+         return;
+      }
+
       const detected = detectTenantFromUrl();
       const normalizedTenant = detected.replace(/-/g, '_'); 
       
@@ -143,24 +158,7 @@ export default function App() {
   }, [initSupabase, activeTenantId, setTenantId]);
 
   useEffect(() => {
-    // Lắng nghe sự kiện Auth từ Supabase
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const store = useTournamentStore.getState();
-      
-      if (event === 'SIGNED_OUT') {
-        console.log('[Auth Listener] Phát hiện đăng xuất (SIGNED_OUT).');
-        if (store.userRole !== 'guest' || store.currentUser !== null) {
-          store.logout();
-        }
-      } else if (event === 'SIGNED_IN' && session?.user && store.userRole === 'guest') {
-        // Option to handle reload or auto-login on new tab if needed.
-        // For now, let AuthModal handle the sign in when user submits.
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    // Sử dụng chung auth listener trong store.ts để tránh logout đúp và bị lỗi
   }, []);
 
   // Sử dụng Supabase Realtime WebSockets thay vì setInterval (Polling)
@@ -183,6 +181,13 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, triggerFullSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, triggerFullSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament' }, triggerFullSync)
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'active_sessions' }, (payload) => {
+          const state = useTournamentStore.getState();
+          if (state.currentEnterpriseUser && payload.old.account_id === state.currentEnterpriseUser.id) {
+             console.warn('Phiên đăng nhập đã bị hủy từ hệ thống máy chủ.');
+             state.logout();
+          }
+      })
       .subscribe();
 
     return () => {
@@ -245,6 +250,7 @@ export default function App() {
       { id: 'knockout', label: 'Sơ đồ trực tiếp', icon: Network, permission: 'manage_knockout', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
       { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv, permission: 'view_live', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'guest'] },
       { id: 'export', label: 'Xuất file', icon: FileDown, permission: 'export_data', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'events_center', label: 'Event Center', icon: CalendarDays, permission: 'manage_system', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
       { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList, permission: 'view_logs', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
       { id: 'accounts', label: 'Quản lý tài khoản', icon: UserCog, permission: 'manage_users', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
     ];
@@ -257,11 +263,9 @@ export default function App() {
     // Hiển thị menu cho từng loại quyền
     return allNavItems.filter(item => {
       // 1. Quản trị được xem mọi thứ
-      if (userRole === 'SUPER_ADMIN' || userRole === 'TENANT_ADMIN') return true;
-      // 2. Chặn những tab rõ ràng không dành cho role hiện tại (Dùng mảng roles)
-      if (item.roles && !item.roles.includes(userRole)) return false;
-      // 3. Fallback check DB permission
-      return hasPermission(item.permission) || item.roles?.includes(userRole);
+      if (hasPermission('*') || hasPermission('manage_tournaments')) return true;
+      // Phân quyền chuẩn doanh nghiệp: Chỉ dựa vào list permissions do Supabase trả về
+      return hasPermission(item.permission) || hasPermission('*');
     });
   }, [permissions, userRole, hasPermission]);
 
@@ -384,6 +388,7 @@ export default function App() {
 
               {hasPermission("manage_events") ? (
                 <div className="flex items-center gap-2 text-xs">
+                  <EventSwitcher />
                   {useTournamentStore.getState().hasPermission('*') && (
                     <span className="bg-indigo-50 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 px-2 py-0.5 rounded-md font-bold text-[10px] border border-indigo-200 flex items-center gap-1">
                       👑 Quyền cao nhất
@@ -422,7 +427,7 @@ export default function App() {
 
           {/* Outer Wrapper cho màn hình chính - Mở rộng toàn bộ chiều rộng (Full Width) */}
           <main className="flex-1 p-4 lg:p-6 w-full print:p-0 print:w-full" id="main-content-panel">
-            {selectedTab !== 'live' && selectedTab !== 'logs' && selectedTab !== 'export' && selectedTab !== 'scoreEntry' && selectedTab !== 'accounts' && <EventBar />}
+            {selectedTab !== 'live' && selectedTab !== 'events_center' && selectedTab !== 'logs' && selectedTab !== 'export' && selectedTab !== 'scoreEntry' && selectedTab !== 'accounts' && <EventBar />}
             
             <div className="animate-fade-in">
               {(() => {
@@ -448,6 +453,7 @@ export default function App() {
                     {selectedTab === 'knockout' && <KnockoutBracket />}
                     {selectedTab === 'live' && <LiveDashboard />}
                     {selectedTab === 'export' && <ExportManager />}
+                    {selectedTab === 'events_center' && <EventManagementPage />}
                     {selectedTab === 'logs' && <AuditLogger />}
                     {selectedTab === 'accounts' && <AccountManager />}
                   </>

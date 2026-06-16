@@ -14,7 +14,7 @@ async function startServer() {
   app.use(express.json());
 
   // API Configuration
-  const SUPABASE_URL = "https://ykckqcykxfhpfqptckxk.supabase.co"; // Matches frontend
+  const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "https://ykckqcykxfhpfqptckxk.supabase.co";
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!SUPABASE_SERVICE_ROLE_KEY && process.env.NODE_ENV === "production") {

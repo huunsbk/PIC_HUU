@@ -1,4 +1,6583 @@
 {
-  "message": "Secret API key required",
-  "hint": "Only secret API keys can be used for this endpoint."
+  "swagger": "2.0",
+  "info": {
+    "description": "",
+    "title": "standard public schema",
+    "version": "14.5"
+  },
+  "host": "ykckqcykxfhpfqptckxk.supabase.co:443",
+  "basePath": "/",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json",
+    "application/vnd.pgrst.object+json;nulls=stripped",
+    "application/vnd.pgrst.object+json",
+    "text/csv"
+  ],
+  "produces": [
+    "application/json",
+    "application/vnd.pgrst.object+json;nulls=stripped",
+    "application/vnd.pgrst.object+json",
+    "text/csv"
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "produces": [
+          "application/openapi+json",
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "summary": "OpenAPI description (this document)",
+        "tags": [
+          "Introspection"
+        ]
+      }
+    },
+    "/payments": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.payments.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.invoice_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.provider"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.provider_transaction_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/payments"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "payments"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.payments"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "payments"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.payments.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.invoice_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.provider"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.provider_transaction_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "payments"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.payments.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.invoice_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.provider"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.provider_transaction_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.payments.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.payments"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/groups": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.groups.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.team_ids"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.tournament_id"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/groups"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "groups"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.groups"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "groups"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.groups.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.team_ids"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.tournament_id"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "groups"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.groups.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.team_ids"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.groups.tournament_id"
+          },
+          {
+            "$ref": "#/parameters/body.groups"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/plan_features": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.plan_features.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.plan_features.plan_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.plan_features.feature_key"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.plan_features.enabled"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/plan_features"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "plan_features"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.plan_features"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "plan_features"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.plan_features.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.plan_features.plan_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.plan_features.feature_key"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.plan_features.enabled"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "plan_features"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.plan_features.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.plan_features.plan_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.plan_features.feature_key"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.plan_features.enabled"
+          },
+          {
+            "$ref": "#/parameters/body.plan_features"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "plan_features"
+        ]
+      }
+    },
+    "/role_permissions": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.role_permissions.role_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.role_permissions.permission_id"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/role_permissions"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "role_permissions"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.role_permissions"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "role_permissions"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.role_permissions.role_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.role_permissions.permission_id"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "role_permissions"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.role_permissions.role_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.role_permissions.permission_id"
+          },
+          {
+            "$ref": "#/parameters/body.role_permissions"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "role_permissions"
+        ]
+      }
+    },
+    "/tenant_usage": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.tenant_usage.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_usage.users_used"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_usage.users_limit"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_usage.events_used"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_usage.events_limit"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_usage.teams_used"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_usage.teams_limit"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/tenant_usage"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "tenant_usage"
+        ]
+      }
+    },
+    "/account_permissions": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.account_permissions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_permissions.account_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_permissions.permission_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_permissions.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/account_permissions"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "account_permissions"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.account_permissions"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "account_permissions"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.account_permissions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_permissions.account_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_permissions.permission_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_permissions.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "account_permissions"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.account_permissions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_permissions.account_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_permissions.permission_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_permissions.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.account_permissions"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "account_permissions"
+        ]
+      }
+    },
+    "/matches": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.matches.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.group_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.team_a_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.team_b_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.score_a"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.score_b"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.winner_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.round"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.knockout_round_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.knockout_match_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.next_match_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.next_match_slot"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.tournament_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.placeholder_a"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.placeholder_b"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/matches"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "matches"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.matches"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "matches"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.matches.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.group_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.team_a_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.team_b_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.score_a"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.score_b"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.winner_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.round"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.knockout_round_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.knockout_match_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.next_match_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.next_match_slot"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.tournament_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.placeholder_a"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.placeholder_b"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "matches"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.matches.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.group_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.team_a_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.team_b_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.score_a"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.score_b"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.winner_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.round"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.knockout_round_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.knockout_match_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.next_match_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.next_match_slot"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.tournament_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.placeholder_a"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.matches.placeholder_b"
+          },
+          {
+            "$ref": "#/parameters/body.matches"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "matches"
+        ]
+      }
+    },
+    "/subscription_plans": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.description"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.max_users"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.max_events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.max_teams"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.storage_limit_mb"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.monthly_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.yearly_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.is_active"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.updated_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/subscription_plans"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "subscription_plans"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.subscription_plans"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "subscription_plans"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.description"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.max_users"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.max_events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.max_teams"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.storage_limit_mb"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.monthly_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.yearly_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.is_active"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.updated_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "subscription_plans"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.description"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.max_users"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.max_events"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.max_teams"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.storage_limit_mb"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.monthly_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.yearly_price"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.is_active"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.subscription_plans.updated_at"
+          },
+          {
+            "$ref": "#/parameters/body.subscription_plans"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "subscription_plans"
+        ]
+      }
+    },
+    "/accounts": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.accounts.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.role_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.username"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.display_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.deleted_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/accounts"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "accounts"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.accounts"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "accounts"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.accounts.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.role_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.username"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.display_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.deleted_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "accounts"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.accounts.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.user_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.role_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.username"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.display_name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.accounts.deleted_at"
+          },
+          {
+            "$ref": "#/parameters/body.accounts"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/permissions": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.permissions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.permissions.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.permissions.description"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.permissions.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/permissions"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.permissions"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.permissions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.permissions.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.permissions.description"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.permissions.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.permissions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.permissions.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.permissions.description"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.permissions.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.permissions"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      }
+    },
+    "/teams": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.teams.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.group_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.seed"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.tournament_id"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/teams"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "teams"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.teams"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "teams"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.teams.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.group_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.seed"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.tournament_id"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "teams"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.teams.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.group_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.seed"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.teams.tournament_id"
+          },
+          {
+            "$ref": "#/parameters/body.teams"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/saas_metrics": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.saas_metrics.active_tenants"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.saas_metrics.trial_tenants"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.saas_metrics.monthly_revenue"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.saas_metrics.annual_revenue"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.saas_metrics.active_subscriptions"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/saas_metrics"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "saas_metrics"
+        ]
+      }
+    },
+    "/invoices": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.invoices.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.subscription_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.invoice_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.billing_period"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.invoice_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.due_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.paid_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/invoices"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "invoices"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.invoices"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "invoices"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.invoices.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.subscription_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.invoice_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.billing_period"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.invoice_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.due_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.paid_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "invoices"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.invoices.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.subscription_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.invoice_number"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.billing_period"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.amount"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.invoice_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.due_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.paid_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.invoices.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.invoices"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/login_logs": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.account_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.action"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.ip_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.browser_info"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.device_info"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/login_logs"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "login_logs"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.login_logs"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "login_logs"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.account_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.action"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.ip_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.browser_info"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.device_info"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "login_logs"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.account_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.action"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.ip_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.browser_info"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.device_info"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.login_logs.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.login_logs"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "login_logs"
+        ]
+      }
+    },
+    "/events": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.settings"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.active_group_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.advance_selection_mode"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.manual_qualified_team_ids"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.tournament_id"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/events"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "events"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.events"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "events"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.settings"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.active_group_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.advance_selection_mode"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.manual_qualified_team_ids"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.tournament_id"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "events"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.events.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.settings"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.active_group_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.advance_selection_mode"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.manual_qualified_team_ids"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.events.tournament_id"
+          },
+          {
+            "$ref": "#/parameters/body.events"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/account_event_permissions": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.account_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.deleted_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/account_event_permissions"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "account_event_permissions"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.account_event_permissions"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "account_event_permissions"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.account_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.deleted_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "account_event_permissions"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.account_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.account_event_permissions.deleted_at"
+          },
+          {
+            "$ref": "#/parameters/body.account_event_permissions"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "account_event_permissions"
+        ]
+      }
+    },
+    "/tenants": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.tenants.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.slug"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.deleted_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/tenants"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "tenants"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.tenants"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "tenants"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.tenants.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.slug"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.deleted_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "tenants"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.tenants.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.slug"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.updated_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenants.deleted_at"
+          },
+          {
+            "$ref": "#/parameters/body.tenants"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "tenants"
+        ]
+      }
+    },
+    "/active_sessions": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.account_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.session_token"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.ip_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.browser_info"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.device_info"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.last_seen_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.expires_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.created_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/active_sessions"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "active_sessions"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.active_sessions"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "active_sessions"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.account_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.session_token"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.ip_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.browser_info"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.device_info"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.last_seen_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.expires_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.created_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "active_sessions"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.account_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.session_token"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.ip_address"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.browser_info"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.device_info"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.last_seen_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.expires_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.active_sessions.created_at"
+          },
+          {
+            "$ref": "#/parameters/body.active_sessions"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "active_sessions"
+        ]
+      }
+    },
+    "/roles": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.roles.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.roles.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.roles.description"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.roles.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.roles.updated_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/roles"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "roles"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.roles"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "roles"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.roles.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.roles.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.roles.description"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.roles.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.roles.updated_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "roles"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.roles.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.roles.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.roles.description"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.roles.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.roles.updated_at"
+          },
+          {
+            "$ref": "#/parameters/body.roles"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "roles"
+        ]
+      }
+    },
+    "/tenant_subscriptions": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.plan_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.start_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.end_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.auto_renew"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.updated_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/tenant_subscriptions"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "tenant_subscriptions"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.tenant_subscriptions"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "tenant_subscriptions"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.plan_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.start_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.end_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.auto_renew"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.updated_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "tenant_subscriptions"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.plan_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.status"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.start_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.end_date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.auto_renew"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tenant_subscriptions.updated_at"
+          },
+          {
+            "$ref": "#/parameters/body.tenant_subscriptions"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "tenant_subscriptions"
+        ]
+      }
+    },
+    "/audit_logs": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.timestamp"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.action"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.details"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/audit_logs"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "audit_logs"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.audit_logs"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "audit_logs"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.timestamp"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.action"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.details"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "audit_logs"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.timestamp"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.action"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.details"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.audit_logs.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/body.audit_logs"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "audit_logs"
+        ]
+      }
+    },
+    "/tournament": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.tournament.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.organization"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.location"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.settings"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.current_event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.deleted_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.updated_at"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/order"
+          },
+          {
+            "$ref": "#/parameters/range"
+          },
+          {
+            "$ref": "#/parameters/rangeUnit"
+          },
+          {
+            "$ref": "#/parameters/offset"
+          },
+          {
+            "$ref": "#/parameters/limit"
+          },
+          {
+            "$ref": "#/parameters/preferCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/tournament"
+              },
+              "type": "array"
+            }
+          },
+          "206": {
+            "description": "Partial Content"
+          }
+        },
+        "tags": [
+          "tournament"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/body.tournament"
+          },
+          {
+            "$ref": "#/parameters/select"
+          },
+          {
+            "$ref": "#/parameters/preferPost"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        },
+        "tags": [
+          "tournament"
+        ]
+      },
+      "delete": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.tournament.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.organization"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.location"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.settings"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.current_event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.deleted_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.updated_at"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "tournament"
+        ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/rowFilter.tournament.id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.name"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.organization"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.location"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.date"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.settings"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.current_event_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.created_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.tenant_id"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.deleted_at"
+          },
+          {
+            "$ref": "#/parameters/rowFilter.tournament.updated_at"
+          },
+          {
+            "$ref": "#/parameters/body.tournament"
+          },
+          {
+            "$ref": "#/parameters/preferReturn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "tournament"
+        ]
+      }
+    },
+    "/rpc/expire_trial_subscriptions": {
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) expire_trial_subscriptions"
+        ]
+      }
+    },
+    "/rpc/current_tenant_id": {
+      "get": {
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) current_tenant_id"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) current_tenant_id"
+        ]
+      }
+    },
+    "/rpc/current_role_name": {
+      "get": {
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) current_role_name"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) current_role_name"
+        ]
+      }
+    },
+    "/rpc/current_account_id": {
+      "get": {
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) current_account_id"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) current_account_id"
+        ]
+      }
+    },
+    "/rpc/has_permission": {
+      "get": {
+        "parameters": [
+          {
+            "format": "text",
+            "in": "query",
+            "name": "perm_name",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) has_permission"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "properties": {
+                "perm_name": {
+                  "format": "text",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "perm_name"
+              ],
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) has_permission"
+        ]
+      }
+    },
+    "/rpc/has_feature": {
+      "get": {
+        "parameters": [
+          {
+            "format": "uuid",
+            "in": "query",
+            "name": "t_id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "format": "character varying",
+            "in": "query",
+            "name": "f_name",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) has_feature"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "properties": {
+                "f_name": {
+                  "format": "character varying",
+                  "type": "string"
+                },
+                "t_id": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "t_id",
+                "f_name"
+              ],
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) has_feature"
+        ]
+      }
+    },
+    "/rpc/generate_round_robin_schedule": {
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "properties": {
+                "p_group_id": {
+                  "format": "text",
+                  "type": "string"
+                },
+                "p_tenant_id": {
+                  "format": "text",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "p_tenant_id",
+                "p_group_id"
+              ],
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) generate_round_robin_schedule"
+        ]
+      }
+    },
+    "/rpc/can_create_event": {
+      "get": {
+        "parameters": [
+          {
+            "format": "uuid",
+            "in": "query",
+            "name": "t_id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) can_create_event"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "properties": {
+                "t_id": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "t_id"
+              ],
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) can_create_event"
+        ]
+      }
+    },
+    "/rpc/get_current_profile": {
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) get_current_profile"
+        ]
+      }
+    },
+    "/rpc/generate_monthly_invoices": {
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) generate_monthly_invoices"
+        ]
+      }
+    },
+    "/rpc/current_role": {
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) current_role"
+        ]
+      }
+    },
+    "/rpc/has_event_access": {
+      "get": {
+        "parameters": [
+          {
+            "format": "text",
+            "in": "query",
+            "name": "check_event_id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) has_event_access"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "properties": {
+                "check_event_id": {
+                  "format": "text",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "check_event_id"
+              ],
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) has_event_access"
+        ]
+      }
+    },
+    "/rpc/can_create_team": {
+      "get": {
+        "parameters": [
+          {
+            "format": "uuid",
+            "in": "query",
+            "name": "t_id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) can_create_team"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "properties": {
+                "t_id": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "t_id"
+              ],
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) can_create_team"
+        ]
+      }
+    },
+    "/rpc/can_create_user": {
+      "get": {
+        "parameters": [
+          {
+            "format": "uuid",
+            "in": "query",
+            "name": "t_id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) can_create_user"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "body",
+            "name": "args",
+            "required": true,
+            "schema": {
+              "properties": {
+                "t_id": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "t_id"
+              ],
+              "type": "object"
+            }
+          },
+          {
+            "$ref": "#/parameters/preferParams"
+          }
+        ],
+        "produces": [
+          "application/json",
+          "application/vnd.pgrst.object+json;nulls=stripped",
+          "application/vnd.pgrst.object+json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "(rpc) can_create_user"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "payments": {
+      "required": [
+        "id",
+        "invoice_id",
+        "tenant_id",
+        "amount"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "invoice_id": {
+          "description": "Note:\nThis is a Foreign Key to `invoices.id`.<fk table='invoices' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "tenant_id": {
+          "description": "Note:\nThis is a Foreign Key to `tenants.id`.<fk table='tenants' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "provider": {
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "provider_transaction_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "amount": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "status": {
+          "default": "pending",
+          "format": "character varying",
+          "maxLength": 30,
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "groups": {
+      "required": [
+        "id",
+        "name",
+        "event_id",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "text",
+          "type": "string"
+        },
+        "name": {
+          "format": "text",
+          "type": "string"
+        },
+        "team_ids": {
+          "format": "jsonb"
+        },
+        "event_id": {
+          "description": "Note:\nThis is a Foreign Key to `events.id`.<fk table='events' column='id'/>",
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "tenant_id": {
+          "description": "Note:\nThis is a Foreign Key to `tenants.id`.<fk table='tenants' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "tournament_id": {
+          "format": "text",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "plan_features": {
+      "required": [
+        "id",
+        "plan_id",
+        "feature_key"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "plan_id": {
+          "description": "Note:\nThis is a Foreign Key to `subscription_plans.id`.<fk table='subscription_plans' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "feature_key": {
+          "format": "character varying",
+          "maxLength": 100,
+          "type": "string"
+        },
+        "enabled": {
+          "default": true,
+          "format": "boolean",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "role_permissions": {
+      "required": [
+        "role_id",
+        "permission_id"
+      ],
+      "properties": {
+        "role_id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>\nThis is a Foreign Key to `roles.id`.<fk table='roles' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "permission_id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>\nThis is a Foreign Key to `permissions.id`.<fk table='permissions' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "tenant_usage": {
+      "properties": {
+        "tenant_id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "users_used": {
+          "format": "bigint",
+          "type": "integer"
+        },
+        "users_limit": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "events_used": {
+          "format": "bigint",
+          "type": "integer"
+        },
+        "events_limit": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "teams_used": {
+          "format": "bigint",
+          "type": "integer"
+        },
+        "teams_limit": {
+          "format": "integer",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "account_permissions": {
+      "required": [
+        "id",
+        "account_id",
+        "permission_id",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "account_id": {
+          "description": "Note:\nThis is a Foreign Key to `accounts.id`.<fk table='accounts' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "permission_id": {
+          "description": "Note:\nThis is a Foreign Key to `permissions.id`.<fk table='permissions' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "matches": {
+      "required": [
+        "id",
+        "round",
+        "event_id",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "text",
+          "type": "string"
+        },
+        "group_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "team_a_id": {
+          "description": "Note:\nThis is a Foreign Key to `teams.id`.<fk table='teams' column='id'/>",
+          "format": "text",
+          "type": "string"
+        },
+        "team_b_id": {
+          "description": "Note:\nThis is a Foreign Key to `teams.id`.<fk table='teams' column='id'/>",
+          "format": "text",
+          "type": "string"
+        },
+        "score_a": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "score_b": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "winner_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "status": {
+          "default": "pending",
+          "format": "text",
+          "type": "string"
+        },
+        "round": {
+          "format": "integer",
+          "type": "integer"
+        },
+        "knockout_round_name": {
+          "format": "text",
+          "type": "string"
+        },
+        "knockout_match_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "next_match_id": {
+          "description": "Note:\nThis is a Foreign Key to `matches.id`.<fk table='matches' column='id'/>",
+          "format": "text",
+          "type": "string"
+        },
+        "next_match_slot": {
+          "format": "text",
+          "type": "string"
+        },
+        "event_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "tenant_id": {
+          "description": "Note:\nThis is a Foreign Key to `tenants.id`.<fk table='tenants' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "tournament_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "placeholder_a": {
+          "format": "character varying",
+          "maxLength": 255,
+          "type": "string"
+        },
+        "placeholder_b": {
+          "format": "character varying",
+          "maxLength": 255,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "subscription_plans": {
+      "required": [
+        "id",
+        "name",
+        "max_users",
+        "max_events",
+        "max_teams",
+        "storage_limit_mb",
+        "monthly_price",
+        "yearly_price",
+        "is_active"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "name": {
+          "format": "character varying",
+          "maxLength": 100,
+          "type": "string"
+        },
+        "description": {
+          "format": "text",
+          "type": "string"
+        },
+        "max_users": {
+          "default": 1,
+          "format": "integer",
+          "type": "integer"
+        },
+        "max_events": {
+          "default": 1,
+          "format": "integer",
+          "type": "integer"
+        },
+        "max_teams": {
+          "default": 50,
+          "format": "integer",
+          "type": "integer"
+        },
+        "storage_limit_mb": {
+          "default": 100,
+          "format": "integer",
+          "type": "integer"
+        },
+        "monthly_price": {
+          "default": 0,
+          "format": "numeric",
+          "type": "number"
+        },
+        "yearly_price": {
+          "default": 0,
+          "format": "numeric",
+          "type": "number"
+        },
+        "is_active": {
+          "default": true,
+          "format": "boolean",
+          "type": "boolean"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "accounts": {
+      "required": [
+        "id",
+        "tenant_id",
+        "role_id",
+        "username",
+        "display_name",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "user_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "tenant_id": {
+          "description": "Note:\nThis is a Foreign Key to `tenants.id`.<fk table='tenants' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "role_id": {
+          "description": "Note:\nThis is a Foreign Key to `roles.id`.<fk table='roles' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "username": {
+          "format": "character varying",
+          "maxLength": 150,
+          "type": "string"
+        },
+        "display_name": {
+          "format": "character varying",
+          "maxLength": 255,
+          "type": "string"
+        },
+        "status": {
+          "default": "active",
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "deleted_at": {
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "permissions": {
+      "required": [
+        "id",
+        "name",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "name": {
+          "format": "character varying",
+          "maxLength": 100,
+          "type": "string"
+        },
+        "description": {
+          "format": "character varying",
+          "maxLength": 255,
+          "type": "string"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "teams": {
+      "required": [
+        "id",
+        "name",
+        "event_id",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "text",
+          "type": "string"
+        },
+        "name": {
+          "format": "text",
+          "type": "string"
+        },
+        "group_id": {
+          "description": "Note:\nThis is a Foreign Key to `groups.id`.<fk table='groups' column='id'/>",
+          "format": "text",
+          "type": "string"
+        },
+        "seed": {
+          "default": "none",
+          "format": "text",
+          "type": "string"
+        },
+        "event_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "tenant_id": {
+          "description": "Note:\nThis is a Foreign Key to `tenants.id`.<fk table='tenants' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "tournament_id": {
+          "format": "text",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "saas_metrics": {
+      "properties": {
+        "active_tenants": {
+          "format": "bigint",
+          "type": "integer"
+        },
+        "trial_tenants": {
+          "format": "bigint",
+          "type": "integer"
+        },
+        "monthly_revenue": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "annual_revenue": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "active_subscriptions": {
+          "format": "bigint",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "invoices": {
+      "required": [
+        "id",
+        "tenant_id",
+        "subscription_id",
+        "amount"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "tenant_id": {
+          "description": "Note:\nThis is a Foreign Key to `tenants.id`.<fk table='tenants' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "subscription_id": {
+          "description": "Note:\nThis is a Foreign Key to `tenant_subscriptions.id`.<fk table='tenant_subscriptions' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "invoice_number": {
+          "format": "character varying",
+          "maxLength": 100,
+          "type": "string"
+        },
+        "billing_period": {
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "amount": {
+          "format": "numeric",
+          "type": "number"
+        },
+        "status": {
+          "default": "pending",
+          "format": "character varying",
+          "maxLength": 30,
+          "type": "string"
+        },
+        "invoice_date": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "due_date": {
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "paid_at": {
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "login_logs": {
+      "required": [
+        "id",
+        "account_id",
+        "action",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "account_id": {
+          "description": "Note:\nThis is a Foreign Key to `accounts.id`.<fk table='accounts' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "action": {
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "ip_address": {
+          "format": "character varying",
+          "maxLength": 45,
+          "type": "string"
+        },
+        "browser_info": {
+          "format": "text",
+          "type": "string"
+        },
+        "device_info": {
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "events": {
+      "required": [
+        "id",
+        "name",
+        "settings",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "text",
+          "type": "string"
+        },
+        "name": {
+          "format": "text",
+          "type": "string"
+        },
+        "settings": {
+          "format": "jsonb"
+        },
+        "active_group_id": {
+          "format": "text",
+          "type": "string"
+        },
+        "advance_selection_mode": {
+          "default": "auto",
+          "format": "text",
+          "type": "string"
+        },
+        "manual_qualified_team_ids": {
+          "format": "jsonb"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "tenant_id": {
+          "description": "Note:\nThis is a Foreign Key to `tenants.id`.<fk table='tenants' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "tournament_id": {
+          "format": "text",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "account_event_permissions": {
+      "required": [
+        "id",
+        "account_id",
+        "event_id",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "account_id": {
+          "description": "Note:\nThis is a Foreign Key to `accounts.id`.<fk table='accounts' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "event_id": {
+          "format": "character varying",
+          "maxLength": 150,
+          "type": "string"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "deleted_at": {
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "tenants": {
+      "required": [
+        "id",
+        "name",
+        "slug",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "name": {
+          "format": "character varying",
+          "maxLength": 255,
+          "type": "string"
+        },
+        "slug": {
+          "format": "character varying",
+          "maxLength": 150,
+          "type": "string"
+        },
+        "status": {
+          "default": "active",
+          "format": "character varying",
+          "maxLength": 50,
+          "type": "string"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "deleted_at": {
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "active_sessions": {
+      "required": [
+        "id",
+        "account_id",
+        "session_token",
+        "last_seen_at",
+        "expires_at",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "account_id": {
+          "description": "Note:\nThis is a Foreign Key to `accounts.id`.<fk table='accounts' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "session_token": {
+          "format": "text",
+          "type": "string"
+        },
+        "ip_address": {
+          "format": "character varying",
+          "maxLength": 45,
+          "type": "string"
+        },
+        "browser_info": {
+          "format": "text",
+          "type": "string"
+        },
+        "device_info": {
+          "format": "text",
+          "type": "string"
+        },
+        "last_seen_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "roles": {
+      "required": [
+        "id",
+        "name",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "name": {
+          "format": "character varying",
+          "maxLength": 100,
+          "type": "string"
+        },
+        "description": {
+          "format": "character varying",
+          "maxLength": 255,
+          "type": "string"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "tenant_subscriptions": {
+      "required": [
+        "id",
+        "tenant_id",
+        "plan_id",
+        "status",
+        "start_date"
+      ],
+      "properties": {
+        "id": {
+          "default": "gen_random_uuid()",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "tenant_id": {
+          "description": "Note:\nThis is a Foreign Key to `tenants.id`.<fk table='tenants' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "plan_id": {
+          "description": "Note:\nThis is a Foreign Key to `subscription_plans.id`.<fk table='subscription_plans' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        },
+        "status": {
+          "default": "trial",
+          "format": "character varying",
+          "maxLength": 30,
+          "type": "string"
+        },
+        "start_date": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "end_date": {
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "auto_renew": {
+          "default": true,
+          "format": "boolean",
+          "type": "boolean"
+        },
+        "created_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "audit_logs": {
+      "required": [
+        "id",
+        "timestamp",
+        "action",
+        "details",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "bigint",
+          "type": "integer"
+        },
+        "timestamp": {
+          "format": "text",
+          "type": "string"
+        },
+        "action": {
+          "format": "text",
+          "type": "string"
+        },
+        "details": {
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "tenant_id": {
+          "description": "Note:\nThis is a Foreign Key to `tenants.id`.<fk table='tenants' column='id'/>",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "tournament": {
+      "required": [
+        "id",
+        "name",
+        "settings",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "default": "t-1",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "format": "text",
+          "type": "string"
+        },
+        "name": {
+          "format": "text",
+          "type": "string"
+        },
+        "organization": {
+          "format": "text",
+          "type": "string"
+        },
+        "location": {
+          "format": "text",
+          "type": "string"
+        },
+        "date": {
+          "format": "text",
+          "type": "string"
+        },
+        "settings": {
+          "format": "jsonb"
+        },
+        "current_event_id": {
+          "default": "event-default",
+          "format": "text",
+          "type": "string"
+        },
+        "created_at": {
+          "default": "timezone('utc'::text, now())",
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "tenant_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "deleted_at": {
+          "format": "timestamp with time zone",
+          "type": "string"
+        },
+        "updated_at": {
+          "default": "now()",
+          "format": "timestamp with time zone",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "parameters": {
+    "preferParams": {
+      "name": "Prefer",
+      "description": "Preference",
+      "required": false,
+      "in": "header",
+      "type": "string"
+    },
+    "preferReturn": {
+      "name": "Prefer",
+      "description": "Preference",
+      "required": false,
+      "enum": [
+        "return=representation",
+        "return=minimal",
+        "return=none"
+      ],
+      "in": "header",
+      "type": "string"
+    },
+    "preferCount": {
+      "name": "Prefer",
+      "description": "Preference",
+      "required": false,
+      "enum": [
+        "count=none"
+      ],
+      "in": "header",
+      "type": "string"
+    },
+    "preferPost": {
+      "name": "Prefer",
+      "description": "Preference",
+      "required": false,
+      "enum": [
+        "return=representation",
+        "return=minimal",
+        "return=none",
+        "resolution=ignore-duplicates",
+        "resolution=merge-duplicates"
+      ],
+      "in": "header",
+      "type": "string"
+    },
+    "select": {
+      "name": "select",
+      "description": "Filtering Columns",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "on_conflict": {
+      "name": "on_conflict",
+      "description": "On Conflict",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "order": {
+      "name": "order",
+      "description": "Ordering",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "range": {
+      "name": "Range",
+      "description": "Limiting and Pagination",
+      "required": false,
+      "in": "header",
+      "type": "string"
+    },
+    "rangeUnit": {
+      "name": "Range-Unit",
+      "description": "Limiting and Pagination",
+      "required": false,
+      "default": "items",
+      "in": "header",
+      "type": "string"
+    },
+    "offset": {
+      "name": "offset",
+      "description": "Limiting and Pagination",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "limit": {
+      "name": "limit",
+      "description": "Limiting and Pagination",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.payments": {
+      "name": "payments",
+      "description": "payments",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/payments"
+      }
+    },
+    "rowFilter.payments.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.payments.invoice_id": {
+      "name": "invoice_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.payments.tenant_id": {
+      "name": "tenant_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.payments.provider": {
+      "name": "provider",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.payments.provider_transaction_id": {
+      "name": "provider_transaction_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.payments.amount": {
+      "name": "amount",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.payments.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.payments.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.groups": {
+      "name": "groups",
+      "description": "groups",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/groups"
+      }
+    },
+    "rowFilter.groups.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.groups.name": {
+      "name": "name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.groups.team_ids": {
+      "name": "team_ids",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.groups.event_id": {
+      "name": "event_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.groups.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.groups.tenant_id": {
+      "name": "tenant_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.groups.tournament_id": {
+      "name": "tournament_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.plan_features": {
+      "name": "plan_features",
+      "description": "plan_features",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/plan_features"
+      }
+    },
+    "rowFilter.plan_features.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.plan_features.plan_id": {
+      "name": "plan_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.plan_features.feature_key": {
+      "name": "feature_key",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.plan_features.enabled": {
+      "name": "enabled",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.role_permissions": {
+      "name": "role_permissions",
+      "description": "role_permissions",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/role_permissions"
+      }
+    },
+    "rowFilter.role_permissions.role_id": {
+      "name": "role_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.role_permissions.permission_id": {
+      "name": "permission_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.tenant_usage": {
+      "name": "tenant_usage",
+      "description": "tenant_usage",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/tenant_usage"
+      }
+    },
+    "rowFilter.tenant_usage.tenant_id": {
+      "name": "tenant_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenant_usage.users_used": {
+      "name": "users_used",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenant_usage.users_limit": {
+      "name": "users_limit",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenant_usage.events_used": {
+      "name": "events_used",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenant_usage.events_limit": {
+      "name": "events_limit",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenant_usage.teams_used": {
+      "name": "teams_used",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenant_usage.teams_limit": {
+      "name": "teams_limit",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.account_permissions": {
+      "name": "account_permissions",
+      "description": "account_permissions",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/account_permissions"
+      }
+    },
+    "rowFilter.account_permissions.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.account_permissions.account_id": {
+      "name": "account_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.account_permissions.permission_id": {
+      "name": "permission_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.account_permissions.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.matches": {
+      "name": "matches",
+      "description": "matches",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/matches"
+      }
+    },
+    "rowFilter.matches.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.group_id": {
+      "name": "group_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.team_a_id": {
+      "name": "team_a_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.team_b_id": {
+      "name": "team_b_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.score_a": {
+      "name": "score_a",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.score_b": {
+      "name": "score_b",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.winner_id": {
+      "name": "winner_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.round": {
+      "name": "round",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.knockout_round_name": {
+      "name": "knockout_round_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.knockout_match_id": {
+      "name": "knockout_match_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.next_match_id": {
+      "name": "next_match_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.next_match_slot": {
+      "name": "next_match_slot",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.event_id": {
+      "name": "event_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.tenant_id": {
+      "name": "tenant_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.tournament_id": {
+      "name": "tournament_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.placeholder_a": {
+      "name": "placeholder_a",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.matches.placeholder_b": {
+      "name": "placeholder_b",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.subscription_plans": {
+      "name": "subscription_plans",
+      "description": "subscription_plans",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/subscription_plans"
+      }
+    },
+    "rowFilter.subscription_plans.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.subscription_plans.name": {
+      "name": "name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.subscription_plans.description": {
+      "name": "description",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.subscription_plans.max_users": {
+      "name": "max_users",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.subscription_plans.max_events": {
+      "name": "max_events",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.subscription_plans.max_teams": {
+      "name": "max_teams",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.subscription_plans.storage_limit_mb": {
+      "name": "storage_limit_mb",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.subscription_plans.monthly_price": {
+      "name": "monthly_price",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.subscription_plans.yearly_price": {
+      "name": "yearly_price",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.subscription_plans.is_active": {
+      "name": "is_active",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.subscription_plans.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.subscription_plans.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.accounts": {
+      "name": "accounts",
+      "description": "accounts",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/accounts"
+      }
+    },
+    "rowFilter.accounts.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.accounts.user_id": {
+      "name": "user_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.accounts.tenant_id": {
+      "name": "tenant_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.accounts.role_id": {
+      "name": "role_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.accounts.username": {
+      "name": "username",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.accounts.display_name": {
+      "name": "display_name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.accounts.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.accounts.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.accounts.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.accounts.deleted_at": {
+      "name": "deleted_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.permissions": {
+      "name": "permissions",
+      "description": "permissions",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/permissions"
+      }
+    },
+    "rowFilter.permissions.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.permissions.name": {
+      "name": "name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.permissions.description": {
+      "name": "description",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.permissions.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.teams": {
+      "name": "teams",
+      "description": "teams",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/teams"
+      }
+    },
+    "rowFilter.teams.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.teams.name": {
+      "name": "name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.teams.group_id": {
+      "name": "group_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.teams.seed": {
+      "name": "seed",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.teams.event_id": {
+      "name": "event_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.teams.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.teams.tenant_id": {
+      "name": "tenant_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.teams.tournament_id": {
+      "name": "tournament_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.saas_metrics": {
+      "name": "saas_metrics",
+      "description": "saas_metrics",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/saas_metrics"
+      }
+    },
+    "rowFilter.saas_metrics.active_tenants": {
+      "name": "active_tenants",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.saas_metrics.trial_tenants": {
+      "name": "trial_tenants",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.saas_metrics.monthly_revenue": {
+      "name": "monthly_revenue",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.saas_metrics.annual_revenue": {
+      "name": "annual_revenue",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.saas_metrics.active_subscriptions": {
+      "name": "active_subscriptions",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.invoices": {
+      "name": "invoices",
+      "description": "invoices",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/invoices"
+      }
+    },
+    "rowFilter.invoices.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.invoices.tenant_id": {
+      "name": "tenant_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.invoices.subscription_id": {
+      "name": "subscription_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.invoices.invoice_number": {
+      "name": "invoice_number",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.invoices.billing_period": {
+      "name": "billing_period",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.invoices.amount": {
+      "name": "amount",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.invoices.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.invoices.invoice_date": {
+      "name": "invoice_date",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.invoices.due_date": {
+      "name": "due_date",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.invoices.paid_at": {
+      "name": "paid_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.invoices.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.login_logs": {
+      "name": "login_logs",
+      "description": "login_logs",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/login_logs"
+      }
+    },
+    "rowFilter.login_logs.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.login_logs.account_id": {
+      "name": "account_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.login_logs.action": {
+      "name": "action",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.login_logs.ip_address": {
+      "name": "ip_address",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.login_logs.browser_info": {
+      "name": "browser_info",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.login_logs.device_info": {
+      "name": "device_info",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.login_logs.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.events": {
+      "name": "events",
+      "description": "events",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/events"
+      }
+    },
+    "rowFilter.events.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.events.name": {
+      "name": "name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.events.settings": {
+      "name": "settings",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.events.active_group_id": {
+      "name": "active_group_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.events.advance_selection_mode": {
+      "name": "advance_selection_mode",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.events.manual_qualified_team_ids": {
+      "name": "manual_qualified_team_ids",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.events.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.events.tenant_id": {
+      "name": "tenant_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.events.tournament_id": {
+      "name": "tournament_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.account_event_permissions": {
+      "name": "account_event_permissions",
+      "description": "account_event_permissions",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/account_event_permissions"
+      }
+    },
+    "rowFilter.account_event_permissions.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.account_event_permissions.account_id": {
+      "name": "account_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.account_event_permissions.event_id": {
+      "name": "event_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.account_event_permissions.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.account_event_permissions.deleted_at": {
+      "name": "deleted_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.tenants": {
+      "name": "tenants",
+      "description": "tenants",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/tenants"
+      }
+    },
+    "rowFilter.tenants.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenants.name": {
+      "name": "name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenants.slug": {
+      "name": "slug",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenants.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenants.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenants.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenants.deleted_at": {
+      "name": "deleted_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.active_sessions": {
+      "name": "active_sessions",
+      "description": "active_sessions",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/active_sessions"
+      }
+    },
+    "rowFilter.active_sessions.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.active_sessions.account_id": {
+      "name": "account_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.active_sessions.session_token": {
+      "name": "session_token",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.active_sessions.ip_address": {
+      "name": "ip_address",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.active_sessions.browser_info": {
+      "name": "browser_info",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.active_sessions.device_info": {
+      "name": "device_info",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.active_sessions.last_seen_at": {
+      "name": "last_seen_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.active_sessions.expires_at": {
+      "name": "expires_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.active_sessions.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.roles": {
+      "name": "roles",
+      "description": "roles",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/roles"
+      }
+    },
+    "rowFilter.roles.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.roles.name": {
+      "name": "name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.roles.description": {
+      "name": "description",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.roles.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.roles.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.tenant_subscriptions": {
+      "name": "tenant_subscriptions",
+      "description": "tenant_subscriptions",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/tenant_subscriptions"
+      }
+    },
+    "rowFilter.tenant_subscriptions.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenant_subscriptions.tenant_id": {
+      "name": "tenant_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenant_subscriptions.plan_id": {
+      "name": "plan_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenant_subscriptions.status": {
+      "name": "status",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenant_subscriptions.start_date": {
+      "name": "start_date",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenant_subscriptions.end_date": {
+      "name": "end_date",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenant_subscriptions.auto_renew": {
+      "name": "auto_renew",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenant_subscriptions.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tenant_subscriptions.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.audit_logs": {
+      "name": "audit_logs",
+      "description": "audit_logs",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/audit_logs"
+      }
+    },
+    "rowFilter.audit_logs.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.audit_logs.timestamp": {
+      "name": "timestamp",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.audit_logs.action": {
+      "name": "action",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.audit_logs.details": {
+      "name": "details",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.audit_logs.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.audit_logs.tenant_id": {
+      "name": "tenant_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "body.tournament": {
+      "name": "tournament",
+      "description": "tournament",
+      "required": false,
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/tournament"
+      }
+    },
+    "rowFilter.tournament.id": {
+      "name": "id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tournament.name": {
+      "name": "name",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tournament.organization": {
+      "name": "organization",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tournament.location": {
+      "name": "location",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tournament.date": {
+      "name": "date",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tournament.settings": {
+      "name": "settings",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tournament.current_event_id": {
+      "name": "current_event_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tournament.created_at": {
+      "name": "created_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tournament.tenant_id": {
+      "name": "tenant_id",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tournament.deleted_at": {
+      "name": "deleted_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    },
+    "rowFilter.tournament.updated_at": {
+      "name": "updated_at",
+      "required": false,
+      "in": "query",
+      "type": "string"
+    }
+  },
+  "externalDocs": {
+    "description": "PostgREST Documentation",
+    "url": "https://postgrest.org/en/v14/references/api.html"
+  }
 }

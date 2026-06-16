@@ -86,9 +86,35 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
        console.warn('[Auth Flow Debug] Missing some expected attributes in payload');
     }
 
+    // Securely delegate active_sessions to DB RPC instead of direct insert
+    if (sessionData?.session) {
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+      try {
+        await supabase.rpc('record_login_session', {
+          p_account_id: accountData.account_id,
+          p_session_token: sessionData.session.access_token,
+          p_ip_address: "127.0.0.1",
+          p_browser_info: navigator.userAgent,
+          p_device_info: navigator.platform || "Unknown",
+          p_expires_at: expiresAt.toISOString()
+        });
+      } catch (err) {
+        console.warn('Could not record login session securely:', err);
+      }
+    }
+
     const mappedRole = accountData.role || 'guest';
     const tenantIdStr = accountData.tenant_id || 'default';
-    const fetchedPermissions = accountData.permissions || [];
+    
+    // Combine role_permissions & account_permissions from new get_current_profile format
+    // or backwards compat
+    const rp = accountData.role_permissions || [];
+    const ap = accountData.account_permissions || [];
+    const legacyPerms = accountData.permissions || [];
+    let fetchedPermissions = Array.from(new Set([...rp, ...ap, ...legacyPerms]));
+    
+    const eventIds = accountData.event_ids || [];
 
     // Construct currentEnterpriseUser payload
     const enterpriseUser = {
@@ -97,54 +123,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       display_name: accountData.display_name,
       tenant_id: tenantIdStr,
       role_name: mappedRole,
-      permissions: fetchedPermissions
+      permissions: fetchedPermissions,
+      event_ids: eventIds
     };
-
-    if (sessionData?.session) {
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24);
-
-      const payloadActiveSession = {
-        account_id: accountData.account_id,
-        session_token: sessionData.session.access_token,
-        ip_address: "127.0.0.1",
-        browser_info: navigator.userAgent,
-        device_info: navigator.platform || "Unknown",
-        expires_at: expiresAt.toISOString()
-      };
-      
-      console.log("ACTIVE_SESSION_PAYLOAD", payloadActiveSession);
-
-      // 1. Ghi active_sessions
-      // Để tránh lỗi duplicate, xoá session bị kẹt trên csdl đi trước
-      await supabase.from("active_sessions").delete().eq("account_id", accountData.account_id);
-      
-      const sessionInsert = await supabase.from("active_sessions").insert(payloadActiveSession);
-      console.log('Session insert result:', sessionInsert);
-      
-      if (sessionInsert.error) {
-        console.warn('Session insert failed (RLS issue), but allowing login:', sessionInsert.error);
-        // Do NOT block login
-      }
-
-      const payloadLoginLog = {
-        account_id: accountData.account_id,
-        action: "login",
-        ip_address: "127.0.0.1",
-        browser_info: navigator.userAgent,
-        device_info: navigator.platform || "Unknown"
-      };
-
-      console.log("LOGIN_LOG_PAYLOAD", payloadLoginLog);
-
-      // 2. Ghi login_logs
-      const logInsert = await supabase.from("login_logs").insert(payloadLoginLog);
-      
-      if (logInsert.error) {
-        console.warn('Login log insert failed (RLS issue), but allowing login:', logInsert.error);
-        // Do NOT block login
-      }
-    }
 
     setSuccessMsg(`Đăng nhập thành công! Chào mừng đại diện ${accountData.display_name}.`);
     
@@ -154,7 +135,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }, 800);
     } catch (err: any) {
       console.error('[Auth] Login exception:', err);
-      setErrorMsg('Lỗi kết nối máy chủ (Failed to fetch). Vui lòng thử lại.');
+      setErrorMsg(`Lỗi kết nối máy chủ: ${err?.message || 'Không xách định (Failed to fetch)'}. Vui lòng thử lại.`);
     }
   };
 
