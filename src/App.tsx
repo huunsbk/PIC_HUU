@@ -236,26 +236,33 @@ export default function App() {
 
   const navItems = React.useMemo(() => {
     const allNavItems = [
-      { id: 'dashboard', label: 'Trang chủ', icon: Trophy, permission: 'view_dashboard' },
-      { id: 'teams', label: 'Quản lý đội', icon: Users, permission: 'manage_teams' },
-      { id: 'groups', label: 'Chia bảng', icon: Layers, permission: 'manage_groups' },
-      { id: 'scoreEntry', label: 'Nhập điểm', icon: Gamepad2, permission: 'enter_score' },
-      { id: 'matches', label: 'Lịch & Kết quả', icon: CalendarDays, permission: 'manage_matches' },
-      { id: 'standings', label: 'Tuyển chọn vòng trong', icon: FileSpreadsheet, permission: 'view_standings' },
-      { id: 'knockout', label: 'Sơ đồ trực tiếp', icon: Network, permission: 'manage_knockout' },
-      { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv, permission: 'view_live' },
-      { id: 'export', label: 'Xuất file', icon: FileDown, permission: 'export_data' },
-      { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList, permission: 'view_logs' },
-      { id: 'accounts', label: 'Quản lý tài khoản', icon: UserCog, permission: 'manage_users' },
+      { id: 'dashboard', label: 'Trang chủ', icon: Trophy, permission: 'view_dashboard', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'teams', label: 'Quản lý đội', icon: Users, permission: 'manage_teams', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'groups', label: 'Chia bảng', icon: Layers, permission: 'manage_groups', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'scoreEntry', label: 'Nhập điểm', icon: Gamepad2, permission: 'enter_score', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
+      { id: 'matches', label: 'Lịch & Kết quả', icon: CalendarDays, permission: 'manage_matches', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
+      { id: 'standings', label: 'Tuyển chọn vòng trong', icon: FileSpreadsheet, permission: 'view_standings', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
+      { id: 'knockout', label: 'Sơ đồ trực tiếp', icon: Network, permission: 'manage_knockout', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv, permission: 'view_live', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'guest'] },
+      { id: 'export', label: 'Xuất file', icon: FileDown, permission: 'export_data', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList, permission: 'view_logs', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
+      { id: 'accounts', label: 'Quản lý tài khoản', icon: UserCog, permission: 'manage_users', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
     ];
     
-    // Always show live for guest if they don't have explicit permissions but userRole is guest. 
-    // And actually, guest can see only 'live'.
+    // Khách vãng lai chỉ xem được "Trực tiếp" (live)
     if (userRole === 'guest') {
       return allNavItems.filter(item => item.id === 'live');
     }
 
-    return allNavItems.filter(item => hasPermission(item.permission));
+    // Hiển thị menu cho từng loại quyền
+    return allNavItems.filter(item => {
+      // 1. Quản trị được xem mọi thứ
+      if (userRole === 'SUPER_ADMIN' || userRole === 'TENANT_ADMIN') return true;
+      // 2. Chặn những tab rõ ràng không dành cho role hiện tại (Dùng mảng roles)
+      if (item.roles && !item.roles.includes(userRole)) return false;
+      // 3. Fallback check DB permission
+      return hasPermission(item.permission) || item.roles?.includes(userRole);
+    });
   }, [permissions, userRole, hasPermission]);
 
   useEffect(() => {

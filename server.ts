@@ -245,6 +245,73 @@ async function startServer() {
   });
 
 
+  app.delete("/api/admin/accounts/:accountId", verifyToken, async (req, res) => {
+    try {
+      if (!supabaseAdmin) throw new Error("Server missing SUPABASE_SERVICE_ROLE_KEY");
+
+      const user = (req as any).user;
+      const { accountId } = req.params;
+
+      const { data: currentAcc } = await supabaseAdmin
+        .from('accounts')
+        .select('roles(name)')
+        .eq('user_id', user.id)
+        .single();
+        
+      const rolesObj: any = currentAcc?.roles;
+      const roleName = rolesObj?.name || rolesObj?.[0]?.name;
+      if (roleName !== 'SUPER_ADMIN') {
+        res.status(403).json({ error: 'Forbidden: Requires SUPER_ADMIN privileges' });
+        return;
+      }
+
+      // Lấy tài khoản cần xóa
+      const { data: targetAccount, error: fetchErr } = await supabaseAdmin
+        .from('accounts')
+        .select('user_id, username')
+        .eq('id', accountId)
+        .single();
+
+      if (fetchErr || !targetAccount) {
+         throw new Error('Không tìm thấy tài khoản để xóa');
+      }
+
+      // Xóa dữ liệu phụ thuộc (Session và Logs)
+      await supabaseAdmin.from('active_sessions').delete().eq('account_id', accountId);
+      await supabaseAdmin.from('login_logs').delete().eq('account_id', accountId);
+      await supabaseAdmin.from('account_permissions').delete().eq('account_id', accountId);
+      await supabaseAdmin.from('account_event_permissions').delete().eq('account_id', accountId);
+
+      // Xóa trong bảng accounts trước
+      const { error: deleteAccErr } = await supabaseAdmin
+        .from('accounts')
+        .delete()
+        .eq('id', accountId);
+
+      if (deleteAccErr) {
+        throw new Error(`Lỗi khi xóa trong DB accounts: ${deleteAccErr.message}`);
+      }
+
+      // Thử xoá Auth User nếu user_id có tồn tại
+      if (targetAccount.user_id) {
+         await supabaseAdmin.auth.admin.deleteUser(targetAccount.user_id);
+      } else {
+         // Thử tìm theo email {username}@pic.com
+         const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+         const tUser = users.find((u:any) => u.email === `${targetAccount.username}@pic.com`);
+         if (tUser) {
+            await supabaseAdmin.auth.admin.deleteUser(tUser.id);
+         }
+      }
+
+      res.json({ success: true });
+
+    } catch (error: any) {
+      console.error("DELETE /api/admin/accounts error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/admin/accounts/reset", verifyToken, async (req, res) => {
     try {
       if (!supabaseAdmin) throw new Error("Server missing SUPABASE_SERVICE_ROLE_KEY");
@@ -285,6 +352,74 @@ async function startServer() {
 
     } catch (error: any) {
       console.error("POST /api/admin/accounts/reset error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Register active sessions and login logs securely using supabaseAdmin to bypass Client RLS
+  app.post("/api/auth/record-login", verifyToken, async (req, res) => {
+    try {
+      if (!supabaseAdmin) throw new Error("Server missing SUPABASE_SERVICE_ROLE_KEY");
+
+      const user = (req as any).user;
+      const { account_id, ip_address, browser_info, device_info, session_token, expires_at } = req.body;
+
+      if (!account_id) {
+         res.status(400).json({ error: "Thiếu thông tin account_id" });
+         return;
+      }
+
+      // Check if user has permission to log in as this account
+      const { data: account, error: accErr } = await supabaseAdmin
+        .from('accounts')
+        .select('id, user_id, username')
+        .eq('id', account_id)
+        .single();
+
+      if (accErr || !account) {
+        res.status(400).json({ error: "Tài khoản không tồn tại" });
+        return;
+      }
+
+      if (account.user_id !== user.id) {
+        res.status(403).json({ error: "Không được phép: Tài khoản không khớp với người dùng đã xác thực" });
+        return;
+      }
+
+      // 1. Delete existing sessions for this account_id to avoid unique constraint duplicates
+      await supabaseAdmin.from("active_sessions").delete().eq("account_id", account_id);
+
+      // 2. Insert active_sessions
+      if (session_token && expires_at) {
+        const { error: sessErr } = await supabaseAdmin.from("active_sessions").insert({
+          account_id,
+          session_token,
+          ip_address: ip_address || "127.0.0.1",
+          browser_info: browser_info || "Unknown",
+          device_info: device_info || "Unknown",
+          expires_at
+        });
+        if (sessErr) {
+          throw new Error(`Lỗi ghi nhận phiên đăng nhập: ${sessErr.message}`);
+        }
+      }
+
+      // 3. Insert login_logs to record this successful login session
+      const { error: logErr } = await supabaseAdmin.from("login_logs").insert({
+        account_id,
+        action: "login",
+        ip_address: ip_address || "127.0.0.1",
+        browser_info: browser_info || "Unknown",
+        device_info: device_info || "Unknown"
+      });
+
+      if (logErr) {
+        throw new Error(`Lỗi ghi nhận nhật ký đăng nhập: ${logErr.message}`);
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("record-login error:", error);
       res.status(500).json({ error: error.message });
     }
   });

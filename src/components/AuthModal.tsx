@@ -104,47 +104,30 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24);
 
-      const payloadActiveSession = {
-        account_id: accountData.account_id,
-        session_token: sessionData.session.access_token,
-        ip_address: "127.0.0.1",
-        browser_info: navigator.userAgent,
-        device_info: navigator.platform || "Unknown",
-        expires_at: expiresAt.toISOString()
-      };
-      
-      console.log("ACTIVE_SESSION_PAYLOAD", payloadActiveSession);
+      try {
+        const response = await fetch('/api/auth/record-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionData.session.access_token}`
+          },
+          body: JSON.stringify({
+            account_id: accountData.account_id,
+            session_token: sessionData.session.access_token,
+            ip_address: "127.0.0.1",
+            browser_info: navigator.userAgent,
+            device_info: navigator.platform || "Unknown",
+            expires_at: expiresAt.toISOString()
+          })
+        });
 
-      // 1. Ghi active_sessions
-      // Để tránh lỗi duplicate do unique constraint, xoá session bị kẹt trên csdl đi trước
-      await supabase.from("active_sessions").delete().eq("account_id", accountData.account_id);
-      
-      const sessionInsert = await supabase.from("active_sessions").insert(payloadActiveSession);
-      console.log('Session insert:', sessionInsert);
-      
-      if (sessionInsert.error) {
-        console.error('Session insert failed:', sessionInsert.error);
-        setErrorMsg('Lỗi hệ thống: Không thể ghi nhận phiên đăng nhập.');
-        await supabase.auth.signOut();
-        return;
-      }
-
-      const payloadLoginLog = {
-        account_id: accountData.account_id,
-        action: "login",
-        ip_address: "127.0.0.1",
-        browser_info: navigator.userAgent,
-        device_info: navigator.platform || "Unknown"
-      };
-
-      console.log("LOGIN_LOG_PAYLOAD", payloadLoginLog);
-
-      // 2. Ghi login_logs
-      const logInsert = await supabase.from("login_logs").insert(payloadLoginLog);
-      
-      if (logInsert.error) {
-        console.error('Login log insert failed:', JSON.stringify(logInsert.error, null, 2));
-        setErrorMsg('Lỗi hệ thống: Không thể ghi log đăng nhập. Bật F12 tab Console để xem nguyên nhân chi tiết.');
+        if (!response.ok) {
+          const resError = await response.json();
+          throw new Error(resError.error || 'Ghi nhận nhận phiên đăng nhập/nhật ký thất bại.');
+        }
+      } catch (err: any) {
+        console.error('Session record failed:', err);
+        setErrorMsg(`Lỗi đồng bộ đăng nhập: ${err.message || err}`);
         await supabase.auth.signOut();
         return;
       }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTournamentStore } from '../store';
 import { supabase, SUPABASE_URL } from '../supabaseClient';
 import { createClient } from '@supabase/supabase-js';
-import { Users, Plus, KeyRound, Search, ShieldAlert, X, Shield, Building2, CheckCircle2, Edit } from 'lucide-react';
+import { Users, Plus, KeyRound, Search, ShieldAlert, X, Shield, Building2, CheckCircle2, Edit, Trash2 } from 'lucide-react';
 
 export default function AccountManager() {
   const accountUser = useTournamentStore((state) => state.currentUser);
@@ -207,6 +207,35 @@ export default function AccountManager() {
     }
   };
 
+  const handleDeleteAccount = async (accountId: string, username: string) => {
+    if (!isSuperAdmin) return;
+    if (!window.confirm(`Hành động này KHÔNG THỂ HOÀN TÁC.\nBạn có chắc chắn muốn XÓA VĨNH VIỄN tài khoản "${username}" cùng tất cả phiên làm việc và lịch sử đăng nhập phụ thuộc không?`)) return;
+    
+    setActionLoading(true);
+    setErrorMsg('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      
+      const response = await fetch(`/api/admin/accounts/${accountId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Có lỗi xảy ra khi xóa tài khoản');
+      }
+      
+      setSuccessMsg('Đã xóa thành công tài khoản.');
+      fetchAccounts();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Lỗi hệ thống khi xóa.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const getRoleBadgeColor = (roleStr: string) => {
     if (!roleStr) return 'bg-zinc-100 text-zinc-600';
     if (roleStr.includes('SUPER_ADMIN')) return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
@@ -323,13 +352,24 @@ export default function AccountManager() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
-                        onClick={() => openEditModal(acc)}
-                        className="p-1.5 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
-                        title="Chỉnh sửa tài khoản"
-                      >
-                        <Edit size={16} />
-                      </button>
+                      <div className="flex justify-end gap-1">
+                        <button 
+                          onClick={() => openEditModal(acc)}
+                          className="p-1.5 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
+                          title="Chỉnh sửa tài khoản"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        {isSuperAdmin && (
+                          <button 
+                            onClick={() => handleDeleteAccount(acc.id, acc.username)}
+                            className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                            title="Xóa tài khoản"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
