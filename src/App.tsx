@@ -425,17 +425,34 @@ export default function App() {
             {selectedTab !== 'live' && selectedTab !== 'logs' && selectedTab !== 'export' && selectedTab !== 'scoreEntry' && selectedTab !== 'accounts' && <EventBar />}
             
             <div className="animate-fade-in">
-              {selectedTab === 'dashboard' && <Dashboard />}
-              {selectedTab === 'teams' && <TeamManager />}
-              {selectedTab === 'groups' && <GroupManager />}
-              {selectedTab === 'scoreEntry' && <ScoreEntry />}
-              {selectedTab === 'matches' && <SchedulerAndScoreKeeper />}
-              {selectedTab === 'standings' && <Standings />}
-              {selectedTab === 'knockout' && <KnockoutBracket />}
-              {selectedTab === 'live' && <LiveDashboard />}
-              {selectedTab === 'export' && <ExportManager />}
-              {selectedTab === 'logs' && <AuditLogger />}
-              {selectedTab === 'accounts' && <AccountManager />}
+              {(() => {
+                const isTabAllowed = navItems.some(item => item.id === selectedTab);
+                if (!isTabAllowed) {
+                  return (
+                    <div className="flex flex-col items-center justify-center p-12 text-center bg-white dark:bg-zinc-900 rounded-xl border border-red-100 dark:border-red-900/30">
+                      <ShieldAlert className="w-12 h-12 text-red-500 mb-4" />
+                      <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">Truy Cập Bị Từ Chối</h3>
+                      <p className="text-zinc-500 dark:text-zinc-400">Bạn không có đủ quyền (Role/Permission) để truy cập chức năng này.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    {selectedTab === 'dashboard' && <Dashboard />}
+                    {selectedTab === 'teams' && <TeamManager />}
+                    {selectedTab === 'groups' && <GroupManager />}
+                    {selectedTab === 'scoreEntry' && <ScoreEntry />}
+                    {selectedTab === 'matches' && <SchedulerAndScoreKeeper />}
+                    {selectedTab === 'standings' && <Standings />}
+                    {selectedTab === 'knockout' && <KnockoutBracket />}
+                    {selectedTab === 'live' && <LiveDashboard />}
+                    {selectedTab === 'export' && <ExportManager />}
+                    {selectedTab === 'logs' && <AuditLogger />}
+                    {selectedTab === 'accounts' && <AccountManager />}
+                  </>
+                );
+              })()}
             </div>
           </main>
 
