@@ -25,6 +25,7 @@
     "motion": "^12.23.24",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
+    "react-router-dom": "^7.18.0",
     "react-zoom-pan-pinch": "^4.0.3",
     "vite": "^6.2.3",
     "zustand": "^5.0.13"
