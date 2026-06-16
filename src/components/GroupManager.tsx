@@ -5,18 +5,24 @@
 
 import React, { useState } from 'react';
 import { useTournamentStore } from '../store';
+import { useTeams } from '../hooks/useTeams';
+import { useGroups } from '../hooks/useGroups';
+import { useGroupMutations } from '../hooks/useDataMutations';
 import { Layers, Shuffle, Sparkles, AlertTriangle, Trash2, HelpCircle, AlertCircle } from 'lucide-react';
 
 export default function GroupManager() {
   const {
-    teams,
-    groups,
-    setupGroups,
-    autoGroupTeams,
-    moveTeamToGroup,
-    clearAllGroups,
     hasPermission,
   } = useTournamentStore();
+
+  const { data: teamsData = [], isLoading: isLoadingTeams } = useTeams();
+  const { data: groupsData = [], isLoading: isLoadingGroups } = useGroups();
+  const { clearAllGroups, setupGroups, autoGroupTeams, moveTeamToGroup } = useGroupMutations();
+
+  const teams: Record<string, any> = {};
+  teamsData.forEach(t => { teams[t.id] = t; });
+  const groups: Record<string, any> = {};
+  groupsData.forEach(g => { groups[g.id] = g; });
 
   const [numGroups, setNumGroups] = useState(4);
   const [draggedTeamId, setDraggedTeamId] = useState<string | null>(null);
@@ -29,8 +35,12 @@ export default function GroupManager() {
   const groupList = Object.values(groups);
   const unassignedTeams = teamList.filter((t) => t.groupId === null);
 
-  const handleCreateGroupsEmpty = () => {
-    setupGroups(numGroups);
+  const handleCreateGroupsEmpty = async () => {
+    try {
+      await setupGroups.mutateAsync(numGroups);
+    } catch(err) {
+      console.error(err);
+    }
   };
 
   const handleAutoGroup = (method: 'random' | 'seed') => {
@@ -66,9 +76,13 @@ export default function GroupManager() {
     setDraggedTeamId(null);
   };
 
-  const handleClearGroupsConfirm = () => {
-    clearAllGroups();
-    setShowClearConfirm(false);
+  const handleClearGroupsConfirm = async () => {
+    try {
+      await clearAllGroups.mutateAsync();
+      setShowClearConfirm(false);
+    } catch(err) {
+      console.error(err);
+    }
   };
 
   return (

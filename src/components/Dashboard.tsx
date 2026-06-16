@@ -18,9 +18,6 @@ export default function Dashboard() {
     updateTournament,
     updateSettings,
     resetAll,
-    addTeam,
-    autoGroupTeams,
-    generateAllSchedules,
     addLog,
     setSelectedTab,
     supabaseConnected,
@@ -114,32 +111,6 @@ export default function Dashboard() {
       advanceCount: Number(advCount),
     });
     showToast('Cập nhật luật chơi & cấu hình điểm số thành công!');
-  };
-
-  const handleLoadSampleData = () => {
-    resetAll();
-    
-    // 10 Đội đấu mẫu chuẩn danh giá
-    const sampleTeams = [
-      { name: 'CLB Pickleball Ba Đình', seed: '1' as const },
-      { name: 'Đội Hoàn Kiếm Đỏ', seed: '1' as const },
-      { name: 'Pickleball Cầu Giấy', seed: '2' as const },
-      { name: 'CLB Tây Hồ Xanh', seed: '2' as const },
-      { name: 'Vận Động Viên Đống Đa', seed: '3' as const },
-      { name: 'Đại Học Bách Khoa', seed: 'none' as const },
-      { name: 'Liên quân Ba Đình Sông Đà', seed: 'none' as const },
-      { name: 'CLB Thanh Xuân Trẻ', seed: 'none' as const },
-      { name: 'Pickleball Mỹ Đình', seed: 'none' as const },
-      { name: 'CLB Nam Từ Liêm Pro', seed: 'none' as const },
-    ];
-
-    sampleTeams.forEach((t) => {
-      addTeam(t.name, t.seed);
-    });
-
-    autoGroupTeams('seed', 2);
-    addLog('Hệ Thống', 'Khởi tạo 10 đội mẫu đỉnh cao và tự động xếp hạt giống vào 2 bảng đấu tròn (Bảng A, Bảng B).');
-    showToast('Đã nạp thành công 10 đội mẫu và bốc thăm 2 bảng đấu!');
   };
 
   const handleExportDataJson = () => {
@@ -771,16 +742,6 @@ export default function Dashboard() {
             </span>
           </div>
         </div>
-
-        {totalTeams === 0 && (
-          <button
-            onClick={handleLoadSampleData}
-            className="px-4 py-2.5 bg-white text-indigo-800 font-black hover:bg-slate-50 rounded-xl transition-all shadow-md shrink-0 flex items-center gap-1.5 text-xs cursor-pointer hover:scale-[1.01] active:scale-[0.99] uppercase tracking-wider"
-            id="btn-sample-data"
-          >
-            <Play size={14} fill="currentColor" className="text-indigo-600" /> Nạp Dữ Liệu Mẫu
-          </button>
-        )}
       </div>
 
       {/* TRẠNG THÁI KẾT NỐI SUPABASE Ở THỜI GIAN THỰC */}

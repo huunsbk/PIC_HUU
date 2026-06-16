@@ -5,6 +5,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTournamentStore } from '../store';
+import { useTeams } from '../hooks/useTeams';
+import { useGroups } from '../hooks/useGroups';
+import { useMatches } from '../hooks/useMatches';
 import { Trophy, PlayCircle, HelpCircle, AlertTriangle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { getReadableTeamName, getReadableKoMatchName, calculateGroupStandings, calculateBestThirdPlaces, getBracketDisplayName } from '../utils/tournamentEngine';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
@@ -12,9 +15,6 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 export default function KnockoutBracket() {
   const {
     tournament,
-    matches,
-    teams,
-    groups,
     generateKnockoutBracket,
     clearKnockout,
     updateKnockoutScore,
@@ -23,6 +23,16 @@ export default function KnockoutBracket() {
     addLog,
     hasPermission,
   } = useTournamentStore();
+
+  const { data: teamsData = [] } = useTeams();
+  const { data: groupsData = [] } = useGroups();
+  const { data: matchesData = [] } = useMatches();
+
+  const teams: Record<string, any> = {};
+  teamsData.forEach(t => { teams[t.id] = t; });
+  const groups: Record<string, any> = {};
+  groupsData.forEach(g => { groups[g.id] = g; });
+  const matches = matchesData;
 
   const canManage = hasPermission("manage_knockout");
 

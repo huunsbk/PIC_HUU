@@ -6,6 +6,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ExcelJS from 'exceljs';
 import { useTournamentStore } from '../store';
+import { useEvents } from '../hooks/useEvents';
+import { useTeams } from '../hooks/useTeams';
+import { useGroups } from '../hooks/useGroups';
+import { useMatches } from '../hooks/useMatches';
 import { supabase } from '../supabaseClient';
 import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
 import { 
@@ -344,11 +348,22 @@ const FullscreenButton = React.memo(({ elementId }: { elementId: string }) => {
 FullscreenButton.displayName = 'FullscreenButton';
 
 export default function LiveDashboard() {
-  const teams = useTournamentStore(state => state.teams);
-  const groups = useTournamentStore(state => state.groups);
-  const matches = useTournamentStore(state => state.matches);
+  const { data: eventsData = [] } = useEvents();
+  const events: Record<string, any> = {};
+  eventsData.forEach(e => { events[e.id] = e; });
+
+  const { data: teamsData = [] } = useTeams();
+  const teams: Record<string, any> = {};
+  teamsData.forEach(t => { teams[t.id] = t; });
+
+  const { data: groupsData = [] } = useGroups();
+  const groups: Record<string, any> = {};
+  groupsData.forEach(g => { groups[g.id] = g; });
+
+  const { data: matchesData = [] } = useMatches();
+  const matches = matchesData;
+
   const tournament = useTournamentStore(state => state.tournament);
-  const events = useTournamentStore(state => state.events);
   const activeTenantId = useTournamentStore(state => state.activeTenantId);
   const canManage = useTournamentStore(state => state.hasPermission("manage_matches"));
   const addLog = useTournamentStore(state => state.addLog);

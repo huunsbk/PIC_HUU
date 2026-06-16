@@ -5,14 +5,23 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTournamentStore } from '../store';
+import { useTeams } from '../hooks/useTeams';
+import { useGroups } from '../hooks/useGroups';
+import { useMatches } from '../hooks/useMatches';
 import { supabase } from '../supabaseClient';
 import { calculateGroupStandings, calculateBestThirdPlaces } from '../utils/tournamentEngine';
 import { BarChart3, Star, Download, Printer, ShieldAlert, Award } from 'lucide-react';
 
 export default function Standings() {
-  const matches = useTournamentStore(state => state.matches);
-  const teams = useTournamentStore(state => state.teams);
-  const groups = useTournamentStore(state => state.groups);
+  const { data: matchesData = [] } = useMatches();
+  const { data: teamsData = [] } = useTeams();
+  const { data: groupsData = [] } = useGroups();
+  const matches = matchesData;
+  const teams: Record<string, any> = {};
+  teamsData.forEach(t => { teams[t.id] = t; });
+  const groups: Record<string, any> = {};
+  groupsData.forEach(g => { groups[g.id] = g; });
+
   const tournament = useTournamentStore(state => state.tournament);
   const advanceSelectionMode = useTournamentStore(state => state.advanceSelectionMode);
   const manualQualifiedTeamIds = useTournamentStore(state => state.manualQualifiedTeamIds);

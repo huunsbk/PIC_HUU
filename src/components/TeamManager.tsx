@@ -5,12 +5,22 @@
 
 import React, { useState, useRef } from 'react';
 import { useTournamentStore } from '../store';
+import { useTeams } from '../hooks/useTeams';
+import { useGroups } from '../hooks/useGroups';
+import { useTeamMutations } from '../hooks/useDataMutations';
 import { Trash2, Edit2, Plus, Upload, FileType, Check, AlertCircle, Sparkles, HelpCircle, FileSpreadsheet } from 'lucide-react';
 import { SeedType } from '../types';
 
 export default function TeamManager() {
-  const { teams, groups, addTeam, deleteTeam, updateTeam, importTeams, addLog, hasPermission } = useTournamentStore();
+  const { addLog, hasPermission } = useTournamentStore();
+  const { data: teamsData = [], isLoading: isLoadingTeams } = useTeams();
+  const { data: groupsData = [] } = useGroups();
+  const { addTeam, deleteTeam, updateTeam, importTeams } = useTeamMutations();
   const canManage = hasPermission('manage_teams');
+  
+  const groups: Record<string, any> = {};
+  groupsData.forEach(g => { groups[g.id] = g; });
+  const teamList = teamsData;
   const [newTeamName, setNewTeamName] = useState('');
   const [newSeed, setNewSeed] = useState<SeedType>('none');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -29,8 +39,6 @@ export default function TeamManager() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [excelPasteText, setExcelPasteText] = useState('');
 
-  const teamList = Object.values(teams);
-
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => {
@@ -38,45 +46,35 @@ export default function TeamManager() {
     }, 4000);
   };
 
-  const handleImportFromExcelText = () => {
+  const handleImportFromExcelText = async () => {
     const text = excelPasteText.trim();
     if (!text) {
       showNotification('error', 'Vui lòng dán danh sách đội đấu trước.');
       return;
     }
 
-    const lines = text.split(/\r?\n/);
-    let added = 0;
-    let dupsOrErrors = 0;
-
-    lines.forEach((line) => {
-      const trimmed = line.trim();
-      if (!trimmed) return;
-      const result = addTeam(trimmed, 'none');
-      if (result.success) {
-        added++;
+    try {
+      const added = await importTeams.mutateAsync(text);
+      if (added > 0) {
+        showNotification('success', `Đã thêm thành công ${added} đội từ Excel.`);
+        setExcelPasteText('');
       } else {
-        dupsOrErrors++;
+        showNotification('error', 'Không thêm được đội nào.');
       }
-    });
-
-    if (added > 0) {
-      showNotification('success', `Đã thêm thành công ${added} đội từ Excel.`);
-      setExcelPasteText('');
-    } else {
-      showNotification('error', 'Không thêm được đội nào (trùng tên hoặc rỗng).');
+    } catch (err: any) {
+      showNotification('error', err.message || 'Lỗi khi nhập danh sách đội');
     }
   };
 
-  const handleCreateTeam = (e: React.FormEvent) => {
+  const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = addTeam(newTeamName, newSeed);
-    if (result.success) {
-      showNotification('success', result.message);
+    try {
+      await addTeam.mutateAsync({ name: newTeamName, seed: newSeed });
+      showNotification('success', 'Thêm đội thành công.');
       setNewTeamName('');
       setNewSeed('none');
-    } else {
-      showNotification('error', result.message);
+    } catch(err: any) {
+      showNotification('error', err.message || 'Lỗi khi thêm đội');
     }
   };
 
@@ -86,23 +84,27 @@ export default function TeamManager() {
     setEditSeed(seed);
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingId) return;
-    const result = updateTeam(editingId, editName, editSeed);
-    if (result.success) {
-      showNotification('success', result.message);
+    try {
+      await updateTeam.mutateAsync({ id: editingId, name: editName, seed: editSeed });
+      showNotification('success', 'Sửa thông tin đội thành công.');
       setEditingId(null);
-    } else {
-      showNotification('error', result.message);
+    } catch(err: any) {
+      showNotification('error', err.message || 'Lỗi khi sửa đội');
     }
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!teamToDelete) return;
-    deleteTeam(teamToDelete.id);
-    showNotification('success', `Đã xóa đội "${teamToDelete.name}" thành công.`);
-    setTeamToDelete(null);
+    try {
+      await deleteTeam.mutateAsync(teamToDelete.id);
+      showNotification('success', `Đã xóa đội "${teamToDelete.name}" thành công.`);
+      setTeamToDelete(null);
+    } catch(err: any) {
+      showNotification('error', err.message || 'Lỗi khi xóa đội');
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,18 +112,15 @@ export default function TeamManager() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const text = event.target?.result as string;
       if (text) {
-        const result = importTeams(text);
-        if (result.success) {
-          let msg = `Tập tin xử lý thành công! Đã thêm ${result.addedCount} đội.`;
-          if (result.errors.length > 0) {
-            msg += ` Không thể nhập ${result.errors.length} đội trùng hoặc lỗi.`;
-          }
-          showNotification('success', msg);
-        } else {
-          showNotification('error', result.errors[0] || 'Lỗi xử lý file.');
+        try {
+          const count = await importTeams.mutateAsync(text);
+          showNotification('success', `Tập tin xử lý thành công! Đã thêm ${count} đội.`);
+          addLog('Danh Sách Đội', `Nhập loạt ${count} đội bằng file CSV thành công.`);
+        } catch (error: any) {
+          showNotification('error', error.message || 'Lỗi xử lý file.');
         }
       }
     };

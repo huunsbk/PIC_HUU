@@ -6,6 +6,11 @@
 import React, { useState, useEffect } from 'react';
 import ExcelJS from 'exceljs';
 import { useTournamentStore } from '../store';
+import { useTeams } from '../hooks/useTeams';
+import { useGroups } from '../hooks/useGroups';
+import { useMatches } from '../hooks/useMatches';
+import { useMatchMutations } from '../hooks/useDataMutations';
+import { useEvents } from '../hooks/useEvents';
 import { calculateGroupStandings, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
 import { supabase } from '../supabaseClient';
 import { 
@@ -23,21 +28,28 @@ import {
 
 export default function SchedulerAndScoreKeeper() {
   const {
-    teams,
-    groups,
-    matches,
     tournament,
-    generateMatchesForGroup,
-    generateAllSchedules,
-    updateMatchScore,
-    resetMatchScore,
     activeGroupId,
     setActiveGroupId,
     addLog,
-    events,
     currentEventId,
     hasPermission,
   } = useTournamentStore();
+
+  const { data: teamsData = [] } = useTeams();
+  const { data: groupsData = [] } = useGroups();
+  const { data: matchesData = [] } = useMatches();
+  const { data: eventsData = [] } = useEvents();
+
+  const teams: Record<string, any> = {};
+  teamsData.forEach(t => { teams[t.id] = t; });
+  const groups: Record<string, any> = {};
+  groupsData.forEach(g => { groups[g.id] = g; });
+  const matches = matchesData;
+  const events: Record<string, any> = {};
+  eventsData.forEach(e => { events[e.id] = e; });
+
+  const { updateMatchScore, resetMatchScore, generateForGroup, generateAllSchedules } = useMatchMutations();
 
   const canManage = hasPermission('manage_matches');
 
@@ -74,7 +86,7 @@ export default function SchedulerAndScoreKeeper() {
     setLocalScores(scoresMap);
   }, [activeGroupId, matches]); // Sync when active table changes or background matches update
 
-  const handleScoreInputChange = (matchId: string, team: 'A' | 'B', value: string) => {
+  const handleScoreInputChange = async (matchId: string, team: 'A' | 'B', value: string) => {
     // Keep value clean: only digits or empty string
     const cleanVal = value.replace(/[^0-9]/g, '');
 
@@ -97,7 +109,7 @@ export default function SchedulerAndScoreKeeper() {
     if (scoreAStr !== '' && scoreBStr !== '') {
       const numA = Number(scoreAStr);
       const numB = Number(scoreBStr);
-      updateMatchScore(matchId, numA, numB);
+      await updateMatchScore.mutateAsync({ matchId, scoreA: numA, scoreB: numB });
     } else {
       // Only reset/clears the match score if there's an actual score populated in the store
       const currentMatchInStore = matches.find((m) => m.id === matchId);
@@ -105,7 +117,7 @@ export default function SchedulerAndScoreKeeper() {
         currentMatchInStore &&
         (currentMatchInStore.scoreA !== null || currentMatchInStore.scoreB !== null)
       ) {
-        updateMatchScore(matchId, null, null);
+        await updateMatchScore.mutateAsync({ matchId, scoreA: null, scoreB: null });
       }
     }
   };
@@ -116,7 +128,7 @@ export default function SchedulerAndScoreKeeper() {
     
     setRegenLoading(true);
     try {
-      generateMatchesForGroup(activeGroup.id);
+      await generateForGroup.mutateAsync({ groupId: activeGroup.id, teamIds: activeGroup.teamIds });
       addLog('Thiết Lập Lịch', `Tái tạo toàn bộ lịch đấu cho bảng [${activeGroup.name}] thành công.`);
     } catch (err: any) {
       console.error(err);
@@ -130,12 +142,12 @@ export default function SchedulerAndScoreKeeper() {
   };
 
   // Reset scores for active group matches only
-  const handleResetScoresSubmit = () => {
+  const handleResetScoresSubmit = async () => {
     if (!activeGroup) return;
     const groupMatches = matches.filter((m) => m.groupId === activeGroup.id);
-    groupMatches.forEach((m) => {
-      resetMatchScore(m.id);
-    });
+    for (const m of groupMatches) {
+      await resetMatchScore.mutateAsync(m.id);
+    }
 
     // Clear local text inputs
     setLocalScores((prev) => {
@@ -413,8 +425,8 @@ export default function SchedulerAndScoreKeeper() {
           {/* Regenerate schedule buttons on the right */}
           <div className="pb-2 md:pb-0 flex flex-wrap gap-2">
             <button
-              onClick={() => {
-                generateAllSchedules();
+              onClick={async () => {
+                await generateAllSchedules.mutateAsync(groupList);
                 addLog('Lập Lịch', 'Khởi tạo nhanh lịch đấu toàn giải cho tất cả các bảng và nội dung.');
               }}
               disabled={!canManage}

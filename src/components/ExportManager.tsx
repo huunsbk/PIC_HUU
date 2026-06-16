@@ -6,6 +6,9 @@
 import React, { useState } from 'react';
 import ExcelJS from 'exceljs';
 import { useTournamentStore } from '../store';
+import { useTeams } from '../hooks/useTeams';
+import { useMatches } from '../hooks/useMatches';
+import { useGroups } from '../hooks/useGroups';
 import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime } from '../utils/tournamentEngine';
 import {
   FileSpreadsheet,
@@ -22,13 +25,21 @@ import {
 
 export default function ExportManager() {
   const {
-    teams,
-    groups,
-    matches,
     tournament,
     events,
     addLog,
+    currentEventId
   } = useTournamentStore();
+
+  const { data: teamsData = [] } = useTeams();
+  const { data: groupsData = [] } = useGroups();
+  const { data: matchesData = [] } = useMatches();
+
+  const teams: Record<string, any> = {};
+  teamsData.forEach(t => { teams[t.id] = t; });
+  const groups: Record<string, any> = {};
+  groupsData.forEach(g => { groups[g.id] = g; });
+  const matches = matchesData;
 
   const [selectedEventFilter, setSelectedEventFilter] = useState<string>('all');
   const [isExportingExcel, setIsExportingExcel] = useState(false);
@@ -37,17 +48,17 @@ export default function ExportManager() {
 
   const eventList = Object.values(events || {});
 
-  // Hàm tính Standing cho một Event bất kỳ
+  // Hàm tính Standing cho một Event bất kỳ (hiện chỉ hoạt động cho current event)
   const getEventStandings = (evt: typeof events[string]) => {
     const stdRecord: Record<string, ReturnType<typeof calculateGroupStandings>> = {};
-    const groupList = Object.values(evt.groups || {});
+    const groupList = groupsData;
     groupList.forEach((g) => {
-      const groupMatches = (evt.matches || []).filter((m) => m.groupId === g.id);
+      const groupMatches = matches.filter((m) => m.groupId === g.id);
       stdRecord[g.id] = calculateGroupStandings(
         g.id, 
         g.teamIds, 
         groupMatches, 
-        evt.teams || {}, 
+        teams, 
         evt.settings
       );
     });

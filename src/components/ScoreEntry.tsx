@@ -1,11 +1,30 @@
 import React, { useState } from 'react';
 import { Clock, Play, Award, CheckSquare, Save, X } from 'lucide-react';
 import { useTournamentStore } from '../store';
+import { useEvents } from '../hooks/useEvents';
+import { useMatches } from '../hooks/useMatches';
+import { useTeams } from '../hooks/useTeams';
+import { useGroups } from '../hooks/useGroups';
+import { useMatchMutations } from '../hooks/useDataMutations';
 import { getReadableTeamName, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
 
 export default function ScoreEntry() {
-  const { events, updateMatchScore, updateMatchStatus, currentEventId, setCurrentEvent, userRole, currentUser } = useTournamentStore();
+  const { currentEventId, setCurrentEvent, userRole, currentUser } = useTournamentStore();
   const currentEnterpriseUser = useTournamentStore(state => state.currentEnterpriseUser);
+
+  const { data: eventsData = [] } = useEvents();
+  const { data: matchesData = [] } = useMatches();
+  const { data: teamsData = [] } = useTeams();
+  const { data: groupsData = [] } = useGroups();
+  const { updateMatchScore, updateMatchStatus } = useMatchMutations();
+
+  const events: Record<string, any> = {};
+  eventsData.forEach(e => { events[e.id] = e; });
+  const teams: Record<string, any> = {};
+  teamsData.forEach(t => { teams[t.id] = t; });
+  const groups: Record<string, any> = {};
+  groupsData.forEach(g => { groups[g.id] = g; });
+  const matches = matchesData;
 
   const [localScores, setLocalScores] = useState<Record<string, { a: string, b: string }>>({});
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -15,7 +34,7 @@ export default function ScoreEntry() {
     setTimeout(() => setErrorMsg(null), 4000);
   };
 
-  const eventList = Object.values(events);
+  const eventList = eventsData;
   
   // Safe checks for currentEventId
   const currentEvt = currentEventId && events[currentEventId] ? events[currentEventId] : eventList[0];
@@ -35,7 +54,8 @@ export default function ScoreEntry() {
     return <div className="text-center py-20 text-zinc-500 font-bold bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">Chưa có nội dung thi đấu nào. Vui lòng tạo nội dung trước.</div>;
   }
 
-  if (!currentEvt.matches || currentEvt.matches.length === 0) {
+  // The condition below must now use `matches` array since `currentEvt` no longer holds `.matches`
+  if (!matches || matches.length === 0) {
      return (
         <div className="space-y-6">
           <div className="flex items-center gap-3 bg-zinc-100 dark:bg-zinc-900 p-2 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 overflow-x-auto whitespace-nowrap hide-scrollbar">
@@ -44,7 +64,7 @@ export default function ScoreEntry() {
                 key={evt.id}
                 onClick={() => setCurrentEvent(evt.id)}
                 className={`px-5 py-2.5 rounded-xl font-black text-sm transition-all focus:outline-none ${
-                    currentEvt.id === evt.id
+                    currentEvt?.id === evt.id
                     ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm border border-zinc-200 dark:border-zinc-700'
                     : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 border border-transparent'
                 }`}
@@ -58,20 +78,20 @@ export default function ScoreEntry() {
      )
   }
 
-  const evtMatches = balanceMatchesRestTime(currentEvt.matches || []);
+  const evtMatches = balanceMatchesRestTime(matches || []);
   const pendingMatches = evtMatches.filter(m => m.status === 'pending');
   const playingMatches = evtMatches.filter(m => m.status === 'playing');
 
-  const handleSetPlaying = (matchId: string) => {
-    updateMatchStatus(matchId, 'playing');
+  const handleSetPlaying = async (matchId: string) => {
+    await updateMatchStatus.mutateAsync({ matchId, status: 'playing' });
     setLocalScores(prev => ({
         ...prev,
         [matchId]: { a: '', b: '' }
     }));
   };
 
-  const handleCancelPlaying = (matchId: string) => {
-    updateMatchStatus(matchId, 'pending');
+  const handleCancelPlaying = async (matchId: string) => {
+    await updateMatchStatus.mutateAsync({ matchId, status: 'pending' });
   };
 
   const handleScoreChange = (matchId: string, team: 'a' | 'b', value: string) => {
@@ -89,7 +109,7 @@ export default function ScoreEntry() {
     }
   };
 
-  const saveScore = (matchId: string) => {
+  const saveScore = async (matchId: string) => {
     const scores = localScores[matchId];
     if (!scores || scores.a === '' || scores.b === '') {
         try {
@@ -100,7 +120,7 @@ export default function ScoreEntry() {
         triggerError('Vui lòng nhập đầy đủ điểm số cho cả hai đội!');
         return;
     }
-    updateMatchScore(matchId, parseInt(scores.a, 10), parseInt(scores.b, 10));
+    await updateMatchScore.mutateAsync({ matchId, scoreA: parseInt(scores.a, 10), scoreB: parseInt(scores.b, 10) });
   };
 
   return (
@@ -135,9 +155,9 @@ export default function ScoreEntry() {
             
             <div className="flex-1 overflow-y-auto p-3 space-y-2 h-[500px]">
                 {evtMatches.map((m, idx) => {
-                    const teamA = getMatchDisplayName(m.teamAId, m.placeholderA, currentEvt.teams, currentEvt.groups, currentEvt.matches, currentEvt.settings || {});
-                    const teamB = getMatchDisplayName(m.teamBId, m.placeholderB, currentEvt.teams, currentEvt.groups, currentEvt.matches, currentEvt.settings || {});
-                    const group = currentEvt.groups[m.groupId];
+                    const teamA = getMatchDisplayName(m.teamAId, m.placeholderA, teams, groups, matches, currentEvt.settings || {});
+                    const teamB = getMatchDisplayName(m.teamBId, m.placeholderB, teams, groups, matches, currentEvt.settings || {});
+                    const group = groups[m.groupId];
                     const absoluteIndex = idx + 1;
                     const isFinished = m.status === 'finished';
                     const isPlaying = m.status === 'playing';
@@ -228,9 +248,9 @@ export default function ScoreEntry() {
            ) : (
                <div className="grid grid-cols-1 gap-6">
                    {playingMatches.map(m => {
-                       const teamA = getMatchDisplayName(m.teamAId, m.placeholderA, currentEvt.teams, currentEvt.groups, currentEvt.matches, currentEvt.settings || {});
-                       const teamB = getMatchDisplayName(m.teamBId, m.placeholderB, currentEvt.teams, currentEvt.groups, currentEvt.matches, currentEvt.settings || {});
-                       const group = currentEvt.groups[m.groupId];
+                       const teamA = getMatchDisplayName(m.teamAId, m.placeholderA, teams, groups, matches, currentEvt.settings || {});
+                       const teamB = getMatchDisplayName(m.teamBId, m.placeholderB, teams, groups, matches, currentEvt.settings || {});
+                       const group = groups[m.groupId];
                        
                        let roundLabel = "";
                        if (group) {
