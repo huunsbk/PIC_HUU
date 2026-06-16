@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { KeyRound, ShieldAlert, X, Eye, EyeOff } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_URL } from '../supabaseClient';
+import { SUPABASE_URL, supabase } from '../supabaseClient';
 
 interface ResetPasswordModalProps {
   isOpen: boolean;
@@ -10,7 +10,6 @@ interface ResetPasswordModalProps {
 }
 
 export default function ResetPasswordModal({ isOpen, onClose, targetUsername }: ResetPasswordModalProps) {
-  const [serviceRoleKey, setServiceRoleKey] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -24,55 +23,47 @@ export default function ResetPasswordModal({ isOpen, onClose, targetUsername }: 
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!serviceRoleKey.trim() || !newPassword.trim()) {
-      setErrorMsg('Vui lòng nhập Service Role Key và Mật khẩu mới.');
+    if (!newPassword.trim()) {
+      setErrorMsg('Vui lòng nhập mật khẩu mới.');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Create a temporary admin client
-      const supabaseAdmin = createClient(SUPABASE_URL, serviceRoleKey.trim(), {
-        auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false }
-      });
-
-      // 1. Find the user by using listUsers
-      // Note: listUsers requires pagination, but for a small db, 1 page is usually enough.
-      // Alternatively, we know the email: targetUsername + '@pic.com'
-      // But there's no getUserByEmail directly, so we list and filter.
-      const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
       
-      if (listError) {
-        throw new Error('Lỗi truy cập dữ liệu người dùng: Service Role Key có thể không hợp lệ.');
+      if (!token) {
+        throw new Error('Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn.');
       }
 
-      const targetEmail = `${targetUsername}@pic.com`.toLowerCase();
-      const user = users.find((u: any) => u.email === targetEmail);
-
-      if (!user) {
-        throw new Error(`Không tìm thấy người dùng với email ảo: ${targetEmail}`);
-      }
-
-      // 2. Update password
-      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
-        password: newPassword
+      const response = await fetch('/api/admin/accounts/reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          targetUsername,
+          newPassword: newPassword.trim()
+        })
       });
 
-      if (updateError) {
-        throw new Error(`Lỗi cập nhật mật khẩu: ${updateError.message}`);
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Có lỗi xảy ra khi đổi mật khẩu.');
       }
 
       setSuccessMsg('Đổi mật khẩu thành công!');
       setTimeout(() => {
         onClose();
-        setServiceRoleKey('');
         setNewPassword('');
         setSuccessMsg('');
       }, 1500);
 
     } catch (err: any) {
-      setErrorMsg(err.message || 'Có lỗi xảy ra (kiểm tra lại Service Key).');
+      setErrorMsg(err.message || 'Có lỗi xảy ra.');
     } finally {
       setLoading(false);
     }
@@ -138,23 +129,6 @@ export default function ResetPasswordModal({ isOpen, onClose, targetUsername }: 
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-              Supabase Service Role Key <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="password"
-              value={serviceRoleKey}
-              onChange={(e) => setServiceRoleKey(e.target.value)}
-              placeholder="eyJh..."
-              className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 font-mono text-xs"
-              required
-            />
-            <p className="mt-1 text-[10px] text-zinc-500">
-              * Yêu cầu quyền quản trị cấp cao (service_role) từ bảng điều khiển Supabase để can thiệp đổi mật khẩu. Key này chỉ dùng 1 lần, KHÔNG LƯU LẠI trên hệ thống.
-            </p>
           </div>
 
           <button

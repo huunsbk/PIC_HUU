@@ -41,10 +41,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       return;
     }
 
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: trimmedUser + '@pic.com',
-      password: trimmedPass
-    });
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: trimmedUser + '@pic.com',
+        password: trimmedPass
+      });
 
     if (authError || !authData.user) {
       setErrorMsg('Tên đăng nhập hoặc mật khẩu không chính xác.');
@@ -155,6 +156,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       setAuthStatus(mappedRole, accountData.username, tenantIdStr, enterpriseUser);
       onClose();
     }, 800);
+    } catch (err: any) {
+      console.error('[Auth] Login exception:', err);
+      setErrorMsg('Lỗi kết nối máy chủ (Failed to fetch). Vui lòng thử lại.');
+    }
   };
 
   return (

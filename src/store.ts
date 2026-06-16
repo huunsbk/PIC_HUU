@@ -609,7 +609,9 @@ export const useTournamentStore = create<AppState>()(
             timestamp: newLog.timestamp,
             action: newLog.action,
             details: newLog.details
-          }]).then();
+          }]).then(({ error }) => {
+            if (error) console.warn('Audit log insert failed:', error);
+          });
         }
       };
 

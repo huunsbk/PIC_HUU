@@ -67,6 +67,9 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Initial fetch
     supabase.auth.getSession().then(({ data: { session } }) => {
       fetchTenantContext(session);
+    }).catch(err => {
+      console.warn("Could not get session:", err);
+      fetchTenantContext(null);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
