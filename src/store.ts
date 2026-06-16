@@ -642,7 +642,12 @@ export const useTournamentStore = create<AppState>()(
         permissions: [],
         hasPermission: (permissionName) => {
           const state = get();
-          return state.userRole === 'SUPER_ADMIN' || state.userRole === 'TENANT_ADMIN' || state.permissions.includes(permissionName) || state.permissions.includes('*');
+          if (state.userRole === 'SUPER_ADMIN' || state.userRole === 'TENANT_ADMIN') return true;
+          if (state.userRole === 'EVENT_ADMIN') {
+            const eventAdminPerms = ['manage_events', 'manage_teams', 'manage_groups', 'manage_matches', 'manage_knockout', 'enter_score'];
+            if (eventAdminPerms.includes(permissionName)) return true;
+          }
+          return state.permissions.includes(permissionName) || state.permissions.includes('*');
         },
         currentEventId: 'event-default',
         currentUser: null,
@@ -660,7 +665,7 @@ export const useTournamentStore = create<AppState>()(
             activeTenantId: tenantId,
             permissions: enterpriseUser?.permissions || [],
             isAdmin: false /* deprecated */,
-            selectedTab: enterpriseUser?.permissions?.includes('enter_score') && !enterpriseUser?.permissions?.includes('*') ? 'scoreEntry' : 'dashboard',
+            selectedTab: (role === 'EVENT_ADMIN' || (enterpriseUser?.permissions?.includes('enter_score') && !enterpriseUser?.permissions?.includes('*'))) ? 'scoreEntry' : 'dashboard',
             isLoadingSupabase: true
           });
 
@@ -764,7 +769,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateTournament: (t) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           set((state) => {
             const updated = { ...state.tournament, ...t };
             return { tournament: updated };
@@ -773,7 +778,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateSettings: (s) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           set((state) => {
             const updatedSettings = { ...state.tournament.settings, ...s };
             const updated = { ...state.tournament, settings: updatedSettings };
@@ -783,7 +788,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         addEvent: (name) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           const tenantPrefix = get().activeTenantId === 'default' ? '' : `${get().activeTenantId}__`;
           const id = `${tenantPrefix}event-${Math.random().toString(36).substring(2, 9)}`;
           const trimmedName = name.trim() || 'Nội dung mới';
@@ -815,7 +820,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         deleteEvent: async (id) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           const event = get().events[id];
           if (!event) return;
 
@@ -862,7 +867,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         renameEvent: (id, newName) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           const trimmed = newName.trim();
           if (!trimmed) return;
           const oldName = get().events[id]?.name || id;
@@ -887,7 +892,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         addTeam: (name, seed) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) {
+          if (get().userRole === 'guest') {
             return { success: false, message: 'Yêu cầu quyền Admin để thêm đội.' };
           }
           if (!get().currentEventId) {
@@ -922,7 +927,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         deleteTeam: (id) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           const team = get().teams[id];
           if (!team) return;
 
@@ -958,7 +963,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateTeam: (id, name, seed) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) {
+          if (get().userRole === 'guest') {
             return { success: false, message: 'Yêu cầu quyền Admin để sửa thông tin đội.' };
           }
           const trimmedName = name.trim();
@@ -988,7 +993,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         importTeams: (csvContent) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) {
+          if (get().userRole === 'guest') {
             return { success: false, addedCount: 0, errors: ['Yêu cầu quyền Admin để nhập danh sách từ file.'] };
           }
           if (!csvContent.trim()) {
@@ -1070,7 +1075,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         setupGroups: (numGroups) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           if (numGroups < 1 || numGroups > 32) return;
 
           const getGroupName = (index: number) => {
@@ -1120,7 +1125,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         autoGroupTeams: (method, numGroups) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           if (numGroups < 1 || numGroups > 32) return;
           const allTeams = Object.values(get().teams);
           if (allTeams.length === 0) return;
@@ -1205,7 +1210,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         moveTeamToGroup: (teamId, targetGroupId) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           const team = get().teams[teamId];
           if (!team) return;
 
@@ -1256,7 +1261,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         clearAllGroups: () => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           set((state) => {
             const nextGroups: Record<string, Group> = {};
             const nextTeams = { ...state.teams };
@@ -1279,7 +1284,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         generateMatchesForGroup: (groupId) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           const group = get().groups[groupId];
           if (!group || group.teamIds.length === 0) return;
 
@@ -1316,7 +1321,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         clearMatchesForGroup: (groupId) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           const group = get().groups[groupId];
           set((state) => {
             const finalMatchesList = state.matches.filter((m) => m.groupId !== groupId);
@@ -1342,7 +1347,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateMatchStatus: (matchId, status) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           set((state) => {
             const matchesCopy = state.matches.map((m) => {
               if (m.id !== matchId) return m;
@@ -1375,7 +1380,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateMatchScore: (matchId, scoreA, scoreB) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           set((state) => {
             const matchesCopy = state.matches.map((m) => {
               if (m.id !== matchId) return m;
@@ -1437,7 +1442,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         resetMatchScore: (matchId) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           const m = get().matches.find((x) => x.id === matchId);
           set((state) => {
             const matchesCopy = state.matches.map((x) => {
@@ -1467,7 +1472,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
          generateAllSchedules: () => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           const groupsMap = get().groups;
           const groupIdsList = Object.keys(groupsMap);
           if (groupIdsList.length === 0) return;
@@ -1511,7 +1516,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         generateKnockoutBracket: (size) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           // 1. Tính toán bảng xếp hạng của các bảng
           const standingsByGroup: Record<string, GroupStanding[]> = {};
           const groupsMap = get().groups;
@@ -1713,7 +1718,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateKnockoutScore: (matchId, scoreA, scoreB) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           
           set((state) => {
             const matchesMap = new Map<string, Match>();
@@ -1815,7 +1820,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateKnockoutParticipant: (matchId, slot, teamNameOrId) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           set((state) => {
             const updated = state.matches.map((m) => {
               if (m.id !== matchId) return m;
@@ -1857,7 +1862,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         propagateKnockoutResets: (changedMatchIds) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           if (changedMatchIds.length === 0) return;
 
           set((state) => {
@@ -1919,7 +1924,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         clearKnockout: () => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           set((state) => {
             const finalMatchesList = state.matches.filter((m) => m.groupId !== 'knockout');
 
@@ -1941,7 +1946,7 @@ export const useTournamentStore = create<AppState>()(
         },
 
         updateKnockoutManualBracket: (updatedKoMatches, numBestThirds) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           set((state) => {
             const nonKoMatches = state.matches.filter((m) => m.groupId !== 'knockout');
             const mergedMatches = [...nonKoMatches, ...updatedKoMatches];
@@ -1978,12 +1983,12 @@ export const useTournamentStore = create<AppState>()(
         setSelectedTab: (tab) => set({ selectedTab: tab }),
         setActiveGroupId: (id) => set({ activeGroupId: id }),
         setAdvanceSelectionMode: (mode) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           set({ advanceSelectionMode: mode });
           logToStore('Tuyển chọn', `Thay đổi chế độ tuyển chọn vòng trong thành: ${mode === 'auto' ? 'Tự động' : 'Tích chọn thủ công'}`);
         },
         toggleManualQualifiedTeam: (teamId) => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           set((state) => {
             const current = state.manualQualifiedTeamIds || [];
             const isExist = current.includes(teamId);
@@ -1995,19 +2000,19 @@ export const useTournamentStore = create<AppState>()(
           logToStore('Tuyển chọn', `Thay đổi trạng thái đấu thủ "${tName}" thành ${status}.`);
         },
         clearManualQualifiedTeams: () => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           set({ manualQualifiedTeamIds: [] });
           logToStore('Tuyển chọn', `Xóa toàn bộ lựa chọn vé đi tiếp thủ công.`);
         },
 
         addLog: (action, details) => logToStore(action, details),
         clearLogs: () => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           set({ logs: [] });
         },
 
         resetAll: () => {
-          if ((!get().hasPermission('*') && get().permissions.length === 0)) return;
+          if (get().userRole === 'guest') return;
           set({
             tournament: DEFAULT_TOURNAMENT,
             teams: {},
