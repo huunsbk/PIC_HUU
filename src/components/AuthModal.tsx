@@ -55,8 +55,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     // Load Enterprise Account details using unified RPC
     const { data: profileStr, error: accountError } = await supabase.rpc('get_current_profile');
     
-    const { data: sessionData } = await supabase.auth.getSession();
-
     if (accountError || !profileStr) {
       console.error('[Auth Flow Error] Stack trace / Error details:', accountError);
       setErrorMsg('Tài khoản không tồn tại trên hệ thống hoặc đã bị khóa.');
@@ -70,24 +68,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     // Check if expected attributes exist
     if (!(accountData.account_id && accountData.tenant_id && accountData.role && accountData.permissions)) {
        console.warn('[Auth Flow Debug] Missing some expected attributes in payload');
-    }
-
-    // Securely delegate active_sessions to DB RPC instead of direct insert
-    if (sessionData?.session) {
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24);
-      try {
-        await supabase.rpc('record_login_session', {
-          p_account_id: accountData.account_id,
-          p_session_token: sessionData.session.access_token,
-          p_ip_address: "127.0.0.1",
-          p_browser_info: navigator.userAgent,
-          p_device_info: navigator.platform || "Unknown",
-          p_expires_at: expiresAt.toISOString()
-        });
-      } catch (err) {
-        console.warn('Could not record login session securely:', err);
-      }
     }
 
     const mappedRole = accountData.role || 'guest';
