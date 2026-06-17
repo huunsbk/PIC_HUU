@@ -151,39 +151,116 @@ export function useGroupMutations() {
   const queryClient = useQueryClient();
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
+  const tournamentId = useTournamentStore((state) => state.tournament.id);
+  const tenantId = activeTenantId !== 'default' ? activeTenantId : null;
+
+  const getGroupName = (index: number) => {
+    let name = '';
+    let temp = index;
+    while (temp >= 0) {
+      name = String.fromCharCode((temp % 26) + 65) + name;
+      temp = Math.floor(temp / 26) - 1;
+    }
+    return `Bảng ${name}`;
+  };
+
+  const resetEventGroups = async (numGroups: number) => {
+    if (!currentEventId) {
+      throw new Error('Chưa có nội dung thi đấu hiện hành để tạo bảng.');
+    }
+
+    const deletedAt = new Date().toISOString();
+    const { error: archiveError } = await supabase
+      .from('groups')
+      .update({ deleted_at: deletedAt })
+      .eq('event_id', currentEventId)
+      .is('deleted_at', null);
+    if (archiveError) throw archiveError;
+
+    const { error: resetTeamsError } = await supabase
+      .from('teams')
+      .update({ group_id: null })
+      .eq('event_id', currentEventId)
+      .is('deleted_at', null);
+    if (resetTeamsError) throw resetTeamsError;
+
+    const { error: resetMatchesError } = await supabase
+      .from('matches')
+      .delete()
+      .eq('event_id', currentEventId)
+      .neq('group_id', 'knockout');
+    if (resetMatchesError) throw resetMatchesError;
+
+    const groupRows = Array.from({ length: numGroups }, (_, index) => ({
+      id: `group-${crypto.randomUUID()}`,
+      name: getGroupName(index),
+      event_id: currentEventId,
+      tenant_id: tenantId,
+      tournament_id: tournamentId || null,
+      team_ids: [],
+    }));
+
+    const { data, error } = await supabase
+      .from('groups')
+      .insert(groupRows)
+      .select('id, name');
+    if (error) throw error;
+
+    return data || [];
+  };
 
   const clearAllGroups = useMutation({
      mutationFn: async () => {
        const deletedAt = new Date().toISOString();
-       await supabase.from('groups').update({ deleted_at: deletedAt }).eq('event_id', currentEventId);
+       const { error: archiveError } = await supabase
+         .from('groups')
+         .update({ deleted_at: deletedAt })
+         .eq('event_id', currentEventId)
+         .is('deleted_at', null);
+       if (archiveError) throw archiveError;
+
+       const { error: resetTeamsError } = await supabase
+         .from('teams')
+         .update({ group_id: null })
+         .eq('event_id', currentEventId)
+         .is('deleted_at', null);
+       if (resetTeamsError) throw resetTeamsError;
+
+       const { error: resetMatchesError } = await supabase
+         .from('matches')
+         .delete()
+         .eq('event_id', currentEventId)
+         .neq('group_id', 'knockout');
+       if (resetMatchesError) throw resetMatchesError;
      },
      onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
+        queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
+        queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
      }
   });
 
   const setupGroups = useMutation({
      mutationFn: async (numGroups: number) => {
-        await supabase.rpc('setup_groups_v1', { p_event_id: currentEventId, p_num_groups: numGroups });
+        return resetEventGroups(numGroups);
      },
      onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
         queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
+        queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
      }
   });
 
   const autoGroupTeams = useMutation({
-    mutationFn: async (_params?: { method?: 'random' | 'seed'; numGroups?: number }) => {
-      // Basic auto group logic: distribute teams evenly across existing groups
-      // Better to do this via an RPC or query teams and groups, update them.
-      // Since it requires a bit of logic, we can do it client side and then bulk update teams.
-      const { data: groups } = await supabase.from('groups').select('id').eq('event_id', currentEventId).is('deleted_at', null);
+    mutationFn: async (params?: { method?: 'random' | 'seed'; numGroups?: number }) => {
+      const requestedGroups = params?.numGroups || 4;
+      const groups = await resetEventGroups(requestedGroups);
       const { data: teams } = await supabase.from('teams').select('id, seed').eq('event_id', currentEventId).is('deleted_at', null);
       if (!groups || !teams || groups.length === 0 || teams.length === 0) return;
 
-      const sortedTeams = [...teams].sort((a,b) => {
-        return (a.seed || '').localeCompare(b.seed || ''); // very basic seed sorting
-      });
+      const sortedTeams = params?.method === 'random'
+        ? [...teams].sort(() => Math.random() - 0.5)
+        : [...teams].sort((a,b) => (a.seed || '').localeCompare(b.seed || ''));
 
       const updates: any[] = [];
       sortedTeams.forEach((team, index) => {
@@ -199,6 +276,7 @@ export function useGroupMutations() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
       queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
+      queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
     }
   });
 

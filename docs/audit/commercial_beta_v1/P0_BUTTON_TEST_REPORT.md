@@ -11,9 +11,9 @@ Scope: P0 button/action smoke audit only. No credentials were provided, so authe
 - P0 actions audited: 21
 - Static deploy smoke: PASS, HTTP 200
 - Browser automation: BLOCKED by local environment; no authenticated UI flow was executed
-- PASS count: 10
+- PASS count: 9
 - FAIL count: 0
-- FIXED_BY_CODE_CHANGE count: 4
+- FIXED_BY_CODE_CHANGE count: 5
 - BLOCKED count: 2
 - MANUAL_REQUIRED count: 5
 - Build result: PASS (`npm run build:pages`)
@@ -45,11 +45,16 @@ Scope: P0 button/action smoke audit only. No credentials were provided, so authe
    - Evidence: generated matches contain `groupId`, `teamAId`, `scoreA`, etc., then are spread into `supabase.from('matches').insert(dbMatches)`.
    - Expected DB payload fields include `group_id`, `team_a_id`, `score_a`, etc.
 
+5. FIXED_BY_CODE_CHANGE: Create/auto group buttons called missing Staging RPC `setup_groups_v1`.
+   - File/function: `src/hooks/useDataMutations.ts`, `setupGroups`, `autoGroupTeams`
+   - Evidence: deployed console showed `POST /rest/v1/rpc/setup_groups_v1 404`.
+   - Fix: frontend now archives old groups, resets team assignments, clears group-stage matches, inserts `groups` rows, and then assigns teams.
+
 ## Test Matrix
 
 | # | Status | Menu | Button/Action | Expected result | Actual result | Source file/function | Data table/RPC | Network error | Console error | Suspected root cause | Fix priority |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | FIXED_BY_CODE_CHANGE | Auth | Login | User signs in, profile loads, redirects with `/PIC_HUU/` base path | Removed session/user/profile object logging; browser login not executed due no demo credentials | `src/components/AuthModal.tsx` `handleLogin`; `src/store.ts` `setAuthStatus` | `auth.signInWithPassword`, `get_current_profile`, `record_login_session` | none in source; browser auth not run | Not runtime-tested | Debug logging removed from login path | P0 |
+| 1 | FIXED_BY_CODE_CHANGE | Auth | Login | User signs in, profile loads, redirects with `/PIC_HUU/` base path | Removed session/user/profile object logging and removed missing `record_login_session` RPC call; browser login not executed due no demo credentials | `src/components/AuthModal.tsx` `handleLogin`; `src/store.ts` `setAuthStatus` | `auth.signInWithPassword`, `get_current_profile` | none in source; browser auth not run | Not runtime-tested | Debug logging and missing login-session RPC removed from login path | P0 |
 | 2 | PASS | Auth | Logout | Clears auth, signs out, reloads as guest | Source audit passes; runtime manual test still recommended | `src/store.ts` `logout`; `src/App.tsx` logout button | `auth.signOut` | none | none found | Auth state clears before signOut and reload | P1 |
 | 3 | PASS | Auth | Refresh after logout | Refresh remains logged out | Source audit passes; persisted auth fields excluded from Zustand storage | `src/store.ts` `logout`, `partialize` | `auth.signOut` | none | none found | State and auth session cleared | P1 |
 | 4 | MANUAL_REQUIRED | Auth | Browser Back after logout | Back should not restore admin session | Not executed; needs real browser login/logout flow | `src/store.ts` `logout`; `src/App.tsx` auth guard | `auth.signOut` | none | not captured | Needs browser history validation after real logout | P1 |
@@ -60,7 +65,7 @@ Scope: P0 button/action smoke audit only. No credentials were provided, so authe
 | 9 | PASS | Quản lý đội | Nhập CSV | Reads CSV/TXT and inserts teams | Source audit passes | `src/components/TeamManager.tsx` `handleFileUpload`; `src/hooks/useDataMutations.ts` `importTeams` | `teams.insert` | none | none found | Same parser as paste path | P0 |
 | 10 | MANUAL_REQUIRED | Quản lý đội | Sửa đội `SMOKE_TEST_` | Updates only test team name/seed | Not executed; no demo credentials/SMOKE_TEST data available | `src/components/TeamManager.tsx` `handleSaveEdit`; `src/hooks/useDataMutations.ts` `updateTeam` | `teams.update` | none | not captured | Needs safe test team row | P0 |
 | 11 | MANUAL_REQUIRED | Quản lý đội | Xóa đội `SMOKE_TEST_` only | Soft deletes only test team | Not executed to avoid real data deletion | `src/components/TeamManager.tsx` `handleDeleteConfirm`; `src/hooks/useDataMutations.ts` `deleteTeam` | `teams.update deleted_at` | none | not captured | Needs disposable SMOKE_TEST row | P0 |
-| 12 | PASS | Chia bảng | Tạo bảng test | Creates empty groups for current event | Source audit passes handler shape | `src/components/GroupManager.tsx` `handleCreateGroupsEmpty`; `src/hooks/useDataMutations.ts` `setupGroups` | `setup_groups_v1` | none | none found | Uses `setupGroups.mutateAsync(numGroups)` | P0 |
+| 12 | FIXED_BY_CODE_CHANGE | Chia bảng | Tạo bảng test | Creates empty groups for current event | Replaced missing `setup_groups_v1` RPC with direct `groups.insert` payload and local cleanup; not runtime-tested | `src/components/GroupManager.tsx` `handleCreateGroupsEmpty`; `src/hooks/useDataMutations.ts` `setupGroups` | `groups.update`, `teams.update`, `matches.delete`, `groups.insert` | `setup_groups_v1` 404 fixed in source | Not runtime-tested | Missing RPC replaced with direct table operations | P0 |
 | 13 | FIXED_BY_CODE_CHANGE | Chia bảng | Chia tự động with `SMOKE_TEST_` data only | Assigns teams to groups | Updated to use `autoGroupTeams.mutateAsync({ method, numGroups })`; not runtime-tested | `src/components/GroupManager.tsx` `handleAutoGroup`; `src/hooks/useDataMutations.ts` `autoGroupTeams` | `teams.update` | none | Not runtime-tested | Mutation object call fixed | P0 |
 | 14 | FIXED_BY_CODE_CHANGE | Chia bảng | Kéo thả/gán đội test | Moves team to selected group | Updated drag/drop and quick selects to use `moveTeamToGroup.mutate({ teamId, toGroupId })`; not runtime-tested | `src/components/GroupManager.tsx` `handleDrop`, quick select handlers; `src/hooks/useDataMutations.ts` `moveTeamToGroup` | `teams.update` | none | Not runtime-tested | Mutation object call and payload shape fixed | P0 |
 | 15 | MANUAL_REQUIRED | Nhập điểm | Bắt đầu trận test if safe | Sets match status to `playing` | Not executed; needs SMOKE_TEST match | `src/components/ScoreEntry.tsx` `handleSetPlaying`; `src/hooks/useDataMutations.ts` `updateMatchStatus` | `matches.update` | none | not captured | Needs safe test match | P0 |
