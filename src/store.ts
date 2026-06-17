@@ -68,8 +68,8 @@ interface AppState {
 
   // Actions
   checkConnection: () => Promise<boolean>;
-  updateTournament: (t: Partial<Tournament>) => void;
-  updateSettings: (s: Partial<TournamentSettings>) => void;
+  updateTournament: (t: Partial<Tournament>) => Promise<void>;
+  updateSettings: (s: Partial<TournamentSettings>) => Promise<void>;
   
   // Event actions
   addEvent: (name: string) => void;
@@ -428,21 +428,66 @@ export const useTournamentStore = create<AppState>()(
           return connected;
         },
 
-        updateTournament: (t) => {
+        updateTournament: async (t) => {
           if (get().userRole === 'guest') return;
-          set((state) => {
-            const updated = { ...state.tournament, ...t };
-            return { tournament: updated };
+          const state = get();
+          const updated = { ...state.tournament, ...t };
+          const payload = {
+            name: updated.name,
+            organization: updated.organization,
+            location: updated.location,
+            date: updated.date,
+            settings: updated.settings,
+            current_event_id: state.currentEventId,
+          };
+
+          const { data, error } = await supabase
+            .from('tournament')
+            .update(payload)
+            .eq('id', state.tournament.id)
+            .select('id, name, organization, location, date, settings, current_event_id')
+            .single();
+
+          if (error) throw error;
+
+          set({
+            tournament: {
+              id: data.id,
+              name: data.name,
+              organization: data.organization,
+              location: data.location,
+              date: data.date,
+              settings: data.settings || DEFAULT_SETTINGS,
+            },
+            currentEventId: data.current_event_id || state.currentEventId,
           });
           logToStore('Cấu hình Giải', `Cập nhật thông tin tổng quan của giải đấu.`);
         },
 
-        updateSettings: (s) => {
+        updateSettings: async (s) => {
           if (get().userRole === 'guest') return;
-          set((state) => {
-            const updatedSettings = { ...state.tournament.settings, ...s };
-            const updated = { ...state.tournament, settings: updatedSettings };
-            return { tournament: updated };
+          const state = get();
+          const updatedSettings = { ...state.tournament.settings, ...s };
+
+          const { data, error } = await supabase
+            .from('tournament')
+            .update({ settings: updatedSettings })
+            .eq('id', state.tournament.id)
+            .select('id, name, organization, location, date, settings, current_event_id')
+            .single();
+
+          if (error) throw error;
+
+          set({
+            tournament: {
+              id: data.id,
+              name: data.name,
+              organization: data.organization,
+              location: data.location,
+              date: data.date,
+              settings: data.settings || updatedSettings,
+            },
+            currentEventId: data.current_event_id || state.currentEventId,
           });
           logToStore('Cấu hình Điểm', `Thay đổi cài đặt điểm chạm: ${JSON.stringify(s)}`);
         },

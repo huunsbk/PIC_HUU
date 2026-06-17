@@ -42,7 +42,7 @@ export default function Dashboard() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [dragActive, setDragActive] = useState(false);
 
-  const [notification, setNotification] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isCheckingConn, setIsCheckingConn] = useState(false);
 
   // Check connection once on mount
@@ -85,32 +85,40 @@ export default function Dashboard() {
     directMatchesCountAll += evtMatches.filter((m) => m.groupId === 'knockout').length;
   });
 
-  const showToast = (message: string) => {
-    setNotification(message);
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setNotification({ type, message });
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const handleSaveInfo = (e: React.FormEvent) => {
+  const handleSaveInfo = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateTournament({
-      name,
-      organization: org,
-      location: loc,
-      date,
-    });
-    showToast('Đã lưu thông tin giải đấu thành công!');
+    try {
+      await updateTournament({
+        name,
+        organization: org,
+        location: loc,
+        date,
+      });
+      showToast('Đã lưu thông tin giải đấu thành công!');
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi khi cập nhật thông tin giải đấu.', 'error');
+    }
   };
 
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings({
-      winPoint: Number(winPt),
-      lossPoint: Number(lossPt),
-      maxScore: Number(maxSc),
-      capScore: Number(capSc),
-      advanceCount: Number(advCount),
-    });
-    showToast('Cập nhật luật chơi & cấu hình điểm số thành công!');
+    try {
+      await updateSettings({
+        winPoint: Number(winPt),
+        lossPoint: Number(lossPt),
+        maxScore: Number(maxSc),
+        capScore: Number(capSc),
+        advanceCount: Number(advCount),
+      });
+      showToast('Cập nhật luật chơi & cấu hình điểm số thành công!');
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi khi cập nhật quy chế giải đấu.', 'error');
+    }
   };
 
   const handleExportDataJson = () => {
@@ -716,9 +724,17 @@ export default function Dashboard() {
       
       {/* Toast báo sự kiện mini */}
       {notification && (
-        <div className="fixed bottom-4 right-4 bg-zinc-900 border border-zinc-800 text-white text-xs px-4 py-2.5 rounded-lg shadow-2xl z-50 flex items-center gap-2 animate-bounce">
-          <Check size={13} className="text-emerald-400 stroke-[3]" />
-          <span className="font-bold">{notification}</span>
+        <div className={`fixed bottom-4 right-4 border text-white text-xs px-4 py-2.5 rounded-lg shadow-2xl z-50 flex items-center gap-2 animate-bounce ${
+          notification.type === 'success'
+            ? 'bg-zinc-900 border-zinc-800'
+            : 'bg-red-700 border-red-800'
+        }`}>
+          {notification.type === 'success' ? (
+            <Check size={13} className="text-emerald-400 stroke-[3]" />
+          ) : (
+            <AlertCircle size={13} className="text-red-100 stroke-[3]" />
+          )}
+          <span className="font-bold">{notification.message}</span>
         </div>
       )}
 
