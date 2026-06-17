@@ -110,8 +110,12 @@ Bảng dưới đây đại diện cho mô hình dự báo sử dụng chỉ m�
 
 Hệ thống **Tournament Manager Enterprise V5.7** thiết lập mục tiêu thương mại và giới hạn nghiệm thu giai đoạn đầu cho phân vùng Staging như sau:
 
-* **Mốc thử nghiệm Commercial Beta:** Phục vụ an toàn từ **100 – 300 giải đấu hoạt động song song (active tournaments)**.
-* **Thời điểm hỗ trợ quy mô lớn:** Bất cứ chỉ số tải trọng giả thuyết quy mô lớn nào đều chưa được chứng thực trên môi trường vật lý. Hệ thống cần được benchmark thực tế trước khi mở rộng cao hơn.
+* **Mốc thử nghiệm Commercial Beta V1:** **Mục tiêu Commercial Beta V1: tối đa 100 giải hoạt động đồng thời** (**Commercial Beta V1 target: up to 100 active tournaments**).
+* **Vượt mốc 100 active tournaments:** Bất kỳ kế hoạch mở rộng nào vượt quá 100 giải hoạt động đồng thời đều cần bằng chứng benchmark Staging/Production-like, bao gồm raw `EXPLAIN JSON`, số liệu độ trễ RPC, chỉ số `pg_stat_user_indexes`, và xác thực cô lập RLS.
+* **Mốc 100-300 tournaments:** **Không còn là mục tiêu hiện tại** của Commercial Beta V1. Mốc này chỉ được xem xét lại sau khi có bằng chứng benchmark đủ mạnh cho tải vượt 100 active tournaments.
+* **Mốc 300-800 tournaments:** Chỉ là định hướng mở rộng tương lai, chưa thuộc phạm vi Commercial Beta V1.
+* **Mốc 1000+ tournaments:** **Không được phê duyệt** cho Commercial Beta V1 hoặc Production ở thời điểm hiện tại.
+* **Production status:** Production vẫn **NOT APPROVED** cho tới khi Staging hotfix, raw `EXPLAIN` evidence, và RLS isolation checks đều pass.
 
 ---
 
