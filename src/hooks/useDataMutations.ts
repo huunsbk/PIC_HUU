@@ -16,6 +16,20 @@ export function useTeamMutations() {
     tenant_id: activeTenantId !== 'default' ? activeTenantId : null,
     tournament_id: tournamentId || null,
   });
+  const splitImportLine = (line: string) => {
+    if (line.includes('\t')) return line.split('\t').map((cell) => cell.trim());
+    if (line.includes(';')) return line.split(';').map((cell) => cell.trim());
+    return line.split(',').map((cell) => cell.trim());
+  };
+  const isRowNumber = (value?: string) => !!value && /^\d+$/.test(value.trim());
+  const normalizeSeed = (value?: string) => {
+    const rawSeed = (value || '').trim().toLowerCase();
+    if (['hạt giống 1', 'seed 1', 'seed1', '1'].includes(rawSeed)) return '1';
+    if (['hạt giống 2', 'seed 2', 'seed2', '2'].includes(rawSeed)) return '2';
+    if (['hạt giống 3', 'seed 3', 'seed3', '3'].includes(rawSeed)) return '3';
+    if (['hạt giống 4', 'seed 4', 'seed4', '4'].includes(rawSeed)) return '4';
+    return 'none';
+  };
 
   const addTeam = useMutation({
     mutationFn: async (data: { name: string, seed: string }) => {
@@ -88,22 +102,16 @@ export function useTeamMutations() {
         startIndex = 1;
       }
 
-      const rawInputs = lines.slice(startIndex).map(line => line.split(','));
+      const rawInputs = lines.slice(startIndex).map(splitImportLine);
       const inserts = [];
 
       for (const columns of rawInputs) {
-        if (!columns[0]) continue;
-        const name = columns[0].trim();
+        const nameIndex = isRowNumber(columns[0]) && columns[1] ? 1 : 0;
+        const seedIndex = nameIndex + 1;
+        const name = columns[nameIndex]?.trim();
         if (!name) continue;
 
-        let seed = 'none';
-        if (columns[1]) {
-          const rawSeed = columns[1].trim().toLowerCase();
-          if (['hạt giống 1', 'seed 1', '1'].includes(rawSeed)) seed = 'seed1';
-          else if (['hạt giống 2', 'seed 2', '2'].includes(rawSeed)) seed = 'seed2';
-          else if (['hạt giống 3', 'seed 3', '3'].includes(rawSeed)) seed = 'seed3';
-          else if (['vượt qua vòng loại', 'qualified', 'q'].includes(rawSeed)) seed = 'qualified';
-        }
+        const seed = normalizeSeed(columns[seedIndex]);
         
         // Zod validation check on item parsing stage
         const validation = CreateTeamSchema.safeParse({ name, seed });
