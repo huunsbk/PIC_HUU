@@ -35,8 +35,14 @@ export default function EventCard({ event }: EventCardProps) {
     }
   };
 
+  const getAppUrl = (path: string) => {
+    const basePath = import.meta.env.BASE_URL || '/';
+    const normalizedBase = basePath.endsWith('/') ? basePath : `${basePath}/`;
+    return `${window.location.origin}${normalizedBase}${path.replace(/^\//, '')}`;
+  };
+
   const copyPublicLink = () => {
-    const url = `${window.location.origin}/e/${event.slug || event.id}`;
+    const url = getAppUrl(`/e/${event.slug || event.id}`);
     navigator.clipboard.writeText(url);
     alert('Đã copy link public!');
   };
@@ -69,7 +75,7 @@ export default function EventCard({ event }: EventCardProps) {
           <button onClick={copyPublicLink} className="p-2 flex justify-center items-center text-zinc-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Copy Link">
             <Copy size={16} />
           </button>
-          <button onClick={() => window.open(`/dashboard/event/${event.id}`, '_blank')} className="p-2 flex justify-center items-center text-zinc-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Open Dashboard">
+          <button onClick={() => window.open(getAppUrl(`/dashboard/event/${event.id}`), '_blank')} className="p-2 flex justify-center items-center text-zinc-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Open Dashboard">
             <ExternalLink size={16} />
           </button>
           <button onClick={() => setShowMembers(true)} className="p-2 flex justify-center items-center text-zinc-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Members">

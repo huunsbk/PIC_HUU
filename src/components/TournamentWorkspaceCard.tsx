@@ -32,17 +32,23 @@ export default function TournamentWorkspaceCard({ tournament, onManageAdmin }: T
     });
   };
 
+  const getAppUrl = (path: string) => {
+    const basePath = import.meta.env.BASE_URL || '/';
+    const normalizedBase = basePath.endsWith('/') ? basePath : `${basePath}/`;
+    return `${window.location.origin}${normalizedBase}${path.replace(/^\//, '')}`;
+  };
+
   const copyPublicLink = () => {
-    const url = `${window.location.origin}/tournament/${tournament.slug}`;
+    const url = getAppUrl(`/tournament/${tournament.slug}`);
     navigator.clipboard.writeText(url);
     alert('Đã sao chép liên kết');
   };
 
   const openAdminWorkspace = () => {
-    window.open(`/admin/workspace/${tournament.slug}`, '_blank');
+    window.open(getAppUrl(`/admin/workspace/${tournament.slug}`), '_blank');
   };
 
-  const publicUrl = `${window.location.origin}/tournament/${tournament.slug}`;
+  const publicUrl = getAppUrl(`/tournament/${tournament.slug}`);
 
   return (
     <>
