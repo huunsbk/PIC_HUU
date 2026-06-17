@@ -9,7 +9,7 @@ export function useGroups() {
   return useQuery({
     queryKey: ['groups', activeTenantId, currentEventId],
     queryFn: async () => {
-      let query = supabase.from('groups').select('id, name, order_index').eq('event_id', currentEventId).is('deleted_at', null);
+      let query = supabase.from('groups').select('id, name, team_ids').eq('event_id', currentEventId).is('deleted_at', null);
 
       if (activeTenantId !== 'default') {
         query = query.eq('tenant_id', activeTenantId);
