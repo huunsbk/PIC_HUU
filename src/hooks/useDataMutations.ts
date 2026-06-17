@@ -8,17 +8,33 @@ export function useTeamMutations() {
   const queryClient = useQueryClient();
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
+  const tournamentId = useTournamentStore((state) => state.tournament.id);
+
+  const createTeamId = () => `team-${crypto.randomUUID()}`;
+  const getTeamScope = () => ({
+    event_id: currentEventId,
+    tenant_id: activeTenantId !== 'default' ? activeTenantId : null,
+    tournament_id: tournamentId || null,
+  });
 
   const addTeam = useMutation({
     mutationFn: async (data: { name: string, seed: string }) => {
       const { name, seed } = data;
+      const trimmedName = name.trim();
+      if (!trimmedName) {
+        throw new Error('Tên đội không được để trống.');
+      }
+      if (!currentEventId) {
+        throw new Error('Chưa có nội dung thi đấu hiện hành để thêm đội.');
+      }
+
       const { data: result, error } = await supabase
         .from('teams')
         .insert([{
-          name,
+          id: createTeamId(),
+          name: trimmedName,
           seed,
-          event_id: currentEventId,
-          tenant_id: activeTenantId !== 'default' ? activeTenantId : null
+          ...getTeamScope(),
         }])
         .select()
         .single();
@@ -97,10 +113,10 @@ export function useTeamMutations() {
         }
         
         inserts.push({
+           id: createTeamId(),
            name,
            seed,
-           event_id: currentEventId,
-           tenant_id: activeTenantId !== 'default' ? activeTenantId : null
+           ...getTeamScope(),
         });
       }
 
