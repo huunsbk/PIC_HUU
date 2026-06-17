@@ -20,7 +20,21 @@ export function useMatches() {
       const { data, error } = await query;
       if (error) throw error;
       
-      return data || [];
+      return (data || []).map((match) => ({
+        ...match,
+        groupId: match.group_id,
+        teamAId: match.team_a_id,
+        teamBId: match.team_b_id,
+        placeholderA: match.placeholder_a,
+        placeholderB: match.placeholder_b,
+        scoreA: match.score_a,
+        scoreB: match.score_b,
+        winnerId: match.winner_id,
+        knockoutRoundName: match.knockout_round_name,
+        knockoutMatchId: match.knockout_match_id,
+        nextMatchId: match.next_match_id,
+        nextMatchSlot: match.next_match_slot,
+      }));
     },
     enabled: !!activeTenantId && !!currentEventId,
   });
