@@ -34,10 +34,16 @@ jobs:
           cache: npm
 
       - name: Cài đặt thư viện
-        run: npm ci || npm install
+        run: npm ci
 
-      - name: Xây dựng dự án (Vite Build)
-        run: npm run build
+      - name: Kiểm tra lint
+        run: npm run lint --if-present
+
+      - name: Xây dựng dự án cho GitHub Pages
+        run: npm run build:pages
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       - name: Cấu hình GitHub Pages
         uses: actions/configure-pages@v5
