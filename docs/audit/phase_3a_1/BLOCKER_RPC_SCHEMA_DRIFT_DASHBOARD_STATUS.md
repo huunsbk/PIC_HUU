@@ -28,3 +28,11 @@ The hotfix must:
 ## Evidence Needed After Hotfix
 
 Replace the before/after JSON placeholders in this folder with raw `EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT JSON)` output captured from Supabase Staging.
+
+## Commercial Beta V1 Release Boundary
+
+Commercial Beta V1 target: up to 100 active tournaments.
+
+Scale beyond 100 active tournaments requires benchmark evidence. 100-300 tournaments is no longer the current target, 300-800 tournaments is future expansion only, and 1000+ tournaments is not approved.
+
+Production remains NOT APPROVED until the Staging hotfix, raw EXPLAIN evidence, and RLS isolation checks pass.
