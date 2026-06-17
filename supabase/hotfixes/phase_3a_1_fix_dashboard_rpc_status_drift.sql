@@ -1,3 +1,6 @@
+-- This is the Staging-validated Commercial Beta V1 hotfix.
+-- It intentionally returns NULL owner fields because tournament.owner_account_id is not part of the current schema.
+
 CREATE OR REPLACE FUNCTION public.get_tournament_workspace_dashboard_v6(
   p_cursor timestamp with time zone DEFAULT NULL::timestamp with time zone,
   p_limit integer DEFAULT 50
@@ -16,8 +19,7 @@ BEGIN
       tr.name,
       tr.slug,
       tr.created_at,
-      tr.settings,
-      tr.owner_account_id
+      tr.settings
     FROM public.tournament tr
     WHERE p_cursor IS NULL
        OR tr.created_at < p_cursor
@@ -25,7 +27,12 @@ BEGIN
     LIMIT GREATEST(p_limit, 0) + 1
   ),
   page_tournaments AS (
-    SELECT *
+    SELECT
+      id,
+      name,
+      slug,
+      created_at,
+      settings
     FROM limited_tournaments
     ORDER BY created_at DESC, id DESC
     LIMIT GREATEST(p_limit, 0)
@@ -45,11 +52,9 @@ BEGIN
       COALESCE(events.events_count, 0)::integer AS events_count,
       COALESCE(teams.teams_count, 0)::integer AS teams_count,
       COALESCE(matches.matches_count, 0)::integer AS matches_count,
-      owner.display_name AS owner_name,
-      pt.owner_account_id
+      NULL::text AS owner_name,
+      NULL::uuid AS owner_account_id
     FROM page_tournaments pt
-    LEFT JOIN public.accounts owner
-      ON owner.id = pt.owner_account_id
     LEFT JOIN LATERAL (
       SELECT COUNT(*)::integer AS events_count
       FROM public.events e
