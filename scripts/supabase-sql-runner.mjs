@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
-import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import pg from 'pg';
+
+const { Client } = pg;
 
 const repoRoot = process.cwd();
 const envPath = path.join(repoRoot, '.env.db.local');
@@ -119,23 +121,25 @@ try {
 }
 
 const query = wrapRowsAsJson(sql);
-const result = spawnSync('psql', [dbUrl, '--no-psqlrc', '--quiet', '--tuples-only', '--no-align', '--command', query], {
-  encoding: 'utf8',
-  env: { ...process.env, PGPASSWORD: undefined },
-  maxBuffer: 20 * 1024 * 1024,
+const client = new Client({
+  connectionString: dbUrl,
+  ssl: { rejectUnauthorized: false },
 });
 
-if (result.error) {
-  console.error(`Failed to run psql: ${result.error.message}`);
-  process.exit(1);
-}
+try {
+  await client.connect();
+  const result = await client.query(query);
 
-if (result.stderr) {
-  console.error(result.stderr.trim());
+  if (/^explain\b/i.test(sql.trim())) {
+    console.log(JSON.stringify(result.rows, null, 2));
+  } else if (result.rows.length === 1 && Object.prototype.hasOwnProperty.call(result.rows[0], 'rows')) {
+    console.log(JSON.stringify(result.rows[0].rows, null, 2));
+  } else {
+    console.log(JSON.stringify(result.rows, null, 2));
+  }
+} catch (error) {
+  console.error(`Database query failed: ${error.message}`);
+  process.exitCode = 1;
+} finally {
+  await client.end().catch(() => {});
 }
-
-if (result.status !== 0) {
-  process.exit(result.status || 1);
-}
-
-console.log((result.stdout || '').trim());
