@@ -1,6 +1,7 @@
 {
-  "info": "Paste the raw EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT JSON) output BEFORE index creation here.",
-  "rpc": "archive_tournament_workspace_v6",
-  "phase": "PHASE 3A - Pre-Indexing Staging Analysis",
-  "plan": []
+  "status": "PENDING_CAPTURE",
+  "environment": "staging",
+  "supabase_project_ref": "ykckqcykxfhpfqptckxk",
+  "phase": "3A.1",
+  "note": "Replace this file with raw EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT JSON) output captured from Supabase Staging."
 }
