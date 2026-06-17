@@ -91,6 +91,20 @@ FROM __codex_runner_rows;
 `;
 }
 
+function getSslConfig() {
+  const dbTarget = (process.env.DB_TARGET || '').toLowerCase();
+  const rejectUnauthorizedOverride = process.env.SUPABASE_DB_SSL_REJECT_UNAUTHORIZED;
+  const allowStagingSelfSigned =
+    dbTarget === 'staging' &&
+    rejectUnauthorizedOverride === 'NO';
+
+  if (dbTarget === 'production' && rejectUnauthorizedOverride === 'NO') {
+    throw new Error('Blocked: production connections must not disable SSL certificate verification.');
+  }
+
+  return { rejectUnauthorized: !allowStagingSelfSigned };
+}
+
 loadLocalEnv(envPath);
 
 const sqlFile = process.argv[2];
@@ -121,9 +135,18 @@ try {
 }
 
 const query = wrapRowsAsJson(sql);
+let ssl;
+
+try {
+  ssl = getSslConfig();
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
+
 const client = new Client({
   connectionString: dbUrl,
-  ssl: { rejectUnauthorized: false },
+  ssl,
 });
 
 try {
