@@ -18,11 +18,7 @@ export function useAuditLogs(limit: number = 50) {
         query = query.lt('created_at', pageParam);
       }
 
-      if (activeTenantId !== 'default') {
-        query = query.eq('tenant_id', activeTenantId);
-      } else {
-        query = query.is('tenant_id', null);
-      }
+      query = query.eq('tenant_id', activeTenantId);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -39,6 +35,6 @@ export function useAuditLogs(limit: number = 50) {
     },
     getNextPageParam: (lastPage) => lastPage.has_more ? lastPage.next_cursor : undefined,
     initialPageParam: null as string | null,
-    enabled: !!activeTenantId,
+    enabled: !!activeTenantId && activeTenantId !== 'default',
   });
 }

@@ -70,6 +70,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
        console.warn('[Auth Flow Debug] Missing some expected attributes in payload');
     }
 
+    supabase.rpc('record_login_session_v1').then(({ error }) => {
+      if (error) {
+        console.warn('[Auth] Optional login telemetry skipped:', error.message);
+      }
+    }).catch((err) => {
+      console.warn('[Auth] Optional login telemetry skipped:', err?.message || err);
+    });
+
     const mappedRole = accountData.role || 'guest';
     const tenantIdStr = accountData.tenant_id || 'default';
     

@@ -9,13 +9,12 @@ export function useTeams() {
   return useQuery({
     queryKey: ['teams', activeTenantId, currentEventId],
     queryFn: async () => {
-      let query = supabase.from('teams').select('id, name, group_id, seed').eq('event_id', currentEventId).is('deleted_at', null);
-
-      if (activeTenantId !== 'default') {
-        query = query.eq('tenant_id', activeTenantId);
-      } else {
-        query = query.is('tenant_id', null);
-      }
+      const query = supabase
+        .from('teams')
+        .select('id, name, group_id, seed')
+        .eq('event_id', currentEventId)
+        .eq('tenant_id', activeTenantId)
+        .is('deleted_at', null);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -25,6 +24,6 @@ export function useTeams() {
         groupId: team.group_id || null,
       }));
     },
-    enabled: !!activeTenantId && !!currentEventId,
+    enabled: !!activeTenantId && activeTenantId !== 'default' && !!currentEventId,
   });
 }

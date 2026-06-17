@@ -59,16 +59,17 @@ function riskyTokens(sql) {
 
 function assertSafeToRun(sql) {
   const risky = riskyTokens(sql);
+  const dbTarget = (process.env.DB_TARGET || '').toLowerCase();
   const isWriteAllowed =
     process.env.ALLOW_DB_WRITE === 'YES' &&
-    (process.env.DB_TARGET || '').toLowerCase() === 'staging';
+    ['beta', 'staging'].includes(dbTarget);
 
-  if ((process.env.DB_TARGET || '').toLowerCase() === 'production' && risky.length > 0) {
+  if (dbTarget === 'production' && risky.length > 0) {
     throw new Error('Blocked: production writes are never allowed by this runner.');
   }
 
   if (risky.length > 0 && !isWriteAllowed) {
-    throw new Error(`Blocked risky SQL token(s): ${risky.join(', ')}. Set ALLOW_DB_WRITE=YES and DB_TARGET=staging only for approved staging writes.`);
+    throw new Error(`Blocked risky SQL token(s): ${risky.join(', ')}. Set ALLOW_DB_WRITE=YES and DB_TARGET=beta or staging only for approved beta/staging writes.`);
   }
 
   if (risky.length === 0 && !isReadOnlySql(sql)) {
@@ -95,7 +96,7 @@ function getSslConfig() {
   const dbTarget = (process.env.DB_TARGET || '').toLowerCase();
   const rejectUnauthorizedOverride = process.env.SUPABASE_DB_SSL_REJECT_UNAUTHORIZED;
   const allowStagingSelfSigned =
-    dbTarget === 'staging' &&
+    ['beta', 'staging'].includes(dbTarget) &&
     rejectUnauthorizedOverride === 'NO';
 
   if (dbTarget === 'production' && rejectUnauthorizedOverride === 'NO') {
@@ -103,6 +104,23 @@ function getSslConfig() {
   }
 
   return { rejectUnauthorized: !allowStagingSelfSigned };
+}
+
+function getConnectionString(rawDbUrl) {
+  const dbTarget = (process.env.DB_TARGET || '').toLowerCase();
+  const rejectUnauthorizedOverride = process.env.SUPABASE_DB_SSL_REJECT_UNAUTHORIZED;
+  const allowSelfSigned =
+    ['beta', 'staging'].includes(dbTarget) &&
+    rejectUnauthorizedOverride === 'NO';
+
+  if (!allowSelfSigned) {
+    return rawDbUrl;
+  }
+
+  const parsed = new URL(rawDbUrl);
+  parsed.searchParams.delete('sslmode');
+  parsed.searchParams.delete('sslrootcert');
+  return parsed.toString();
 }
 
 loadLocalEnv(envPath);
@@ -126,6 +144,7 @@ if (!existsSync(sqlPath)) {
 }
 
 const sql = readFileSync(sqlPath, 'utf8');
+const isWriteSql = riskyTokens(sql).length > 0;
 
 try {
   assertSafeToRun(sql);
@@ -134,7 +153,7 @@ try {
   process.exit(1);
 }
 
-const query = wrapRowsAsJson(sql);
+const query = isWriteSql ? sql : wrapRowsAsJson(sql);
 let ssl;
 
 try {
@@ -145,7 +164,7 @@ try {
 }
 
 const client = new Client({
-  connectionString: dbUrl,
+  connectionString: getConnectionString(dbUrl),
   ssl,
 });
 
@@ -153,7 +172,13 @@ try {
   await client.connect();
   const result = await client.query(query);
 
-  if (/^explain\b/i.test(sql.trim())) {
+  if (isWriteSql) {
+    console.log(JSON.stringify({
+      success: true,
+      command: result.command || 'SQL',
+      rowCount: result.rowCount ?? null,
+    }, null, 2));
+  } else if (/^explain\b/i.test(sql.trim())) {
     console.log(JSON.stringify(result.rows, null, 2));
   } else if (result.rows.length === 1 && Object.prototype.hasOwnProperty.call(result.rows[0], 'rows')) {
     console.log(JSON.stringify(result.rows[0].rows, null, 2));
