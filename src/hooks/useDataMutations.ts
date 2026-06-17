@@ -173,7 +173,7 @@ export function useGroupMutations() {
   });
 
   const autoGroupTeams = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (_params?: { method?: 'random' | 'seed'; numGroups?: number }) => {
       // Basic auto group logic: distribute teams evenly across existing groups
       // Better to do this via an RPC or query teams and groups, update them.
       // Since it requires a bit of logic, we can do it client side and then bulk update teams.
@@ -203,7 +203,7 @@ export function useGroupMutations() {
   });
 
   const moveTeamToGroup = useMutation({
-    mutationFn: async ({ teamId, fromGroupId, toGroupId }: { teamId: string, fromGroupId: string, toGroupId: string }) => {
+    mutationFn: async ({ teamId, toGroupId }: { teamId: string, toGroupId: string | null }) => {
       const dbGroupId = toGroupId === 'unassigned' ? null : toGroupId;
       await supabase.from('teams').update({ group_id: dbGroupId }).eq('id', teamId);
     },
@@ -221,6 +221,27 @@ export function useMatchMutations() {
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
   const tournament = useTournamentStore((state) => state.tournament);
+  const tenantId = activeTenantId !== 'default' ? activeTenantId : null;
+  const mapMatchToDbInsert = (match: any) => ({
+    id: match.id,
+    group_id: match.groupId,
+    team_a_id: match.teamAId,
+    team_b_id: match.teamBId,
+    score_a: match.scoreA,
+    score_b: match.scoreB,
+    winner_id: match.winnerId,
+    status: match.status,
+    round: match.round,
+    event_id: currentEventId,
+    tenant_id: tenantId,
+    tournament_id: tournament.id || null,
+    placeholder_a: match.placeholderA || null,
+    placeholder_b: match.placeholderB || null,
+    knockout_round_name: match.knockoutRoundName || null,
+    knockout_match_id: match.knockoutMatchId || null,
+    next_match_id: match.nextMatchId || null,
+    next_match_slot: match.nextMatchSlot || null,
+  });
 
   const updateMatchScore = useMutation({
     mutationFn: async ({ matchId, scoreA, scoreB }: { matchId: string, scoreA: number | null, scoreB: number | null }) => {
@@ -253,11 +274,7 @@ export function useMatchMutations() {
       // 2. Local generation
       const newMatches = generateRoundRobinMatches(groupId, teamIds, tournament.settings);
       // 3. Map to DB inserts
-      const dbMatches = newMatches.map(m => ({
-        ...m,
-        event_id: currentEventId,
-        tenant_id: activeTenantId !== 'default' ? activeTenantId : null,
-      }));
+      const dbMatches = newMatches.map(mapMatchToDbInsert);
       if (dbMatches.length > 0) {
         const { error } = await supabase.from('matches').insert(dbMatches);
         if (error) throw error;
@@ -282,11 +299,7 @@ export function useMatchMutations() {
       });
       
       const latestMatched = balanceMatchesRestTime(allNewMatches);
-      const dbMatches = latestMatched.map(m => ({
-        ...m,
-        event_id: currentEventId,
-        tenant_id: activeTenantId !== 'default' ? activeTenantId : null,
-      }));
+      const dbMatches = latestMatched.map(mapMatchToDbInsert);
       
       if (dbMatches.length > 0) {
         const { error } = await supabase.from('matches').insert(dbMatches);

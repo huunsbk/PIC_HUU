@@ -43,7 +43,7 @@ export default function GroupManager() {
     }
   };
 
-  const handleAutoGroup = (method: 'random' | 'seed') => {
+  const handleAutoGroup = async (method: 'random' | 'seed') => {
     if (teamList.length === 0) {
       try {
         alert('Vui lòng đăng ký đội bóng trước khi thực hiện chia bảng để tránh bảng đấu trống.');
@@ -52,7 +52,7 @@ export default function GroupManager() {
       }
       return;
     }
-    autoGroupTeams(method, numGroups);
+    await autoGroupTeams.mutateAsync({ method, numGroups });
   };
 
   // Drag & Drop HTML5 Handler cực kỳ nhịp nhàng, tối ưu
@@ -71,7 +71,10 @@ export default function GroupManager() {
     e.preventDefault();
     const teamId = e.dataTransfer.getData('text/plain') || draggedTeamId;
     if (teamId) {
-      moveTeamToGroup(teamId, targetGroupId);
+      moveTeamToGroup.mutate({
+        teamId,
+        toGroupId: targetGroupId,
+      });
     }
     setDraggedTeamId(null);
   };
@@ -233,7 +236,12 @@ export default function GroupManager() {
                   <select
                     onChange={(e) => {
                       const val = e.target.value;
-                      if (val) moveTeamToGroup(team.id, val);
+                      if (val) {
+                        moveTeamToGroup.mutate({
+                          teamId: team.id,
+                          toGroupId: val,
+                        });
+                      }
                     }}
                     value=""
                     className="p-1 px-1.5 text-[10px] font-bold border border-zinc-200 dark:border-zinc-800 rounded bg-zinc-50 dark:bg-zinc-950 text-zinc-650 dark:text-zinc-400 cursor-pointer focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
@@ -306,7 +314,10 @@ export default function GroupManager() {
                             <select
                               onChange={(e) => {
                                 const val = e.target.value;
-                                moveTeamToGroup(team.id, val === "unassigned" ? null : val);
+                                moveTeamToGroup.mutate({
+                                  teamId: team.id,
+                                  toGroupId: val === "unassigned" ? null : val,
+                                });
                               }}
                               value={group.id}
                               disabled={!canManage}
