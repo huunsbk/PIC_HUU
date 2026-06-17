@@ -4,11 +4,14 @@ import { X, UserPlus, Trash2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabaseClient';
 import { useTournamentStore } from '../store';
+import ConfirmDialog from './ConfirmDialog';
 
 export default function EventMembersManager({ eventId, onClose }: { eventId: string, onClose: () => void }) {
   const { data: members, isLoading } = useEventMembersQuery(eventId);
   const queryClient = useQueryClient();
   const [newUsername, setNewUsername] = useState('');
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,16 +50,24 @@ export default function EventMembersManager({ eventId, onClose }: { eventId: str
     }
   };
 
-  const handleRemoveMember = async (accountId: string) => {
-    if (!window.confirm('Gỡ người này khỏi giải đấu?')) return;
+  const triggerRemoveMember = (accountId: string) => {
+    setSelectedAccountId(accountId);
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmRemoveMember = async () => {
+    if (!selectedAccountId) return;
+    setIsConfirmOpen(false);
     try {
       await supabase.from('account_event_permissions')
         .delete()
-        .eq('account_id', accountId)
+        .eq('account_id', selectedAccountId)
         .eq('event_id', eventId);
       queryClient.invalidateQueries({ queryKey: ['event_members', eventId] });
     } catch (err: any) {
       alert('Lỗi: ' + err.message);
+    } finally {
+      setSelectedAccountId(null);
     }
   };
 
@@ -119,7 +130,7 @@ export default function EventMembersManager({ eventId, onClose }: { eventId: str
                             <p className="text-xs text-zinc-500">@{m.accounts?.username}</p>
                           </div>
                           <button 
-                            onClick={() => handleRemoveMember(m.account_id)}
+                            onClick={() => triggerRemoveMember(m.account_id)}
                             className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
                           >
                             <Trash2 size={16} />
@@ -134,6 +145,17 @@ export default function EventMembersManager({ eventId, onClose }: { eventId: str
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        title="Gỡ thành viên"
+        message="Bạn có chắc chắn muốn gỡ thành viên này khỏi giải đấu?"
+        confirmText="Gỡ bỏ"
+        cancelText="Hủy bỏ"
+        isDanger={true}
+        onConfirm={handleConfirmRemoveMember}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
     </div>
   );
 }

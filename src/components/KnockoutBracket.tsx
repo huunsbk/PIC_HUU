@@ -28,10 +28,18 @@ export default function KnockoutBracket() {
   const { data: groupsData = [] } = useGroups();
   const { data: matchesData = [] } = useMatches();
 
-  const teams: Record<string, any> = {};
-  teamsData.forEach(t => { teams[t.id] = t; });
-  const groups: Record<string, any> = {};
-  groupsData.forEach(g => { groups[g.id] = g; });
+  const teams = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    teamsData.forEach(t => { record[t.id] = t; });
+    return record;
+  }, [teamsData]);
+
+  const groups = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    groupsData.forEach(g => { record[g.id] = g; });
+    return record;
+  }, [groupsData]);
+
   const matches = matchesData;
 
   const canManage = hasPermission("manage_knockout");

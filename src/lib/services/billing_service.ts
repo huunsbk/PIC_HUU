@@ -39,7 +39,7 @@ export const billingService = {
     const tenantId = await getCurrentTenant();
     const { count } = await supabase
       .from('accounts')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId);
 
     return (count || 0) < limits.max_users;
@@ -52,7 +52,7 @@ export const billingService = {
     const tenantId = await getCurrentTenant();
     const { count } = await supabase
       .from('events')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId);
 
     return (count || 0) < limits.max_events;

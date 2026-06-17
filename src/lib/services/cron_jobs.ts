@@ -39,7 +39,7 @@ export const cronJobs = {
 
     const { data: renewingSubs, error } = await supabase
       .from('tenant_subscriptions')
-      .select('*, subscription_plans(*)')
+      .select('id, tenant_id, plan_id, end_date, billing_cycle, status, subscription_plans(id, name, code, price_monthly, price_yearly, max_users, max_events, storage_gb)')
       .lte('end_date', upcomingRenewals.toISOString())
       .eq('status', 'active');
 

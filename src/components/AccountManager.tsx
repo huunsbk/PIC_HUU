@@ -3,6 +3,7 @@ import { useTournamentStore } from '../store';
 import { supabase, SUPABASE_URL } from '../supabaseClient';
 import { createClient } from '@supabase/supabase-js';
 import { Users, Plus, KeyRound, Search, ShieldAlert, X, Shield, Building2, CheckCircle2, Edit, Trash2 } from 'lucide-react';
+import ConfirmDialog from './ConfirmDialog';
 
 export default function AccountManager() {
   const accountUser = useTournamentStore((state) => state.currentUser);
@@ -13,6 +14,8 @@ export default function AccountManager() {
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<{ id: string, username: string } | null>(null);
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newUsername, setNewUsername] = useState('');
@@ -207,9 +210,15 @@ export default function AccountManager() {
     }
   };
 
-  const handleDeleteAccount = async (accountId: string, username: string) => {
+  const handleDeleteAccount = (accountId: string, username: string) => {
     if (!isSuperAdmin) return;
-    if (!window.confirm(`Hành động này KHÔNG THỂ HOÀN TÁC.\nBạn có chắc chắn muốn XÓA VĨNH VIỄN tài khoản "${username}" cùng tất cả phiên làm việc và lịch sử đăng nhập phụ thuộc không?`)) return;
+    setAccountToDelete({ id: accountId, username });
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteAccount = async () => {
+    if (!accountToDelete) return;
+    setIsDeleteConfirmOpen(false);
     
     setActionLoading(true);
     setErrorMsg('');
@@ -217,7 +226,7 @@ export default function AccountManager() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
       
-      const response = await fetch(`/api/admin/accounts/${accountId}`, {
+      const response = await fetch(`/api/admin/accounts/${accountToDelete.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -233,6 +242,7 @@ export default function AccountManager() {
       setErrorMsg(err.message || 'Lỗi hệ thống khi xóa.');
     } finally {
       setActionLoading(false);
+      setAccountToDelete(null);
     }
   };
 
@@ -588,6 +598,20 @@ export default function AccountManager() {
           </form>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={isDeleteConfirmOpen}
+        title="Xóa vĩnh viễn tài khoản"
+        message={`Hành động này cực kỳ nguy hiểm và KHÔNG THỂ HOÀN TÁC.\n\nBạn có thực sự chắc chắn muốn XÓA VĨNH VIỄN tài khoản "${accountToDelete?.username || ''}" cùng toàn bộ phiên làm việc, phân quyền và lịch sử hoạt động liên quan không?`}
+        confirmText="Xóa vĩnh viễn"
+        cancelText="Hủy bỏ"
+        isDanger={true}
+        onConfirm={handleConfirmDeleteAccount}
+        onCancel={() => {
+          setIsDeleteConfirmOpen(false);
+          setAccountToDelete(null);
+        }}
+      />
     </div>
   );
 }

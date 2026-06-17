@@ -18,12 +18,24 @@ export default function ScoreEntry() {
   const { data: groupsData = [] } = useGroups();
   const { updateMatchScore, updateMatchStatus } = useMatchMutations();
 
-  const events: Record<string, any> = {};
-  eventsData.forEach(e => { events[e.id] = e; });
-  const teams: Record<string, any> = {};
-  teamsData.forEach(t => { teams[t.id] = t; });
-  const groups: Record<string, any> = {};
-  groupsData.forEach(g => { groups[g.id] = g; });
+  const events = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    eventsData.forEach(e => { record[e.id] = e; });
+    return record;
+  }, [eventsData]);
+
+  const teams = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    teamsData.forEach(t => { record[t.id] = t; });
+    return record;
+  }, [teamsData]);
+
+  const groups = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    groupsData.forEach(g => { record[g.id] = g; });
+    return record;
+  }, [groupsData]);
+
   const matches = matchesData;
 
   const [localScores, setLocalScores] = useState<Record<string, { a: string, b: string }>>({});

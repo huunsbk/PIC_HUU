@@ -3,6 +3,7 @@ import { Copy, ExternalLink, Users, Edit, Archive, Trash2, ShieldAlert } from 'l
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '../supabaseClient';
 import EventMembersManager from './event-members-manager';
+import ConfirmDialog from './ConfirmDialog';
 
 interface EventCardProps {
   event: any;
@@ -10,6 +11,7 @@ interface EventCardProps {
 
 export default function EventCard({ event }: EventCardProps) {
   const [showMembers, setShowMembers] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Basic Mutation example for soft locking/archiving
@@ -37,6 +39,14 @@ export default function EventCard({ event }: EventCardProps) {
     const url = `${window.location.origin}/e/${event.slug || event.id}`;
     navigator.clipboard.writeText(url);
     alert('Đã copy link public!');
+  };
+
+  const handleDeleteConfirm = () => {
+    supabase.from('events').update({ deleted_at: new Date().toISOString() }).eq('id', event.id)
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['events'] });
+        setIsConfirmOpen(false);
+      });
   };
 
   return (
@@ -68,14 +78,7 @@ export default function EventCard({ event }: EventCardProps) {
           <button onClick={() => updateStatusMutation.mutate(event.status === 'archived' ? 'active' : 'archived')} className="p-2 flex justify-center items-center text-zinc-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title={event.status === 'archived' ? 'Unarchive' : 'Archive'}>
             <Archive size={16} />
           </button>
-          <button onClick={() => {
-            if(window.confirm('Chắc chắn xóa (Soft query)?')) {
-               // Should call delete mutation.
-               // We will just do a simple mark as deleted_at to avoid breaking constraints.
-               supabase.from('events').update({ deleted_at: new Date().toISOString() }).eq('id', event.id)
-                .then(() => queryClient.invalidateQueries({ queryKey: ['events'] }));
-            }
-          }} className="p-2 flex justify-center items-center text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+          <button onClick={() => setIsConfirmOpen(true)} className="p-2 flex justify-center items-center text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
             <Trash2 size={16} />
           </button>
         </div>
@@ -84,6 +87,17 @@ export default function EventCard({ event }: EventCardProps) {
       {showMembers && (
         <EventMembersManager eventId={event.id} onClose={() => setShowMembers(false)} />
       )}
+
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        title="Xóa sự kiện"
+        message={`Bạn có chắc chắn muốn xóa sự kiện "${event.name}" không? Hành động này sẽ chuyển trạng thái của sự kiện.`}
+        confirmText="Xóa sự kiện"
+        cancelText="Hủy bỏ"
+        isDanger={true}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
     </>
   );
 }

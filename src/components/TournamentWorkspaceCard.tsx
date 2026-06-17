@@ -3,6 +3,7 @@ import { Copy, ExternalLink, Info, Trash2, Users, Archive, Link } from 'lucide-r
 import { TournamentWorkspaceStat } from '../hooks/useTournamentWorkspaces';
 import { useArchiveTournamentWorkspace } from '../hooks/useTournamentMutations';
 import TournamentWorkspaceDetailsDrawer from './TournamentWorkspaceDetailsDrawer';
+import ConfirmDialog from './ConfirmDialog';
 
 interface TournamentWorkspaceCardProps {
   tournament: TournamentWorkspaceStat;
@@ -11,15 +12,24 @@ interface TournamentWorkspaceCardProps {
 
 export default function TournamentWorkspaceCard({ tournament, onManageAdmin }: TournamentWorkspaceCardProps) {
   const [showDetails, setShowDetails] = useState(false);
+  const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
   const archiveMutation = useArchiveTournamentWorkspace();
 
   const handleArchive = () => {
-    if(window.confirm('Chắc chắn lưu trữ workspace này (Archive)? Tất cả dữ liệu liên quan sẽ bị ẩn.')) {
-       archiveMutation.mutate(tournament.tournament_id, {
-          onSuccess: () => alert('Đã lưu trữ workspace.'),
-          onError: (err: any) => alert(`Lỗi: ${err.message}`)
-       });
-    }
+    setIsArchiveConfirmOpen(true);
+  };
+
+  const handleConfirmArchive = () => {
+    archiveMutation.mutate(tournament.tournament_id, {
+      onSuccess: () => {
+        setIsArchiveConfirmOpen(false);
+        alert('Đã lưu trữ workspace.');
+      },
+      onError: (err: any) => {
+        setIsArchiveConfirmOpen(false);
+        alert(`Lỗi: ${err.message}`);
+      }
+    });
   };
 
   const copyPublicLink = () => {
@@ -91,6 +101,17 @@ export default function TournamentWorkspaceCard({ tournament, onManageAdmin }: T
       {showDetails && (
         <TournamentWorkspaceDetailsDrawer tournament={tournament} onClose={() => setShowDetails(false)} />
       )}
+
+      <ConfirmDialog
+        isOpen={isArchiveConfirmOpen}
+        title="Lưu trữ workspace"
+        message={`Bạn có chắc chắn muốn lưu trữ workspace "${tournament.name}"? Tất cả dữ liệu liên quan sẽ bị ẩn.`}
+        confirmText="Lưu trữ"
+        cancelText="Hủy bỏ"
+        isDanger={true}
+        onConfirm={handleConfirmArchive}
+        onCancel={() => setIsArchiveConfirmOpen(false)}
+      />
     </>
   );
 }

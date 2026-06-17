@@ -9,8 +9,8 @@ export const subscriptionService = {
     const { data, error } = await supabase
       .from('tenant_subscriptions')
       .select(`
-        *,
-        subscription_plans (*)
+        id, tenant_id, plan_id, start_date, end_date, status, billing_cycle, created_at,
+        subscription_plans (id, name, code, max_users, max_events, price_monthly, price_yearly, storage_gb)
       `)
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
@@ -68,7 +68,7 @@ export const subscriptionService = {
   async renewSubscription(subscriptionId: string) {
     const { data: sub } = await supabase
       .from('tenant_subscriptions')
-      .select('*')
+      .select('id, tenant_id, plan_id, start_date, end_date, status, billing_cycle, created_at')
       .eq('id', subscriptionId)
       .single();
     
@@ -91,7 +91,7 @@ export const subscriptionService = {
   async checkExpiration(subscriptionId: string) {
     const { data: sub } = await supabase
       .from('tenant_subscriptions')
-      .select('*')
+      .select('id, tenant_id, plan_id, start_date, end_date, status, billing_cycle, created_at')
       .eq('id', subscriptionId)
       .single();
     

@@ -349,16 +349,25 @@ FullscreenButton.displayName = 'FullscreenButton';
 
 export default function LiveDashboard() {
   const { data: eventsData = [] } = useEvents();
-  const events: Record<string, any> = {};
-  eventsData.forEach(e => { events[e.id] = e; });
+  const events = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    eventsData.forEach(e => { record[e.id] = e; });
+    return record;
+  }, [eventsData]);
 
   const { data: teamsData = [] } = useTeams();
-  const teams: Record<string, any> = {};
-  teamsData.forEach(t => { teams[t.id] = t; });
+  const teams = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    teamsData.forEach(t => { record[t.id] = t; });
+    return record;
+  }, [teamsData]);
 
   const { data: groupsData = [] } = useGroups();
-  const groups: Record<string, any> = {};
-  groupsData.forEach(g => { groups[g.id] = g; });
+  const groups = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    groupsData.forEach(g => { record[g.id] = g; });
+    return record;
+  }, [groupsData]);
 
   const { data: matchesData = [] } = useMatches();
   const matches = matchesData;

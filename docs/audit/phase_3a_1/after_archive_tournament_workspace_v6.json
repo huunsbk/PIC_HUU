@@ -1,0 +1,6 @@
+{
+  "info": "Paste the raw EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT JSON) output AFTER index creation here.",
+  "rpc": "archive_tournament_workspace_v6",
+  "phase": "PHASE 3A - Post-Indexing Staging Analysis",
+  "plan": []
+}

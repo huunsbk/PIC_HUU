@@ -1790,48 +1790,24 @@ export const useTournamentStore = create<AppState>()(
                       let fetchedPermissions = Array.from(new Set([...rp, ...ap, ...legacyPerms]));
                       const eventIds = accountData.event_ids || [];
 
-                      // Tự động load bù quyền nếu do lỗi version CSDL cũ (get_current_profile chưa trả mảng role_permissions)
-                      if (fetchedPermissions.length === 0 && mappedRole !== 'SUPER_ADMIN' && mappedRole !== 'guest') {
-                         try {
-                             // Fetch the role's permissions directly from Supabase
-                             const { data: roleData } = await supabase.from('roles').select('id').eq('name', mappedRole).single();
-                             if (roleData?.id) {
-                                 const { data: rolePerms } = await supabase.from('role_permissions').select('permissions(name)').eq('role_id', roleData.id);
-                                 if (rolePerms && rolePerms.length > 0) {
-                                     const fallbackPerms = rolePerms.map((r: any) => r.permissions?.name).filter(Boolean);
-                                     fetchedPermissions = Array.from(new Set([...fetchedPermissions, ...fallbackPerms]));
-                                 }
-                             }
-                         } catch (fallbackErr) {
-                             console.error('[Auth Sync] Failed to auto-recover permissions:', fallbackErr);
-                         }
-                      }
-
-                      const enterpriseUser = {
-                         id: accountData.account_id,
-                         username: accountData.username,
-                         display_name: accountData.display_name,
-                         tenant_id: tenantIdStr,
-                         role_name: mappedRole,
-                         permissions: fetchedPermissions,
-                         event_ids: eventIds
-                      };
-                      
-                      // Cập nhật lại zustand để thoát khỏi trạng thái guest
                       originalSet({
-                         userRole: mappedRole,
-                         currentUser: accountData.username,
-                         currentEnterpriseUser: enterpriseUser,
-                         activeTenantId: tenantIdStr,
-                         permissions: fetchedPermissions
+                        currentUser: {
+                          id: accountData.account_id,
+                          username: accountData.username,
+                          displayName: accountData.display_name,
+                        },
+                        userRole: mappedRole,
+                        activeTenantId: tenantIdStr,
+                        permissions: fetchedPermissions,
+                        isAdmin: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'].includes(mappedRole)
                       });
                    }
                 }
              }
-          } catch (err) {
-             console.warn('[Auth Sync] Không thể đồng bộ profile tự động:', err);
+          } catch (err: any) {
+             console.error('Lỗi khi phục hồi session trước tiên:', err);
           }
-          
+
           try {
             // Lấy trạng thái dữ liệu trong store cục bộ trước khi query (khôi phục từ localStorage)
             const localState = get();
@@ -1842,12 +1818,8 @@ export const useTournamentStore = create<AppState>()(
             
             console.log(`Khởi tạo và đồng bộ dữ liệu cho CSDL phân rã: "${validTenantUUID || 'default'}" từ Supabase...`);
             
-            const hasLocalTeams = Object.keys(localState.teams || {}).length > 0;
-            const hasLocalMatches = (localState.matches || []).length > 0;
-            const hasLocalData = hasLocalTeams || hasLocalMatches;
-
-            // 1. Đọc giải đấu (Tournament metadata) - Bảng cấu hình chung nhỏ gọn
-            const { data: tData, error: tError } = await supabase.from('tournament').select('*');
+            // 1. Đọc giải đấu (Tournament metadata) - Bảng cấu hình chung nhỏ gọn (no select *)
+            const { data: tData, error: tError } = await supabase.from('tournament').select('id, name, organization, location, date, settings, current_event_id');
             if (tError) {
               if (tError.code === '42P01' || tError.message?.includes('relation') || tError.message?.includes('does not exist')) {
                 console.warn('LƯU Ý: Các bảng dữ liệu chưa được khởi tạo trên Supabase. Đang chạy ở chế độ dự phòng Offline.');
@@ -1857,117 +1829,12 @@ export const useTournamentStore = create<AppState>()(
               throw tError;
             }
 
-            // Khởi tạo trạng thái Enterprise Auth session check
-            let forceLogout = false;
-            
-            if (forceLogout) {
-              console.warn('Phát hiện đăng nhập song song hoặc mất phiên kết nối. Tự động đăng xuất phiên làm việc cũ.');
-              alert(`CẢNH BÁO: KẾT NỐI BỊ NGẮT\n\nTài khoản "${localState.currentUser}" \n\nPhiên làm việc này sẽ được đăng xuất tự động.`);
-              get().logout();
-              return; // Ngừng quá trình initSupabase
-            }
-
             // Lọc ra các giải đấu thông thường
             const regularTournaments = tData || [];
-
-            // 2. Đọc danh sách sự kiện - TRUY VẤN LỌC TRỰC TIẾP Ở DB LEVEL ĐỂ TỐI ƯU HÓA QUY MÔ LỚN
-            let eData: any[] | null = null;
-            try {
-              let eQuery = supabase.from('events').select('*').is('deleted_at', null);
-              if (validTenantUUID) eQuery = eQuery.eq('tenant_id', validTenantUUID);
-              const res = await eQuery;
-              if (res.error) throw res.error;
-              eData = res.data;
-            } catch (err) {
-              throw err;
-            }
-
-            // 3. Đọc dữ liệu teams - TRUY VẤN LỌC TRỰC TIẾP Ở DB LEVEL
-            let teamData: any[] | null = null;
-            try {
-              let tQuery = supabase.from('teams').select('*').is('deleted_at', null);
-              if (validTenantUUID) tQuery = tQuery.eq('tenant_id', validTenantUUID);
-              const res = await tQuery;
-              if (res.error) throw res.error;
-              teamData = res.data;
-            } catch (err) {
-              throw err;
-            }
-
-            // 4. Đọc dữ liệu groups - TRUY VẤN LỌC TRỰC TIẾP Ở DB LEVEL
-            let groupData: any[] | null = null;
-            try {
-              let gQuery = supabase.from('groups').select('*').is('deleted_at', null);
-              if (validTenantUUID) gQuery = gQuery.eq('tenant_id', validTenantUUID);
-              const res = await gQuery;
-              if (res.error) throw res.error;
-              groupData = res.data;
-            } catch (err) {
-              throw err;
-            }
-
-            // 5. Đọc dữ liệu matches - TRUY VẤN LỌC TRỰC TIẾP Ở DB LEVEL
-            let matchData: any[] | null = null;
-            try {
-              let mQuery = supabase.from('matches').select('*').is('deleted_at', null);
-              if (validTenantUUID) mQuery = mQuery.eq('tenant_id', validTenantUUID);
-              const res = await mQuery;
-              if (res.error) throw res.error;
-              matchData = res.data;
-            } catch (err) {
-              throw err;
-            }
-
-            // 6. Đọc kết hoạt logs - TRUY VẤN LỌC TRỰC TIẾP Ở DB LEVEL (Có Defensive Fallback)
-            let logData: any[] | null = null;
-            try {
-              let logQuery = supabase.from('audit_logs').select('*');
-              if (validTenantUUID) logQuery = logQuery.eq('tenant_id', validTenantUUID);
-              const res = await logQuery.order('id', { ascending: false }).limit(200);
-              if (res.error) {
-                // If column doesn't exist, ignore logs. But now tenant_id must exist.
-                logData = [];
-              } else {
-                logData = res.data;
-              }
-            } catch (err) {
-              logData = [];
-            }
-
-            const hasRemoteData = (teamData && teamData.length > 0) || (matchData && matchData.length > 0);
-
-            // TÌNH HUỐNG 1: TRÊN CLOUD TRỐNG HOÀN TOÀN NHƯNG DƯỚI CLIENT LẠI CÓ SẴN DỮ LIỆU
-            // CỰC KỲ QUAN TRỌNG: Chỉ tự động đồng bộ (push) dữ liệu cũ lên cho tenant mặc định ('default') khi khởi chạy lần đầu tiên.
-            // Ngăn chặn triệt để tình trạng lệch hoặc sao chép rác dữ liệu từ tenant cũ sang tenant mới tinh khi đổi view CSDL!
-            if (activeTenantId === 'default' && !hasRemoteData && hasLocalData) {
-              if ((localState.hasPermission('*') || localState.permissions.length > 0)) {
-                console.log('Phát hiện cơ sỡ dữ liệu mặc định trống, đang đồng bộ dữ liệu Local Cache lên cloud...');
-                await syncStateToSupabase(localState);
-                
-                // Đồng bộ mảng logs ban đầu nếu có
-                if (localState.logs && localState.logs.length > 0) {
-                  const initialLogs = localState.logs.slice(0, 100).map(l => ({
-                    timestamp: l.timestamp,
-                    action: l.action,
-                    details: l.details,
-                    }));
-                  await supabase.from('audit_logs').insert(initialLogs);
-                }
-
-                originalSet({ supabaseConnected: true });
-                console.log('Tự động nạp dữ liệu ban đầu lên Supabase trực tuyến thành công!');
-                return;
-              } else {
-                console.log('Cơ sở dữ liệu Supabase online trống, hiển thị tạm thời trạng thái Local Cache đệm.');
-                originalSet({ supabaseConnected: true });
-                return;
-              }
-            }
 
             // TÌNH HUỐNG 2: SUPABASE ĐÃ CÓ VỀ HOẶC CẦN KHỞI TẠO NỘI DUNG RIÊNG CHO TENANT
             const targetTid = localState.activeTenantId === 'default' ? 't-1' : localState.activeTenantId;
             let dbTournament = regularTournaments.find((rowId: any) => rowId.id === targetTid) || null;
-            const isFirstTime = !dbTournament;
             if (!dbTournament) {
               let tournamentDetailsName = DEFAULT_TOURNAMENT.name;
               if (localState.activeTenantId !== 'default') {
@@ -1996,171 +1863,14 @@ export const useTournamentStore = create<AppState>()(
                 date: DEFAULT_TOURNAMENT.date,
                 settings: DEFAULT_SETTINGS,
                 current_event_id: localState.activeTenantId === 'default' ? 'event-default' : `${localState.activeTenantId}__event-default`,
-                };
+              };
               if (localState.hasPermission('manage_system') || localState.hasPermission('manage_tournaments') || localState.hasPermission('*')) {
                 await supabase.from('tournament').insert([defaultObj]);
               }
               dbTournament = defaultObj;
             }
 
-            // Lọc danh sách sự kiện dựa trên activeTenantId để đảm bảo sự tách biệt dữ liệu hoàn hảo
-            let dbEvents = eData ? eData.filter((evt: any) => {
-              if (localState.activeTenantId === 'default') {
-                return !evt.id.includes('__');
-              } else {
-                return evt.id.startsWith(`${localState.activeTenantId}__`);
-              }
-            }) : [];
-            
-            // RBAC DOANH NGHIỆP: Lọc danh sách sự kiện dựa trên quyền truy cập (account_event_permissions)
-            if (localState.currentEnterpriseUser &&
-               ['EVENT_ADMIN', 'REFEREE'].includes(localState.currentEnterpriseUser.role_name) &&
-               !localState.hasPermission('*') &&
-               !(localState.hasPermission('manage_tournaments') && localState.currentEnterpriseUser.role_name === 'TENANT_ADMIN')) {
-               const allowedEventIds = localState.currentEnterpriseUser.event_ids || [];
-               dbEvents = dbEvents.filter((evt: any) => allowedEventIds.includes(evt.id));
-            }
-            
-            if (dbEvents.length === 0 && isFirstTime) {
-              const defaultEvtId = localState.activeTenantId === 'default' ? 'event-default' : `${localState.activeTenantId}__event-default`;
-              const defaultEvt = {
-                id: defaultEvtId,
-                name: 'Đôi Nam Chuyên Nghiệp',
-                settings: DEFAULT_SETTINGS,
-                active_group_id: null,
-                advance_selection_mode: 'auto',
-                manual_qualified_team_ids: [],
-                };
-              if (localState.hasPermission('manage_system') || localState.hasPermission('manage_events') || localState.hasPermission('*')) {
-                const { error: insErr } = await supabase.from('events').insert([defaultEvt]);
-                if (insErr) {
-                  console.error("Lỗi khi tạo Event mặc định trên Supabase:", insErr.message, insErr.details);
-                }
-              }
-              dbEvents = [defaultEvt];
-            }
-
-            // Lấy tập hợp các ID sự kiện hợp lệ của Tenant này
-            const activeEventIds = new Set(dbEvents.map((evt: any) => evt.id));
-
-            // Chỉ lấy các teams, groups, matches thuộc các sự kiện hợp lệ của tenant này
-            const tenantTeams = (teamData || []).filter((t: any) => activeEventIds.has(t.event_id || t.eventId));
-            const tenantGroups = (groupData || []).filter((g: any) => activeEventIds.has(g.event_id || g.eventId));
-            const tenantMatches = (matchData || []).filter((m: any) => activeEventIds.has(m.event_id || m.eventId));
-
-            // Khởi tạo cấu trúc map của events
-            const eventsRecord: Record<string, EventData> = {};
-            dbEvents.forEach(evt => {
-              let activeGroupId = evt.active_group_id !== undefined ? evt.active_group_id : (evt.activeGroupId || null);
-              if (activeGroupId && activeGroupId !== 'knockout' && !activeGroupId.endsWith(`-${evt.id}`)) {
-                activeGroupId = `${activeGroupId}-${evt.id}`;
-              }
-
-              const advanceSelectionMode = evt.advance_selection_mode !== undefined ? evt.advance_selection_mode : (evt.advanceSelectionMode || 'auto');
-              const manualQualifiedTeamIds = evt.manual_qualified_team_ids !== undefined ? evt.manual_qualified_team_ids : (evt.manualQualifiedTeamIds || []);
-
-              eventsRecord[evt.id] = {
-                id: evt.id,
-                name: evt.name,
-                settings: evt.settings || DEFAULT_SETTINGS,
-                activeGroupId: activeGroupId,
-                advanceSelectionMode: advanceSelectionMode,
-                manualQualifiedTeamIds: manualQualifiedTeamIds,
-                teams: {},
-                groups: {},
-                matches: []
-              };
-            });
-
-            // Nạp thông tin Đội (teams)
-            tenantTeams.forEach(t => {
-              const eventId = t.event_id || t.eventId;
-              if (eventsRecord[eventId]) {
-                let finalGroupId = t.group_id !== undefined ? t.group_id : (t.groupId || null);
-                if (finalGroupId && finalGroupId !== 'knockout' && !finalGroupId.endsWith(`-${eventId}`)) {
-                  finalGroupId = `${finalGroupId}-${eventId}`;
-                }
-                eventsRecord[eventId].teams[t.id] = {
-                  id: t.id,
-                  name: t.name,
-                  groupId: finalGroupId,
-                  seed: t.seed || 'none'
-                };
-              }
-            });
-
-            // Nạp thông tin Nhóm/Bảng đấu (groups)
-            tenantGroups.forEach(g => {
-              const eventId = g.event_id || g.eventId;
-              if (eventsRecord[eventId]) {
-                let finalGroupId = g.id;
-                if (!finalGroupId.endsWith(`-${eventId}`)) {
-                  finalGroupId = `${finalGroupId}-${eventId}`;
-                }
-
-                // Tối ưu hóa chuyên nghiệp: Tự động khôi phục và tính toán các đội thuộc bảng đấu từ dữ liệu 'teams' (đã nạp ở bước trên),
-                // tham khảo thông qua trường group_id để triệt tiêu vĩnh viễn việc bất đồng bộ hoặc lệch dữ liệu JSONB.
-                const fallbackTeamIds = Object.values(eventsRecord[eventId].teams)
-                  .filter(t => t.groupId === finalGroupId)
-                  .map(t => t.id);
-
-                const dbTeamIds = g.team_ids !== undefined ? g.team_ids : (g.teamIds || []);
-                const teamIds = Array.isArray(dbTeamIds) && dbTeamIds.length > 0 ? dbTeamIds : fallbackTeamIds;
-
-                eventsRecord[eventId].groups[finalGroupId] = {
-                  id: finalGroupId,
-                  name: g.name,
-                  teamIds: teamIds
-                };
-              }
-            });
-
-            // Nạp thông tin Trận đấu (matches)
-            tenantMatches.forEach(m => {
-              const eventId = m.event_id || m.eventId;
-              if (eventsRecord[eventId]) {
-                let finalGroupId = m.group_id !== undefined ? m.group_id : (m.groupId || null);
-                if (finalGroupId && finalGroupId !== 'knockout' && !finalGroupId.endsWith(`-${eventId}`)) {
-                  finalGroupId = `${finalGroupId}-${eventId}`;
-                }
-
-                eventsRecord[eventId].matches.push({
-                  id: m.id,
-                  groupId: finalGroupId,
-                  teamAId: normalizeSlotKey(m.team_a_id !== undefined ? m.team_a_id : (m.teamAId || null), eventsRecord[eventId]?.groups),
-                  teamBId: normalizeSlotKey(m.team_b_id !== undefined ? m.team_b_id : (m.teamBId || null), eventsRecord[eventId]?.groups),
-                  scoreA: m.score_a !== undefined && m.score_a !== null ? m.score_a : (m.scoreA !== undefined && m.scoreA !== null ? m.scoreA : null),
-                  scoreB: m.score_b !== undefined && m.score_b !== null ? m.score_b : (m.scoreB !== undefined && m.scoreB !== null ? m.scoreB : null),
-                  winnerId: m.winner_id !== undefined ? m.winner_id : (m.winnerId || null),
-                  status: m.status,
-                  round: m.round,
-                  knockoutRoundName: m.knockout_round_name !== undefined ? m.knockout_round_name : (m.knockoutRoundName || null),
-                  knockoutMatchId: m.knockout_match_id !== undefined ? m.knockout_match_id : (m.knockoutMatchId || null),
-                  nextMatchId: m.next_match_id !== undefined ? m.next_match_id : (m.nextMatchId || null),
-                  nextMatchSlot: m.next_match_slot !== undefined ? m.next_match_slot : (m.nextMatchSlot || null),
-                  placeholderA: m.placeholder_a !== undefined ? m.placeholder_a : (m.placeholderA || null),
-                  placeholderB: m.placeholder_b !== undefined ? m.placeholder_b : (m.placeholderB || null)
-                });
-              }
-            });
-
-            // Thiết lập sự kiện hiện tại
-            let currentEventId = dbTournament.current_event_id || dbTournament.currentEventId || '';
-            let activeEvent = eventsRecord[currentEventId] || Object.values(eventsRecord)[0];
-            
-            if (!activeEvent) {
-              activeEvent = {
-                id: '',
-                name: '',
-                settings: DEFAULT_SETTINGS,
-                activeGroupId: null,
-                advanceSelectionMode: 'auto',
-                manualQualifiedTeamIds: [],
-                teams: {},
-                groups: {},
-                matches: []
-              };
-            }
+            const currentEventId = dbTournament.current_event_id || '';
 
             const tournamentState: Tournament = {
               id: dbTournament.id,
@@ -2168,29 +1878,20 @@ export const useTournamentStore = create<AppState>()(
               organization: dbTournament.organization,
               location: dbTournament.location,
               date: dbTournament.date,
-              settings: activeEvent.id ? (activeEvent.settings || dbTournament.settings || DEFAULT_SETTINGS) : (dbTournament.settings || DEFAULT_SETTINGS)
+              settings: dbTournament.settings || DEFAULT_SETTINGS
             };
-
-            const logsState: AuditLog[] = (logData || []).map(l => ({
-              timestamp: l.timestamp,
-              action: l.action,
-              details: l.details
-            }));
 
             // Lưu dữ liệu trực tuyến đồng bộ hoàn chỉnh vào Zustand store
             originalSet({
               tournament: tournamentState,
-              events: eventsRecord,
-              currentEventId: activeEvent.id,
-              teams: activeEvent.teams,
-              groups: activeEvent.groups,
-              matches: activeEvent.matches,
-              activeGroupId: activeEvent.activeGroupId,
-              advanceSelectionMode: activeEvent.advanceSelectionMode,
-              manualQualifiedTeamIds: activeEvent.manualQualifiedTeamIds,
-              logs: logsState,
+              currentEventId: currentEventId,
               supabaseConnected: true,
               isLoadingSupabase: false,
+              events: {},
+              teams: {},
+              groups: {},
+              matches: [],
+              logs: []
             });
 
             console.log('Nạp dữ liệu trực tuyến từ Supabase thành công!');

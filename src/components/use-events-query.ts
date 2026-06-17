@@ -9,7 +9,7 @@ export function useEventsQuery() {
   return useQuery({
     queryKey: ['events', activeTenantId],
     queryFn: async () => {
-      let query = supabase.from('events').select('*').is('deleted_at', null);
+      let query = supabase.from('events').select('id, name, tournament_id, tenant_id, settings, created_at').is('deleted_at', null);
 
       if (activeTenantId !== 'default') {
         query = query.eq('tenant_id', activeTenantId);
@@ -54,7 +54,8 @@ export function useEventMembersQuery(eventId: string | null) {
             roles (name)
           )
         `)
-        .eq('event_id', eventId);
+        .eq('event_id', eventId)
+        .is('deleted_at', null);
         
       if (error) throw error;
       return data || [];

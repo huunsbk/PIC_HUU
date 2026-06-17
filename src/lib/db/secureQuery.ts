@@ -1,9 +1,9 @@
 import { supabase } from "../../supabaseClient";
 import { getCurrentTenant } from "../auth/tenant";
 
-export async function secureTenantQuery(table: string) {
+export async function secureTenantQuery(table: string, selectFields: string = "*") {
   const tenantId = await getCurrentTenant();
-  return supabase.from(table).select("*").eq("tenant_id", tenantId);
+  return supabase.from(table).select(selectFields).eq("tenant_id", tenantId);
 }
 
 export async function secureTenantDelete(table: string) {

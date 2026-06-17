@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabaseClient';
 import { useTournamentStore } from '../store';
 import { generateRoundRobinMatches, balanceMatchesRestTime } from '../utils/tournamentEngine';
+import { CreateTeamSchema } from '../lib/validation/schemas';
 
 export function useTeamMutations() {
   const queryClient = useQueryClient();
@@ -67,7 +68,7 @@ export function useTeamMutations() {
       const lines = csvContent.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
       // Skip header if contains specific keywords
       let startIndex = 0;
-      if (lines.length > 0 && lines[0].toLowerCase().includes('tên đội') || lines[0].toLowerCase().includes('team')) {
+      if (lines.length > 0 && (lines[0].toLowerCase().includes('tên đội') || lines[0].toLowerCase().includes('team'))) {
         startIndex = 1;
       }
 
@@ -88,6 +89,13 @@ export function useTeamMutations() {
           else if (['vượt qua vòng loại', 'qualified', 'q'].includes(rawSeed)) seed = 'qualified';
         }
         
+        // Zod validation check on item parsing stage
+        const validation = CreateTeamSchema.safeParse({ name, seed });
+        if (!validation.success) {
+          console.warn('[Zod Bulk Validate] Bỏ qua đội do không đạt định dạng:', name, validation.error.format());
+          continue;
+        }
+        
         inserts.push({
            name,
            seed,
@@ -96,11 +104,16 @@ export function useTeamMutations() {
         });
       }
 
-      if (inserts.length > 0) {
-         const { error } = await supabase.from('teams').insert(inserts);
+      const CHUNK_SIZE = 100;
+      let insertedCount = 0;
+      for (let i = 0; i < inserts.length; i += CHUNK_SIZE) {
+         const chunk = inserts.slice(i, i + CHUNK_SIZE);
+         const { error } = await supabase.from('teams').insert(chunk);
          if (error) throw error;
+         insertedCount += chunk.length;
+         console.log(`[Chunk Import Engine] Đã đồng bộ thành công ${insertedCount}/${inserts.length} đội.`);
       }
-      return inserts.length;
+      return insertedCount;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
@@ -140,8 +153,8 @@ export function useGroupMutations() {
       // Basic auto group logic: distribute teams evenly across existing groups
       // Better to do this via an RPC or query teams and groups, update them.
       // Since it requires a bit of logic, we can do it client side and then bulk update teams.
-      const { data: groups } = await supabase.from('groups').select('*').eq('event_id', currentEventId).is('deleted_at', null);
-      const { data: teams } = await supabase.from('teams').select('*').eq('event_id', currentEventId).is('deleted_at', null);
+      const { data: groups } = await supabase.from('groups').select('id').eq('event_id', currentEventId).is('deleted_at', null);
+      const { data: teams } = await supabase.from('teams').select('id, seed').eq('event_id', currentEventId).is('deleted_at', null);
       if (!groups || !teams || groups.length === 0 || teams.length === 0) return;
 
       const sortedTeams = [...teams].sort((a,b) => {

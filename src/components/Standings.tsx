@@ -17,10 +17,17 @@ export default function Standings() {
   const { data: teamsData = [] } = useTeams();
   const { data: groupsData = [] } = useGroups();
   const matches = matchesData;
-  const teams: Record<string, any> = {};
-  teamsData.forEach(t => { teams[t.id] = t; });
-  const groups: Record<string, any> = {};
-  groupsData.forEach(g => { groups[g.id] = g; });
+  const teams = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    teamsData.forEach(t => { record[t.id] = t; });
+    return record;
+  }, [teamsData]);
+
+  const groups = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    groupsData.forEach(g => { record[g.id] = g; });
+    return record;
+  }, [groupsData]);
 
   const tournament = useTournamentStore(state => state.tournament);
   const advanceSelectionMode = useTournamentStore(state => state.advanceSelectionMode);
@@ -34,7 +41,7 @@ export default function Standings() {
   const toggleManualQualifiedTeam = useTournamentStore(state => state.toggleManualQualifiedTeam);
   const clearManualQualifiedTeams = useTournamentStore(state => state.clearManualQualifiedTeams);
 
-  const groupList = React.useMemo(() => Object.values(groups), [groups]);
+  const groupList = groupsData;
   const settings = tournament.settings;
 
   // 1. Tính toán BXH toàn bộ các bảng ở trạng thái tức thì

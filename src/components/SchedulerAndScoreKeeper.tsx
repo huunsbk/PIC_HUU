@@ -41,25 +41,40 @@ export default function SchedulerAndScoreKeeper() {
   const { data: matchesData = [] } = useMatches();
   const { data: eventsData = [] } = useEvents();
 
-  const teams: Record<string, any> = {};
-  teamsData.forEach(t => { teams[t.id] = t; });
-  const groups: Record<string, any> = {};
-  groupsData.forEach(g => { groups[g.id] = g; });
+  const teams = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    teamsData.forEach(t => { record[t.id] = t; });
+    return record;
+  }, [teamsData]);
+
+  const groups = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    groupsData.forEach(g => { record[g.id] = g; });
+    return record;
+  }, [groupsData]);
+
   const matches = matchesData;
-  const events: Record<string, any> = {};
-  eventsData.forEach(e => { events[e.id] = e; });
+
+  const events = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    eventsData.forEach(e => { record[e.id] = e; });
+    return record;
+  }, [eventsData]);
 
   const { updateMatchScore, resetMatchScore, generateForGroup, generateAllSchedules } = useMatchMutations();
 
   const canManage = hasPermission('manage_matches');
 
-  const groupList = React.useMemo(() => Object.values(groups), [groups]);
+  const groupList = groupsData;
   const activeGroup = activeGroupId ? groups[activeGroupId] : groupList[0];
 
-  // Set default active group on mount if not set
+  // Set default active group on mount if not set, and handle switching events correctly
   useEffect(() => {
-    if (groupList.length > 0 && !activeGroupId) {
-      setActiveGroupId(groupList[0].id);
+    if (groupList.length > 0) {
+      const isValid = groupList.some((g) => g.id === activeGroupId);
+      if (!isValid) {
+        setActiveGroupId(groupList[0].id);
+      }
     }
   }, [groupList, activeGroupId, setActiveGroupId]);
 

@@ -3,6 +3,7 @@ import { Copy, ExternalLink, Info, Trash2, ShieldAlert } from 'lucide-react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '../supabaseClient';
 import TournamentDetailsDrawer from './TournamentDetailsDrawer';
+import ConfirmDialog from './ConfirmDialog';
 
 interface TournamentCardProps {
   tournament: any;
@@ -10,6 +11,7 @@ interface TournamentCardProps {
 
 export default function TournamentCard({ tournament }: TournamentCardProps) {
   const [showDetails, setShowDetails] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const getOwner = () => {
@@ -85,11 +87,7 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
             <Info size={16} />
             <span className="text-[10px]">Chi Tiết</span>
           </button>
-          <button onClick={() => {
-            if(window.confirm('Chắc chắn xóa giải đấu này (Soft Delete)?')) {
-               deleteMutation.mutate();
-            }
-          }} disabled={deleteMutation.isPending} className="p-2 flex flex-col justify-center items-center gap-1 text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50" title="Xóa">
+          <button onClick={() => setIsConfirmOpen(true)} disabled={deleteMutation.isPending} className="p-2 flex flex-col justify-center items-center gap-1 text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50" title="Xóa">
             <Trash2 size={16} />
             <span className="text-[10px]">Xóa</span>
           </button>
@@ -99,6 +97,26 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
       {showDetails && (
         <TournamentDetailsDrawer tournament={tournament} owner={owner} onClose={() => setShowDetails(false)} />
       )}
+
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        title="Xóa giải đấu"
+        message={`Bạn có chắc chắn muốn xóa giải đấu "${tournament.name}"? Tất cả thông tin giải đấu sẽ bị đưa vào trạng thái ẩn (Soft Delete).`}
+        confirmText="Xóa vĩnh viễn"
+        cancelText="Hủy bỏ"
+        isDanger={true}
+        onConfirm={() => {
+          deleteMutation.mutate(undefined, {
+            onSuccess: () => {
+              setIsConfirmOpen(false);
+            },
+            onError: () => {
+              setIsConfirmOpen(false);
+            }
+          });
+        }}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
     </>
   );
 }
