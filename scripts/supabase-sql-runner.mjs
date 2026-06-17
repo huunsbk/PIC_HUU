@@ -53,7 +53,7 @@ function isReadOnlySql(sql) {
 
 function riskyTokens(sql) {
   const normalized = stripCommentsAndStrings(sql);
-  const matches = normalized.match(/\b(insert|update|delete|drop|alter|create|replace)\b/gi);
+  const matches = normalized.match(/\b(insert|update|delete|drop|alter|create|replace|truncate|grant|revoke)\b/gi);
   return [...new Set((matches || []).map((token) => token.toUpperCase()))];
 }
 
@@ -91,7 +91,13 @@ FROM __codex_runner_rows;
 `;
 }
 
-function getSslConfig() {
+function removeSslMode(connectionString) {
+  const url = new URL(connectionString);
+  url.searchParams.delete('sslmode');
+  return url.toString();
+}
+
+function getConnectionConfig(connectionString) {
   const dbTarget = (process.env.DB_TARGET || '').toLowerCase();
   const rejectUnauthorizedOverride = process.env.SUPABASE_DB_SSL_REJECT_UNAUTHORIZED;
   const allowStagingSelfSigned =
@@ -102,7 +108,12 @@ function getSslConfig() {
     throw new Error('Blocked: production connections must not disable SSL certificate verification.');
   }
 
-  return { rejectUnauthorized: !allowStagingSelfSigned };
+  return {
+    connectionString: allowStagingSelfSigned
+      ? removeSslMode(connectionString)
+      : connectionString,
+    ssl: { rejectUnauthorized: !allowStagingSelfSigned },
+  };
 }
 
 loadLocalEnv(envPath);
@@ -135,19 +146,16 @@ try {
 }
 
 const query = wrapRowsAsJson(sql);
-let ssl;
+let connectionConfig;
 
 try {
-  ssl = getSslConfig();
+  connectionConfig = getConnectionConfig(dbUrl);
 } catch (error) {
   console.error(error.message);
   process.exit(1);
 }
 
-const client = new Client({
-  connectionString: dbUrl,
-  ssl,
-});
+const client = new Client(connectionConfig);
 
 try {
   await client.connect();
