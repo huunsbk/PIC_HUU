@@ -20,7 +20,10 @@ export function useTeams() {
       const { data, error } = await query;
       if (error) throw error;
       
-      return data || [];
+      return (data || []).map((team) => ({
+        ...team,
+        groupId: team.group_id || null,
+      }));
     },
     enabled: !!activeTenantId && !!currentEventId,
   });
