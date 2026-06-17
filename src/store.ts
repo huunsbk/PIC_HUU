@@ -9,6 +9,25 @@ import { Tournament, Team, Group, Match, AuditLog, TournamentSettings, SeedType,
 import { generateRoundRobinMatches, calculateGroupStandings, calculateBestThirdPlaces, generateKnockoutMatchesSchema, balanceMatchesRestTime, normalizeSlotKey } from './utils/tournamentEngine';
 import { supabase, checkSupabaseConnection } from './supabaseClient';
 
+const getBasePath = () => {
+  const basePath = import.meta.env.BASE_URL || '/';
+  return basePath.endsWith('/') ? basePath : `${basePath}/`;
+};
+
+const getTenantHashPath = (tenantId: string) => `#/${tenantId.replace(/_/g, '-')}`;
+
+const getCurrentTenantHash = () => window.location.hash.replace(/^#\/?/, '').trim();
+
+const navigateToTenantHash = (tenantId: string, reload = false) => {
+  const targetUrl = `${window.location.origin}${getBasePath()}${getTenantHashPath(tenantId)}`;
+  if (window.location.href !== targetUrl) {
+    window.location.href = targetUrl;
+  }
+  if (reload) {
+    setTimeout(() => window.location.reload(), 100);
+  }
+};
+
 export async function getCurrentTenantId() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -303,24 +322,30 @@ export const useTournamentStore = create<AppState>()(
         isLoadingSupabase: false,
         setAuthStatus: async (role, username, tenantId, enterpriseUser) => {
           console.log(`[Auth Setup] Bắt đầu thiết lập Auth cho "${username}".`);
+          const normalizedEnterpriseUser = enterpriseUser ? {
+            ...enterpriseUser,
+            role: enterpriseUser.role || role || enterpriseUser.role_name || 'guest',
+            role_name: enterpriseUser.role_name || role || enterpriseUser.role || 'guest',
+            permittedEventIds: enterpriseUser.permittedEventIds || enterpriseUser.event_ids || [],
+          } : null;
           
           originalSet({
             userRole: role || 'guest',
             currentUser: username,
-            currentEnterpriseUser: enterpriseUser || null,
+            currentEnterpriseUser: normalizedEnterpriseUser,
             activeTenantId: tenantId,
-            permissions: enterpriseUser?.permissions || [],
+            permissions: normalizedEnterpriseUser?.permissions || [],
             isAdmin: false /* deprecated */,
-            selectedTab: (role === 'EVENT_ADMIN' || (enterpriseUser?.permissions?.includes('enter_score') && !enterpriseUser?.permissions?.includes('*'))) ? 'scoreEntry' : 'dashboard',
+            selectedTab: (role === 'EVENT_ADMIN' || (normalizedEnterpriseUser?.permissions?.includes('enter_score') && !normalizedEnterpriseUser?.permissions?.includes('*'))) ? 'scoreEntry' : 'dashboard',
             isLoadingSupabase: true
           });
 
-          if (enterpriseUser && enterpriseUser.id) {
+          if (normalizedEnterpriseUser && normalizedEnterpriseUser.id) {
             // Đảm bảo URL trên trình duyệt đồng bộ với tenant được cấp quyền, tránh nhầm lẫn
             requestAnimationFrame(() => {
-              const expectedHash = '/' + tenantId.replace(/_/g, '-');
-              if (window.location.hash.replace(/^#\/?/, '').trim() !== tenantId.replace(/_/g, '-')) {
-                window.location.hash = expectedHash;
+              const expectedTenantHash = tenantId.replace(/_/g, '-');
+              if (getCurrentTenantHash() !== expectedTenantHash || window.location.pathname !== getBasePath()) {
+                navigateToTenantHash(tenantId);
               }
             });
           }
@@ -373,10 +398,9 @@ export const useTournamentStore = create<AppState>()(
             if (tenantId.toLowerCase() !== normalizedAllowed) { 
               console.warn(`Chuyển đổi CSDL không hợp lệ cho tài khoản này. Đã khóa để bảo vệ. Expected ${normalizedAllowed}, got ${tenantId.toLowerCase()}`);
               // Chuyển hướng người dùng về đúng khu vực của họ thay vì đăng xuất ngay lập tức gây khó chịu, nhưng nếu có hack cố tình thì chặn
-              const expectedHash = '/' + normalizedAllowed.replace(/_/g, '-');
-              if (window.location.hash.replace(/^#\/?/, '').trim() !== normalizedAllowed.replace(/_/g, '-')) {
-                window.location.hash = expectedHash;
-                setTimeout(() => window.location.reload(), 100);
+              const expectedTenantHash = normalizedAllowed.replace(/_/g, '-');
+              if (getCurrentTenantHash() !== expectedTenantHash || window.location.pathname !== getBasePath()) {
+                navigateToTenantHash(normalizedAllowed, true);
                 return;
               }
               // Fallback an toàn
@@ -1789,6 +1813,17 @@ export const useTournamentStore = create<AppState>()(
                       const legacyPerms = accountData.permissions || [];
                       let fetchedPermissions = Array.from(new Set([...rp, ...ap, ...legacyPerms]));
                       const eventIds = accountData.event_ids || [];
+                      const restoredEnterpriseUser = {
+                        id: accountData.account_id,
+                        username: accountData.username,
+                        display_name: accountData.display_name,
+                        tenant_id: tenantIdStr,
+                        role: mappedRole,
+                        role_name: mappedRole,
+                        permissions: fetchedPermissions,
+                        event_ids: eventIds,
+                        permittedEventIds: eventIds
+                      };
 
                       originalSet({
                         currentUser: {
@@ -1796,6 +1831,7 @@ export const useTournamentStore = create<AppState>()(
                           username: accountData.username,
                           displayName: accountData.display_name,
                         },
+                        currentEnterpriseUser: restoredEnterpriseUser,
                         userRole: mappedRole,
                         activeTenantId: tenantIdStr,
                         permissions: fetchedPermissions,

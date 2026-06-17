@@ -45,14 +45,20 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
     }
   });
 
+  const getAppUrl = (path: string) => {
+    const basePath = import.meta.env.BASE_URL || '/';
+    const normalizedBase = basePath.endsWith('/') ? basePath : `${basePath}/`;
+    return `${window.location.origin}${normalizedBase}${path.replace(/^\//, '')}`;
+  };
+
   const copyPublicLink = () => {
-    const url = `${window.location.origin}/tournament/${tournament.slug}`;
+    const url = getAppUrl(`/tournament/${tournament.slug}`);
     navigator.clipboard.writeText(url);
     alert('Đã sao chép liên kết');
   };
 
   const openTournament = () => {
-    window.open(`/tournament/${tournament.slug}`, '_blank');
+    window.open(getAppUrl(`/tournament/${tournament.slug}`), '_blank');
   };
 
   return (
