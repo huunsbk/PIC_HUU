@@ -9,6 +9,14 @@ export function useTeamMutations() {
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
   const tournamentId = useTournamentStore((state) => state.tournament.id);
+  const requireTenantContext = () => {
+    if (!currentEventId) {
+      throw new Error('Chưa có nội dung thi đấu hiện hành.');
+    }
+    if (!activeTenantId || activeTenantId === 'default') {
+      throw new Error('Chưa có tenant hợp lệ. Vui lòng đăng nhập lại trước khi thao tác.');
+    }
+  };
 
   const createTeamId = () => `team-${crypto.randomUUID()}`;
   const getTeamScope = () => ({
@@ -78,17 +86,23 @@ export function useTeamMutations() {
 
   const deleteTeam = useMutation({
     mutationFn: async (id: string) => {
+      requireTenantContext();
       // Soft delete
       const deletedAt = new Date().toISOString();
       const { error } = await supabase
         .from('teams')
         .update({ deleted_at: deletedAt })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('event_id', currentEventId)
+        .eq('tenant_id', activeTenantId)
+        .select('id')
+        .single();
       if (error) throw error;
       return id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
+      queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
       queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
     }
   });
@@ -175,30 +189,17 @@ export function useGroupMutations() {
   const clearAllGroups = useMutation({
      mutationFn: async () => {
        requireTenantContext();
-       const deletedAt = new Date().toISOString();
-       const { error: archiveError } = await supabase
-         .from('groups')
-         .update({ deleted_at: deletedAt })
-         .eq('event_id', currentEventId)
-         .eq('tenant_id', activeTenantId)
-         .is('deleted_at', null);
-       if (archiveError) throw archiveError;
-
-       const { error: resetTeamsError } = await supabase
-         .from('teams')
-         .update({ group_id: null })
-         .eq('event_id', currentEventId)
-         .eq('tenant_id', activeTenantId)
-         .is('deleted_at', null);
-       if (resetTeamsError) throw resetTeamsError;
-
-       const { error: resetMatchesError } = await supabase
-         .from('matches')
-         .delete()
-         .eq('event_id', currentEventId)
-         .eq('tenant_id', activeTenantId)
-         .neq('group_id', 'knockout');
-       if (resetMatchesError) throw resetMatchesError;
+       const { data, error } = await supabase.rpc('dissolve_groups_v2', {
+         p_event_id: currentEventId,
+       });
+       if (error) throw error;
+       return data as {
+         success?: boolean;
+         event_id?: string;
+         teams_cleared?: number;
+         groups_dissolved?: number;
+         matches_soft_deleted?: number;
+       } | null;
      },
      onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
