@@ -6,6 +6,7 @@
 --
 -- Apply only to the controlled Commercial Beta database after read-only
 -- preflight confirms the required functions, tables, and columns exist.
+-- Do not run automatically from GitHub Actions.
 
 CREATE OR REPLACE FUNCTION public.setup_groups_v2(
   p_event_id text,
@@ -62,6 +63,7 @@ BEGIN
   FROM public.events e
   WHERE e.id = p_event_id
     AND e.tenant_id = v_tenant_id
+    AND e.deleted_at IS NULL
   LIMIT 1;
 
   IF NOT FOUND THEN
