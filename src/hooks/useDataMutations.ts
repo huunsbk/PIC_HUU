@@ -9,6 +9,9 @@ export function useTeamMutations() {
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
   const tournamentId = useTournamentStore((state) => state.tournament.id);
+  const invalidateDashboardStats = () => {
+    queryClient.invalidateQueries({ queryKey: ['dashboard-stats', activeTenantId] });
+  };
   const requireTenantContext = () => {
     if (!currentEventId) {
       throw new Error('Chưa có nội dung thi đấu hiện hành.');
@@ -65,6 +68,7 @@ export function useTeamMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
+      invalidateDashboardStats();
     }
   });
 
@@ -81,6 +85,7 @@ export function useTeamMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
+      invalidateDashboardStats();
     }
   });
 
@@ -104,6 +109,7 @@ export function useTeamMutations() {
       queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
       queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
       queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      invalidateDashboardStats();
     }
   });
 
@@ -155,6 +161,7 @@ export function useTeamMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
+      invalidateDashboardStats();
     }
   });
 
@@ -165,6 +172,9 @@ export function useGroupMutations() {
   const queryClient = useQueryClient();
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
+  const invalidateDashboardStats = () => {
+    queryClient.invalidateQueries({ queryKey: ['dashboard-stats', activeTenantId] });
+  };
   const requireTenantContext = () => {
     if (!currentEventId) {
       throw new Error('Chưa có nội dung thi đấu hiện hành.');
@@ -215,6 +225,7 @@ export function useGroupMutations() {
         queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
         queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
         queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+        invalidateDashboardStats();
      }
   });
 
@@ -226,6 +237,7 @@ export function useGroupMutations() {
         queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
         queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
         queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+        invalidateDashboardStats();
      }
   });
 
@@ -238,6 +250,7 @@ export function useGroupMutations() {
       queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
       queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
       queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      invalidateDashboardStats();
     }
   });
 
@@ -257,6 +270,7 @@ export function useGroupMutations() {
       queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
       queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
       queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      invalidateDashboardStats();
     }
   });
 
@@ -268,6 +282,9 @@ export function useMatchMutations() {
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
   const tournament = useTournamentStore((state) => state.tournament);
+  const invalidateDashboardStats = () => {
+    queryClient.invalidateQueries({ queryKey: ['dashboard-stats', activeTenantId] });
+  };
   const tenantId = activeTenantId !== 'default' ? activeTenantId : null;
   const mapMatchToDbInsert = (match: any) => ({
     id: match.id,
@@ -301,6 +318,7 @@ export function useMatchMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      invalidateDashboardStats();
     }
   });
 
@@ -311,6 +329,7 @@ export function useMatchMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      invalidateDashboardStats();
     }
   });
 
@@ -329,6 +348,7 @@ export function useMatchMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      invalidateDashboardStats();
     }
   });
 
@@ -355,6 +375,7 @@ export function useMatchMutations() {
     },
     onSuccess: () => {
        queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+       invalidateDashboardStats();
     }
   });
 
@@ -365,6 +386,7 @@ export function useMatchMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      invalidateDashboardStats();
     }
   });
 
