@@ -36,7 +36,7 @@ async function updateHeartbeat() {
       last_seen_at: new Date().toISOString() 
     }).eq('session_token', data.session.access_token);
   } catch (e) {
-    console.error("Heartbeat sync failed:", e);
+    console.warn('Heartbeat sync failed.');
   }
 }
 
@@ -51,6 +51,6 @@ async function endSession() {
     await supabase.auth.signOut();
     window.location.reload();
   } catch (e) {
-    console.error("Session termination failed:", e);
+    console.warn('Session termination failed.');
   }
 }

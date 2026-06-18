@@ -7,10 +7,7 @@ import {
   X, 
   ShieldCheck, 
   AlertCircle, 
-  Eye, 
-  EyeOff, 
   Zap, 
-  Trophy 
 } from 'lucide-react';
 
 interface AuthModalProps {
@@ -22,7 +19,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const { setAuthStatus } = useTournamentStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -56,7 +52,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const { data: profileStr, error: accountError } = await supabase.rpc('get_current_profile');
     
     if (accountError || !profileStr) {
-      console.error('[Auth Flow Error] Stack trace / Error details:', accountError);
+      console.warn('[Auth] Profile lookup failed during login.');
       setErrorMsg('Tài khoản không tồn tại trên hệ thống hoặc đã bị khóa.');
       await supabase.auth.signOut();
       return;
@@ -67,15 +63,15 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     
     // Check if expected attributes exist
     if (!(accountData.account_id && accountData.tenant_id && accountData.role && accountData.permissions)) {
-       console.warn('[Auth Flow Debug] Missing some expected attributes in payload');
+       console.warn('[Auth] Login profile is missing expected attributes.');
     }
 
     supabase.rpc('record_login_session_v1').then(({ error }) => {
       if (error) {
-        console.warn('[Auth] Optional login telemetry skipped:', error.message);
+        console.warn('[Auth] Optional login telemetry skipped.');
       }
-    }).catch((err) => {
-      console.warn('[Auth] Optional login telemetry skipped:', err?.message || err);
+    }).catch(() => {
+      console.warn('[Auth] Optional login telemetry skipped.');
     });
 
     const mappedRole = accountData.role || 'guest';
@@ -107,9 +103,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       setAuthStatus(mappedRole, accountData.username, tenantIdStr, enterpriseUser);
       onClose();
     }, 800);
-    } catch (err: any) {
-      console.error('[Auth] Login exception:', err);
-      setErrorMsg(`Lỗi kết nối máy chủ: ${err?.message || 'Không xách định (Failed to fetch)'}. Vui lòng thử lại.`);
+    } catch {
+      console.warn('[Auth] Login request failed.');
+      setErrorMsg('Không thể đăng nhập lúc này. Vui lòng kiểm tra kết nối và thử lại.');
     }
   };
 
@@ -166,6 +162,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 placeholder="nhập tài khoản"
+                autoComplete="username"
                 autoFocus
                 className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-250 dark:border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-zinc-150 focus:bg-white focus:outline-none"
                 required
@@ -178,20 +175,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             <label className="block font-bold mb-1 select-none text-zinc-705 dark:text-zinc-295">Mật Khẩu <span className="text-red-500">*</span></label>
             <div className="relative">
               <input
-                type={showPassword ? 'text' : 'password'}
+                type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="Nhập mật khẩu"
-                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-250 dark:border-zinc-800 rounded-xl pl-3 pr-9 py-2.5 text-xs text-zinc-900 dark:text-zinc-150 focus:bg-white focus:outline-none"
+                autoComplete="current-password"
+                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-250 dark:border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-zinc-150 focus:bg-white focus:outline-none"
                 required
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3.5 text-zinc-400 hover:text-zinc-600 transition-colors cursor-pointer"
-              >
-                {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
-              </button>
             </div>
           </div>
 
