@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { KeyRound, Mail, ShieldCheck, X, AlertCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { getAppAuthRedirectUrl } from '../lib/authRedirect';
 
 type ModalMode = 'password' | 'email' | null;
 
@@ -94,7 +95,11 @@ export default function SecurityAccountPanel() {
     }
 
     setSaving(true);
-    const { error } = await supabase.auth.updateUser({ email: emailValue });
+    const emailRedirectTo = getAppAuthRedirectUrl();
+    const { error } = await supabase.auth.updateUser(
+      { email: emailValue },
+      { emailRedirectTo }
+    );
     setSaving(false);
 
     if (error) {
@@ -103,7 +108,7 @@ export default function SecurityAccountPanel() {
     }
 
     setNewEmail('');
-    setSuccessMsg('Đã gửi yêu cầu đổi email. Vui lòng kiểm tra email xác nhận nếu Supabase yêu cầu.');
+    setSuccessMsg('Đã gửi email xác thực. Vui lòng mở email mới nhất và bấm liên kết xác nhận. Không sử dụng link cũ vì link cũ có thể đã hết hạn.');
     await signOutAfterSuccess();
   };
 
