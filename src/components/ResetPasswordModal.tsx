@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { KeyRound, ShieldAlert, X, Eye, EyeOff } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_URL, supabase } from '../supabaseClient';
+import { KeyRound, ShieldAlert, X } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 interface ResetPasswordModalProps {
   isOpen: boolean;
@@ -11,7 +10,6 @@ interface ResetPasswordModalProps {
 
 export default function ResetPasswordModal({ isOpen, onClose, targetUsername }: ResetPasswordModalProps) {
   const [newPassword, setNewPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -62,8 +60,8 @@ export default function ResetPasswordModal({ isOpen, onClose, targetUsername }: 
         setSuccessMsg('');
       }, 1500);
 
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Có lỗi xảy ra.');
+    } catch {
+      setErrorMsg('Không thể đổi mật khẩu lúc này. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -113,21 +111,14 @@ export default function ResetPasswordModal({ isOpen, onClose, targetUsername }: 
             </label>
             <div className="relative">
               <input
-                type={showPassword ? 'text' : 'password'}
+                type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Nhập mật khẩu mới"
+                autoComplete="new-password"
                 className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
                 required
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-zinc-400 hover:text-zinc-600 transition-colors"
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
             </div>
           </div>
 

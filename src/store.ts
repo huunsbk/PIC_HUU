@@ -321,7 +321,7 @@ export const useTournamentStore = create<AppState>()(
         activeTenantId: 'default',
         isLoadingSupabase: false,
         setAuthStatus: async (role, username, tenantId, enterpriseUser) => {
-          console.log(`[Auth Setup] Bắt đầu thiết lập Auth cho "${username}".`);
+          console.log('[Auth Setup] Bắt đầu thiết lập Auth.');
           const normalizedEnterpriseUser = enterpriseUser ? {
             ...enterpriseUser,
             role: enterpriseUser.role || role || enterpriseUser.role_name || 'guest',
@@ -380,7 +380,7 @@ export const useTournamentStore = create<AppState>()(
           try {
             await supabase.auth.signOut();
           } catch (e) {
-            console.warn('Error signing out:', e);
+            console.warn('Không thể hoàn tất đăng xuất phía Supabase.');
           }
           
           window.location.reload();
@@ -1886,7 +1886,7 @@ export const useTournamentStore = create<AppState>()(
                 }
              }
           } catch (err: any) {
-             console.error('Lỗi khi phục hồi session trước tiên:', err);
+             console.warn('Lỗi khi phục hồi session trước tiên.');
           }
 
           try {
