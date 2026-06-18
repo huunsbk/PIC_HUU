@@ -7,6 +7,10 @@ import React, { useState } from 'react';
 import { useTournamentStore } from '../store';
 import { supabase } from '../supabaseClient';
 import { Trophy, Users, Layers, Calendar, Play, Download, Upload, Trash2, Check, AlertCircle, MapPin, CalendarDays, PlusCircle, LayoutGrid, Award, Sparkles, FileText, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { useTeams } from '../hooks/useTeams';
+import { useGroups } from '../hooks/useGroups';
+import { useMatches } from '../hooks/useMatches';
+import { useDashboardStats } from '../hooks/useDashboardStats';
 
 export default function Dashboard() {
   const {
@@ -44,6 +48,10 @@ export default function Dashboard() {
 
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isCheckingConn, setIsCheckingConn] = useState(false);
+  const teamsQuery = useTeams();
+  const groupsQuery = useGroups();
+  const matchesQuery = useMatches();
+  const statsQuery = useDashboardStats();
 
   // Check connection once on mount
   React.useEffect(() => {
@@ -58,32 +66,40 @@ export default function Dashboard() {
     showToast('Đã cập nhật trạng thái kết nối Supabase trực tuyến!');
   };
 
-  const teamList = Object.values(teams);
-  const groupList = Object.values(groups);
+  const teamList = teamsQuery.isSuccess ? teamsQuery.data : Object.values(teams);
+  const groupList = groupsQuery.isSuccess ? groupsQuery.data : Object.values(groups);
+  const matchList = matchesQuery.isSuccess ? matchesQuery.data : matches;
   const totalTeams = teamList.length;
   const totalGroups = groupList.length;
-  const totalMatches = matches.length;
-  const finishedMatches = matches.filter((m) => m.status === 'finished').length;
-  const pendingMatches = totalMatches - finishedMatches;
-  const directMatchesCount = matches.filter((m) => m.groupId === 'knockout').length;
+  const groupMatches = matchList.filter((m) => m.groupId !== 'knockout');
+  const totalMatches = groupMatches.length;
+  const finishedMatches = groupMatches.filter((m) => m.status === 'finished').length;
+  const directMatchesCount = matchList.filter((m) => m.groupId === 'knockout').length;
 
   // Tổng hợp thống kê của toàn giải đấu (tất cả cá nội dung)
   const eventList = Object.values(events || {});
-  let totalTeamsAll = 0;
-  let totalGroupsAll = 0;
-  let totalMatchesAll = 0;
-  let finishedMatchesAll = 0;
-  let directMatchesCountAll = 0;
+  let fallbackTeamsAll = 0;
+  let fallbackGroupsAll = 0;
+  let fallbackMatchesAll = 0;
+  let fallbackFinishedMatchesAll = 0;
+  let fallbackDirectMatchesCountAll = 0;
 
   eventList.forEach((evt) => {
-    totalTeamsAll += Object.keys(evt.teams || {}).length;
-    totalGroupsAll += Object.keys(evt.groups || {}).length;
+    fallbackTeamsAll += Object.keys(evt.teams || {}).length;
+    fallbackGroupsAll += Object.keys(evt.groups || {}).length;
     
     const evtMatches = evt.matches || [];
-    totalMatchesAll += evtMatches.length;
-    finishedMatchesAll += evtMatches.filter((m) => m.status === 'finished').length;
-    directMatchesCountAll += evtMatches.filter((m) => m.groupId === 'knockout').length;
+    const evtGroupMatches = evtMatches.filter((m) => m.groupId !== 'knockout');
+    fallbackMatchesAll += evtGroupMatches.length;
+    fallbackFinishedMatchesAll += evtGroupMatches.filter((m) => m.status === 'finished').length;
+    fallbackDirectMatchesCountAll += evtMatches.filter((m) => m.groupId === 'knockout').length;
   });
+
+  const totalTeamsAll = statsQuery.data?.teamsAll ?? fallbackTeamsAll;
+  const totalGroupsAll = statsQuery.data?.groupsAll ?? fallbackGroupsAll;
+  const totalMatchesAll = statsQuery.data?.groupMatchesAll ?? fallbackMatchesAll;
+  const finishedMatchesAll = statsQuery.data?.finishedGroupMatchesAll ?? fallbackFinishedMatchesAll;
+  const directMatchesCountAll = statsQuery.data?.knockoutMatchesAll ?? fallbackDirectMatchesCountAll;
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ type, message });
