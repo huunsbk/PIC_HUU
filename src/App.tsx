@@ -21,6 +21,7 @@ import AccountManager from './components/AccountManager';
 import EventManagementPage from './components/event-management-page';
 import TournamentWorkspaceListPage from './components/TournamentWorkspaceListPage';
 import EventSwitcher from './components/event-switcher';
+import { getAuthHashErrorMessage } from './lib/authRedirect';
 
 import {
   Trophy,
@@ -107,8 +108,32 @@ function RootEntry() {
 }
 
 export default function App() {
+  const [authHashError, setAuthHashError] = React.useState<string | null>(null);
+
+  useEffect(() => {
+    const message = getAuthHashErrorMessage();
+    if (!message) return;
+
+    setAuthHashError(message);
+    window.history.replaceState(null, document.title, `${window.location.pathname}${window.location.search}`);
+  }, []);
+
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
+      {authHashError && (
+        <div className="fixed left-4 right-4 top-4 z-[90] mx-auto max-w-2xl rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800 shadow-lg dark:border-red-900/40 dark:bg-red-950 dark:text-red-200">
+          <div className="flex items-start justify-between gap-3">
+            <span>{authHashError}</span>
+            <button
+              type="button"
+              onClick={() => setAuthHashError(null)}
+              className="shrink-0 rounded-md px-2 py-1 text-red-700 hover:bg-red-100 dark:text-red-200 dark:hover:bg-red-900/50"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      )}
       <Routes>
         <Route path="/" element={<RootEntry />} />
         <Route path="/admin/workspace/:slug" element={<AdminWorkspace />} />
