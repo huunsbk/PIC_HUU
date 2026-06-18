@@ -8,19 +8,17 @@ export function useEvents() {
   return useQuery({
     queryKey: ['events', activeTenantId],
     queryFn: async () => {
-      let query = supabase.from('events').select('id, name, settings').is('deleted_at', null);
-
-      if (activeTenantId !== 'default') {
-        query = query.eq('tenant_id', activeTenantId);
-      } else {
-        query = query.is('tenant_id', null);
-      }
+      const query = supabase
+        .from('events')
+        .select('id, name, settings')
+        .is('deleted_at', null)
+        .eq('tenant_id', activeTenantId);
 
       const { data, error } = await query;
       if (error) throw error;
       
       return data || [];
     },
-    enabled: !!activeTenantId,
+    enabled: !!activeTenantId && activeTenantId !== 'default',
   });
 }

@@ -9,16 +9,18 @@ export function useGroups() {
   return useQuery({
     queryKey: ['groups', activeTenantId, currentEventId],
     queryFn: async () => {
-      let query = supabase.from('groups').select('id, name, team_ids').eq('event_id', currentEventId).is('deleted_at', null);
-      let teamsQuery = supabase.from('teams').select('id, group_id').eq('event_id', currentEventId).is('deleted_at', null);
-
-      if (activeTenantId !== 'default') {
-        query = query.eq('tenant_id', activeTenantId);
-        teamsQuery = teamsQuery.eq('tenant_id', activeTenantId);
-      } else {
-        query = query.is('tenant_id', null);
-        teamsQuery = teamsQuery.is('tenant_id', null);
-      }
+      const query = supabase
+        .from('groups')
+        .select('id, name, team_ids')
+        .eq('event_id', currentEventId)
+        .eq('tenant_id', activeTenantId)
+        .is('deleted_at', null);
+      const teamsQuery = supabase
+        .from('teams')
+        .select('id, group_id')
+        .eq('event_id', currentEventId)
+        .eq('tenant_id', activeTenantId)
+        .is('deleted_at', null);
 
       const [{ data, error }, { data: teamRows, error: teamsError }] = await Promise.all([
         query,
@@ -40,6 +42,6 @@ export function useGroups() {
         teamIds: teamIdsByGroup.get(group.id) || (Array.isArray(group.team_ids) ? group.team_ids : []),
       }));
     },
-    enabled: !!activeTenantId && !!currentEventId,
+    enabled: !!activeTenantId && activeTenantId !== 'default' && !!currentEventId,
   });
 }

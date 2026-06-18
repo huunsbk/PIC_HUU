@@ -151,71 +151,36 @@ export function useGroupMutations() {
   const queryClient = useQueryClient();
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
-  const tournamentId = useTournamentStore((state) => state.tournament.id);
-  const tenantId = activeTenantId !== 'default' ? activeTenantId : null;
-
-  const getGroupName = (index: number) => {
-    let name = '';
-    let temp = index;
-    while (temp >= 0) {
-      name = String.fromCharCode((temp % 26) + 65) + name;
-      temp = Math.floor(temp / 26) - 1;
+  const requireTenantContext = () => {
+    if (!currentEventId) {
+      throw new Error('Chưa có nội dung thi đấu hiện hành.');
     }
-    return `Bảng ${name}`;
+    if (!activeTenantId || activeTenantId === 'default') {
+      throw new Error('Chưa có tenant hợp lệ. Vui lòng đăng nhập lại trước khi thao tác.');
+    }
   };
 
-  const resetEventGroups = async (numGroups: number) => {
-    if (!currentEventId) {
-      throw new Error('Chưa có nội dung thi đấu hiện hành để tạo bảng.');
-    }
+  const setupGroupsContract = async (numGroups: number) => {
+    requireTenantContext();
 
-    const deletedAt = new Date().toISOString();
-    const { error: archiveError } = await supabase
-      .from('groups')
-      .update({ deleted_at: deletedAt })
-      .eq('event_id', currentEventId)
-      .is('deleted_at', null);
-    if (archiveError) throw archiveError;
-
-    const { error: resetTeamsError } = await supabase
-      .from('teams')
-      .update({ group_id: null })
-      .eq('event_id', currentEventId)
-      .is('deleted_at', null);
-    if (resetTeamsError) throw resetTeamsError;
-
-    const { error: resetMatchesError } = await supabase
-      .from('matches')
-      .delete()
-      .eq('event_id', currentEventId)
-      .neq('group_id', 'knockout');
-    if (resetMatchesError) throw resetMatchesError;
-
-    const groupRows = Array.from({ length: numGroups }, (_, index) => ({
-      id: `group-${crypto.randomUUID()}`,
-      name: getGroupName(index),
-      event_id: currentEventId,
-      tenant_id: tenantId,
-      tournament_id: tournamentId || null,
-      team_ids: [],
-    }));
-
-    const { data, error } = await supabase
-      .from('groups')
-      .insert(groupRows)
-      .select('id, name');
+    const { data, error } = await supabase.rpc('setup_groups_v2', {
+      p_event_id: currentEventId,
+      p_num_groups: numGroups,
+    });
     if (error) throw error;
 
-    return data || [];
+    return data as { success?: boolean; event_id?: string; num_groups?: number; group_ids?: string[] } | null;
   };
 
   const clearAllGroups = useMutation({
      mutationFn: async () => {
+       requireTenantContext();
        const deletedAt = new Date().toISOString();
        const { error: archiveError } = await supabase
          .from('groups')
          .update({ deleted_at: deletedAt })
          .eq('event_id', currentEventId)
+         .eq('tenant_id', activeTenantId)
          .is('deleted_at', null);
        if (archiveError) throw archiveError;
 
@@ -223,6 +188,7 @@ export function useGroupMutations() {
          .from('teams')
          .update({ group_id: null })
          .eq('event_id', currentEventId)
+         .eq('tenant_id', activeTenantId)
          .is('deleted_at', null);
        if (resetTeamsError) throw resetTeamsError;
 
@@ -230,6 +196,7 @@ export function useGroupMutations() {
          .from('matches')
          .delete()
          .eq('event_id', currentEventId)
+         .eq('tenant_id', activeTenantId)
          .neq('group_id', 'knockout');
        if (resetMatchesError) throw resetMatchesError;
      },
@@ -242,7 +209,7 @@ export function useGroupMutations() {
 
   const setupGroups = useMutation({
      mutationFn: async (numGroups: number) => {
-        return resetEventGroups(numGroups);
+        return setupGroupsContract(numGroups);
      },
      onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
@@ -254,9 +221,16 @@ export function useGroupMutations() {
   const autoGroupTeams = useMutation({
     mutationFn: async (params?: { method?: 'random' | 'seed'; numGroups?: number }) => {
       const requestedGroups = params?.numGroups || 4;
-      const groups = await resetEventGroups(requestedGroups);
-      const { data: teams } = await supabase.from('teams').select('id, seed').eq('event_id', currentEventId).is('deleted_at', null);
-      if (!groups || !teams || groups.length === 0 || teams.length === 0) return;
+      const setupResult = await setupGroupsContract(requestedGroups);
+      const groupIds = setupResult?.group_ids || [];
+      const { data: teams, error: teamsError } = await supabase
+        .from('teams')
+        .select('id, seed')
+        .eq('event_id', currentEventId)
+        .eq('tenant_id', activeTenantId)
+        .is('deleted_at', null);
+      if (teamsError) throw teamsError;
+      if (groupIds.length === 0 || !teams || teams.length === 0) return;
 
       const sortedTeams = params?.method === 'random'
         ? [...teams].sort(() => Math.random() - 0.5)
@@ -264,13 +238,17 @@ export function useGroupMutations() {
 
       const updates: any[] = [];
       sortedTeams.forEach((team, index) => {
-         const groupIndex = index % groups.length;
-         updates.push({ id: team.id, group_id: groups[groupIndex].id });
+         const groupIndex = index % groupIds.length;
+         updates.push({ id: team.id, group_id: groupIds[groupIndex] });
       });
 
       // Execute bulk update
       for (const update of updates) {
-         await supabase.from('teams').update({ group_id: update.group_id }).eq('id', update.id);
+         await supabase
+           .from('teams')
+           .update({ group_id: update.group_id })
+           .eq('id', update.id)
+           .eq('tenant_id', activeTenantId);
       }
     },
     onSuccess: () => {
@@ -282,8 +260,13 @@ export function useGroupMutations() {
 
   const moveTeamToGroup = useMutation({
     mutationFn: async ({ teamId, toGroupId }: { teamId: string, toGroupId: string | null }) => {
+      requireTenantContext();
       const dbGroupId = toGroupId === 'unassigned' ? null : toGroupId;
-      await supabase.from('teams').update({ group_id: dbGroupId }).eq('id', teamId);
+      await supabase
+        .from('teams')
+        .update({ group_id: dbGroupId })
+        .eq('id', teamId)
+        .eq('tenant_id', activeTenantId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });

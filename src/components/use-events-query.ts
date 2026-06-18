@@ -9,13 +9,11 @@ export function useEventsQuery() {
   return useQuery({
     queryKey: ['events', activeTenantId],
     queryFn: async () => {
-      let query = supabase.from('events').select('id, name, tournament_id, tenant_id, settings, created_at').is('deleted_at', null);
-
-      if (activeTenantId !== 'default') {
-        query = query.eq('tenant_id', activeTenantId);
-      } else {
-        query = query.is('tenant_id', null);
-      }
+      const query = supabase
+        .from('events')
+        .select('id, name, tournament_id, tenant_id, settings, created_at')
+        .is('deleted_at', null)
+        .eq('tenant_id', activeTenantId);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -30,7 +28,7 @@ export function useEventsQuery() {
 
       return events;
     },
-    enabled: !!activeTenantId,
+    enabled: !!activeTenantId && activeTenantId !== 'default',
   });
 }
 

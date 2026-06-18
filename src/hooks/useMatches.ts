@@ -9,13 +9,12 @@ export function useMatches() {
   return useQuery({
     queryKey: ['matches', activeTenantId, currentEventId],
     queryFn: async () => {
-      let query = supabase.from('matches').select('id, group_id, team_a_id, team_b_id, placeholder_a, placeholder_b, score_a, score_b, winner_id, status, round, knockout_round_name, knockout_match_id, next_match_id, next_match_slot').eq('event_id', currentEventId).is('deleted_at', null);
-
-      if (activeTenantId !== 'default') {
-        query = query.eq('tenant_id', activeTenantId);
-      } else {
-        query = query.is('tenant_id', null);
-      }
+      const query = supabase
+        .from('matches')
+        .select('id, group_id, team_a_id, team_b_id, placeholder_a, placeholder_b, score_a, score_b, winner_id, status, round, knockout_round_name, knockout_match_id, next_match_id, next_match_slot')
+        .eq('event_id', currentEventId)
+        .eq('tenant_id', activeTenantId)
+        .is('deleted_at', null);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -36,6 +35,6 @@ export function useMatches() {
         nextMatchSlot: match.next_match_slot,
       }));
     },
-    enabled: !!activeTenantId && !!currentEventId,
+    enabled: !!activeTenantId && activeTenantId !== 'default' && !!currentEventId,
   });
 }

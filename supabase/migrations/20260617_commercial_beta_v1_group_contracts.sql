@@ -1,13 +1,12 @@
--- Commercial Beta V1 database contract RPCs.
+-- Commercial Beta V1 CTO database contracts.
 --
--- Purpose:
--- 1. Provide a versioned group setup contract for the frontend without relying on
---    missing setup_groups_v1.
--- 2. Provide a safe login-session audit contract without storing Supabase tokens
---    or full session objects.
+-- These RPCs replace missing runtime contracts:
+-- - setup_groups_v1 -> setup_groups_v2
+-- - record_login_session -> record_login_session_v1
 --
--- This migration defines contracts only. Apply manually through the approved
--- Staging migration process; do not run automatically from GitHub Actions.
+-- Apply only to the controlled Commercial Beta database after read-only
+-- preflight confirms the required functions, tables, and columns exist.
+-- Do not run automatically from GitHub Actions.
 
 CREATE OR REPLACE FUNCTION public.setup_groups_v2(
   p_event_id text,
@@ -71,24 +70,19 @@ BEGIN
     RAISE EXCEPTION 'Event not found for current tenant';
   END IF;
 
-  UPDATE public.matches
-  SET deleted_at = now()
+  DELETE FROM public.matches
   WHERE event_id = p_event_id
     AND tenant_id = v_tenant_id
-    AND deleted_at IS NULL
     AND COALESCE(group_id, '') <> 'knockout';
 
   UPDATE public.teams
   SET group_id = NULL
   WHERE event_id = p_event_id
-    AND tenant_id = v_tenant_id
-    AND deleted_at IS NULL;
+    AND tenant_id = v_tenant_id;
 
-  UPDATE public.groups
-  SET deleted_at = now()
+  DELETE FROM public.groups
   WHERE event_id = p_event_id
-    AND tenant_id = v_tenant_id
-    AND deleted_at IS NULL;
+    AND tenant_id = v_tenant_id;
 
   FOR v_index IN 0..(p_num_groups - 1) LOOP
     v_letter_index := v_index;
@@ -96,7 +90,7 @@ BEGIN
 
     LOOP
       v_letter_name := chr(65 + (v_letter_index % 26)) || v_letter_name;
-      v_letter_index := (v_letter_index / 26)::integer - 1;
+      v_letter_index := floor(v_letter_index / 26.0)::integer - 1;
       EXIT WHEN v_letter_index < 0;
     END LOOP;
 
@@ -114,7 +108,7 @@ BEGIN
     VALUES (
       v_group_id,
       v_group_name,
-      ARRAY[]::text[],
+      '[]'::jsonb,
       p_event_id,
       v_tenant_id,
       v_event_tournament_id
@@ -133,7 +127,7 @@ END;
 $function$;
 
 COMMENT ON FUNCTION public.setup_groups_v2(text, integer) IS
-  'Commercial Beta V1: safely reset and create tournament groups for one event scoped by current_tenant_id().';
+  'Commercial Beta V1: permission-checked group setup scoped to current_tenant_id() and one event.';
 
 CREATE OR REPLACE FUNCTION public.record_login_session_v1()
 RETURNS jsonb
@@ -314,7 +308,7 @@ END;
 $function$;
 
 COMMENT ON FUNCTION public.record_login_session_v1() IS
-  'Commercial Beta V1: records a safe login audit event when audit_logs is compatible; never stores Supabase tokens or full sessions.';
+  'Commercial Beta V1: optional safe login audit; never stores access_token, refresh_token, or full session objects.';
 
 REVOKE ALL ON FUNCTION public.setup_groups_v2(text, integer) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.record_login_session_v1() FROM PUBLIC;
