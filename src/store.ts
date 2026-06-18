@@ -336,7 +336,7 @@ export const useTournamentStore = create<AppState>()(
             activeTenantId: tenantId,
             permissions: normalizedEnterpriseUser?.permissions || [],
             isAdmin: false /* deprecated */,
-            selectedTab: (role === 'EVENT_ADMIN' || (normalizedEnterpriseUser?.permissions?.includes('enter_score') && !normalizedEnterpriseUser?.permissions?.includes('*'))) ? 'scoreEntry' : 'dashboard',
+            selectedTab: (role === 'EVENT_ADMIN' || (normalizedEnterpriseUser?.permissions?.includes('enter_scores') && !normalizedEnterpriseUser?.permissions?.includes('*'))) ? 'scoreEntry' : 'dashboard',
             isLoadingSupabase: true
           });
 
@@ -1945,7 +1945,7 @@ export const useTournamentStore = create<AppState>()(
                 settings: DEFAULT_SETTINGS,
                 current_event_id: localState.activeTenantId === 'default' ? 'event-default' : `${localState.activeTenantId}__event-default`,
               };
-              if (localState.hasPermission('manage_system') || localState.hasPermission('manage_tournaments') || localState.hasPermission('*')) {
+              if (localState.hasPermission('manage_tenants') || localState.hasPermission('manage_tournaments') || localState.hasPermission('*')) {
                 await supabase.from('tournament').insert([defaultObj]);
               }
               dbTournament = defaultObj;

@@ -42,7 +42,7 @@ export default function KnockoutBracket() {
 
   const matches = matchesData;
 
-  const canManage = hasPermission("manage_knockout");
+  const canManage = hasPermission("manage_matches");
 
   const [sz, setSz] = useState<4 | 8 | 16 | 32>(4);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);

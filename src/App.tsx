@@ -205,19 +205,19 @@ function TournamentShell() {
 
   const navItems = React.useMemo(() => {
     const allNavItems = [
-      { id: 'dashboard', label: 'Trang chủ', icon: Trophy, permission: 'view_dashboard', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'dashboard', label: 'Trang chủ', icon: Trophy, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
       { id: 'teams', label: 'Quản lý đội', icon: Users, permission: 'manage_teams', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
       { id: 'groups', label: 'Chia bảng', icon: Layers, permission: 'manage_groups', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
-      { id: 'scoreEntry', label: 'Nhập điểm', icon: Gamepad2, permission: 'enter_score', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
+      { id: 'scoreEntry', label: 'Nhập điểm', icon: Gamepad2, permission: 'enter_scores', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
       { id: 'matches', label: 'Lịch & Kết quả', icon: CalendarDays, permission: 'manage_matches', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
-      { id: 'standings', label: 'Tuyển chọn vòng trong', icon: FileSpreadsheet, permission: 'view_standings', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
-      { id: 'knockout', label: 'Sơ đồ trực tiếp', icon: Network, permission: 'manage_knockout', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
-      { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv, permission: 'view_live', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'guest'] },
-      { id: 'export', label: 'Xuất file', icon: FileDown, permission: 'export_data', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
-      { id: 'workspaces', label: 'Enterprise Workspaces', icon: Layers, permission: 'manage_system', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
-      { id: 'events_center', label: 'Event Center', icon: CalendarDays, permission: 'manage_system', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
-      { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList, permission: 'view_logs', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
-      { id: 'accounts', label: 'Quản lý tài khoản', icon: UserCog, permission: 'manage_users', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
+      { id: 'standings', label: 'Tuyển chọn vòng trong', icon: FileSpreadsheet, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
+      { id: 'knockout', label: 'Sơ đồ trực tiếp', icon: Network, permission: 'manage_matches', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'guest'] },
+      { id: 'export', label: 'Xuất file', icon: FileDown, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'workspaces', label: 'Enterprise Workspaces', icon: Layers, permission: 'manage_tournaments', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
+      { id: 'events_center', label: 'Event Center', icon: CalendarDays, permission: 'manage_events', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
+      { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList, permission: 'view_audit_logs', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
+      { id: 'accounts', label: 'Quản lý tài khoản', icon: UserCog, permission: 'manage_accounts', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
     ];
     
     if (userRole === 'guest') {

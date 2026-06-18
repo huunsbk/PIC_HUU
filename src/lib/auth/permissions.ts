@@ -10,15 +10,15 @@ export function canManageRoles(currentRole: RoleType): boolean {
 }
 
 export function canManageEvents(currentRole: RoleType): boolean {
-  return hasRole(currentRole, [ROLES.SUPER_ADMIN, ROLES.TENANT_ADMIN, ROLES.EVENT_MANAGER]);
+  return hasRole(currentRole, [ROLES.SUPER_ADMIN, ROLES.TENANT_ADMIN, ROLES.EVENT_ADMIN]);
 }
 
 export function canManageMatches(currentRole: RoleType): boolean {
-  return hasRole(currentRole, [ROLES.SUPER_ADMIN, ROLES.TENANT_ADMIN, ROLES.EVENT_MANAGER, ROLES.REFEREE]);
+  return hasRole(currentRole, [ROLES.SUPER_ADMIN, ROLES.TENANT_ADMIN, ROLES.EVENT_ADMIN, ROLES.REFEREE]);
 }
 
 export function canManageTeams(currentRole: RoleType): boolean {
-  return hasRole(currentRole, [ROLES.SUPER_ADMIN, ROLES.TENANT_ADMIN, ROLES.EVENT_MANAGER]);
+  return hasRole(currentRole, [ROLES.SUPER_ADMIN, ROLES.TENANT_ADMIN, ROLES.EVENT_ADMIN]);
 }
 
 export function canViewAuditLogs(currentRole: RoleType): boolean {

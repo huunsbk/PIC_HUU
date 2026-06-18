@@ -20,7 +20,7 @@ export default function AccountManager() {
   const [newUsername, setNewUsername] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [newRole, setNewRole] = useState('EVENT_MANAGER');
+  const [newRole, setNewRole] = useState('EVENT_ADMIN');
   const [newTenantId, setNewTenantId] = useState(activeTenantId !== 'default' ? activeTenantId : '');
   const [actionLoading, setActionLoading] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -454,7 +454,7 @@ export default function AccountManager() {
                   className="w-full px-3 py-2 border rounded-lg dark:border-zinc-700 dark:bg-zinc-800 font-medium"
                 >
                   {isSuperAdmin && <option value="TENANT_ADMIN">TENANT_ADMIN (Tổ chức cấp 2)</option>}
-                  <option value="EVENT_MANAGER">EVENT_MANAGER (Trưởng Ban tổ chức cấp 3)</option>
+                  <option value="EVENT_ADMIN">EVENT_ADMIN (Quản trị nội dung thi đấu)</option>
                   <option value="REFEREE">REFEREE (Trọng tài giải)</option>
                   <option value="VIEWER">VIEWER (Khán giả)</option>
                 </select>
@@ -544,7 +544,7 @@ export default function AccountManager() {
                   className="w-full px-3 py-2 border rounded-lg dark:border-zinc-700 dark:bg-zinc-800 font-medium"
                 >
                   {isSuperAdmin && <option value="TENANT_ADMIN">TENANT_ADMIN (Tổ chức cấp 2)</option>}
-                  <option value="EVENT_MANAGER">EVENT_MANAGER (Trưởng Ban tổ chức cấp 3)</option>
+                  <option value="EVENT_ADMIN">EVENT_ADMIN (Quản trị nội dung thi đấu)</option>
                   <option value="REFEREE">REFEREE (Trọng tài giải)</option>
                   <option value="VIEWER">VIEWER (Khán giả)</option>
                 </select>
