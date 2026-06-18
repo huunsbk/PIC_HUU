@@ -45,8 +45,8 @@ export default function GroupManager() {
 
   const handleCreateGroupsEmpty = async () => {
     try {
-      await setupGroups.mutateAsync(numGroups);
-      showNotification('success', `Đã tạo ${numGroups} bảng đấu.`);
+      const result = await setupGroups.mutateAsync(numGroups);
+      showNotification('success', `Đã tạo ${result?.num_groups || numGroups} bảng đấu trống.`);
     } catch(err) {
       console.error(err);
       showNotification('error', err instanceof Error ? err.message : 'Không tạo được bảng đấu.');
@@ -63,8 +63,10 @@ export default function GroupManager() {
       return;
     }
     try {
-      await autoGroupTeams.mutateAsync({ method, numGroups });
-      showNotification('success', 'Đã chia bảng thành công.');
+      const result = await autoGroupTeams.mutateAsync({ method, numGroups });
+      const assignedTeams = result?.assigned_teams ?? teamList.length;
+      const modeLabel = method === 'seed' ? 'theo hạt giống và phong trào' : 'ngẫu nhiên';
+      showNotification('success', `Đã chia ${assignedTeams} đội ${modeLabel} vào ${result?.num_groups || numGroups} bảng.`);
     } catch (err) {
       console.error(err);
       showNotification('error', err instanceof Error ? err.message : 'Không chia bảng được.');
@@ -105,6 +107,8 @@ export default function GroupManager() {
       showNotification('error', err instanceof Error ? err.message : 'Không giải tán được bảng đấu.');
     }
   };
+
+  const isGroupingBusy = setupGroups.isPending || autoGroupTeams.isPending || clearAllGroups.isPending || moveTeamToGroup.isPending;
 
   return (
     <div className="space-y-4.5" id="group-manager-view">
@@ -181,7 +185,7 @@ export default function GroupManager() {
             onClick={() => handleAutoGroup('seed')}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-lg transition-all flex items-center gap-1.5 text-xs cursor-pointer shadow-sm uppercase tracking-wider hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-blue-600"
             id="btn-group-seed"
-            disabled={!canManage}
+            disabled={!canManage || isGroupingBusy}
           >
             <Sparkles size={14} className="stroke-[2]" /> Tự Động Chia Bảng (Hạt Giống)
           </button>
@@ -190,7 +194,7 @@ export default function GroupManager() {
             onClick={() => handleAutoGroup('random')}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-750 dark:text-white dark:hover:bg-emerald-650 text-white font-black rounded-lg transition-all flex items-center gap-1.5 text-xs cursor-pointer shadow-sm uppercase tracking-wider hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-emerald-600"
             id="btn-group-random"
-            disabled={!canManage}
+            disabled={!canManage || isGroupingBusy}
           >
             <Shuffle size={14} /> Chia Ngẫu Nhiên
           </button>
@@ -199,7 +203,7 @@ export default function GroupManager() {
             onClick={handleCreateGroupsEmpty}
             className="px-4 py-2 bg-zinc-105 hover:bg-zinc-200 dark:bg-zinc-805 dark:text-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 font-extrabold rounded-lg transition-all text-xs cursor-pointer uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
             id="btn-group-empty"
-            disabled={!canManage}
+            disabled={!canManage || isGroupingBusy}
           >
             Tạo Bảng Đấu Trống
           </button>
@@ -208,7 +212,7 @@ export default function GroupManager() {
             onClick={() => setShowClearConfirm(true)}
             className="px-4 py-2 hover:bg-red-50 dark:hover:bg-red-955/15 text-red-650 font-black rounded-lg transition-all text-xs cursor-pointer ml-auto border border-red-200/50 dark:border-red-900/30 uppercase tracking-widest flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             id="btn-clear-groups"
-            disabled={!canManage}
+            disabled={!canManage || isGroupingBusy}
           >
             <Trash2 size={14} /> Giải Tán Bảng
           </button>
@@ -276,7 +280,7 @@ export default function GroupManager() {
                     }}
                     value=""
                     className="p-1 px-1.5 text-[10px] font-bold border border-zinc-200 dark:border-zinc-800 rounded bg-zinc-50 dark:bg-zinc-950 text-zinc-650 dark:text-zinc-400 cursor-pointer focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
-                    disabled={!canManage}
+                    disabled={!canManage || isGroupingBusy}
                   >
                     <option value="" disabled>Gán...</option>
                     {groupList.map((g) => (
