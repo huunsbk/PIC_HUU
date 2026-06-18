@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTournamentStore } from '../store';
-import { supabase, SUPABASE_URL } from '../supabaseClient';
-import { createClient } from '@supabase/supabase-js';
-import { Users, Plus, KeyRound, Search, ShieldAlert, X, Shield, Building2, CheckCircle2, Edit, Trash2 } from 'lucide-react';
+import { supabase } from '../supabaseClient';
+import { Users, Plus, Search, ShieldAlert, X, Shield, Building2, CheckCircle2, Edit, Trash2 } from 'lucide-react';
 import ConfirmDialog from './ConfirmDialog';
+import SecurityAccountPanel from './SecurityAccountPanel';
 
 export default function AccountManager() {
-  const accountUser = useTournamentStore((state) => state.currentUser);
   const userRole = useTournamentStore((state) => state.userRole);
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   
@@ -93,8 +92,8 @@ export default function AccountManager() {
       setIsEditModalOpen(false);
       fetchAccounts();
 
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Lỗi thao tác Admin (Vui lòng liên hệ hỗ trợ).');
+    } catch {
+      setErrorMsg('Không thể cập nhật tài khoản lúc này. Vui lòng liên hệ hỗ trợ.');
     } finally {
       setActionLoading(false);
     }
@@ -135,8 +134,8 @@ export default function AccountManager() {
          if (fallbackError) throw fallbackError;
          if (fallbackData) setAccounts(fallbackData);
       }
-    } catch (err: any) {
-      console.error("fetchAccounts error:", err);
+    } catch {
+      console.warn('Không thể tải danh sách tài khoản.');
       // Wait to see if we really want to show error to user or just let it be empty
     } finally {
       setLoading(false);
@@ -148,8 +147,8 @@ export default function AccountManager() {
       const { data, error } = await supabase.from('tenants').select('id, name');
       if (error) throw error;
       if (data) setTenants(data);
-    } catch (err) {
-      console.error("fetchTenants error:", err);
+    } catch {
+      console.warn('Không thể tải danh sách đơn vị.');
     }
   };
 
@@ -203,8 +202,8 @@ export default function AccountManager() {
       setNewDisplayName('');
       fetchAccounts();
 
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Lỗi thao tác Admin (Vui lòng liên hệ hỗ trợ).');
+    } catch {
+      setErrorMsg('Không thể tạo tài khoản lúc này. Vui lòng liên hệ hỗ trợ.');
     } finally {
       setActionLoading(false);
     }
@@ -238,8 +237,8 @@ export default function AccountManager() {
       
       setSuccessMsg('Đã xóa thành công tài khoản.');
       fetchAccounts();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Lỗi hệ thống khi xóa.');
+    } catch {
+      setErrorMsg('Không thể xóa tài khoản lúc này. Vui lòng liên hệ hỗ trợ.');
     } finally {
       setActionLoading(false);
       setAccountToDelete(null);
@@ -294,6 +293,8 @@ export default function AccountManager() {
           </div>
         </div>
       )}
+
+      <SecurityAccountPanel />
 
       {/* Main Table */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden flex flex-col">
@@ -427,6 +428,7 @@ export default function AccountManager() {
                   type="password"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
                   className="w-full px-3 py-2 border rounded-lg dark:border-zinc-700 dark:bg-zinc-800"
                   required
                 />
@@ -528,6 +530,7 @@ export default function AccountManager() {
                   type="password"
                   value={editPassword}
                   onChange={e => setEditPassword(e.target.value)}
+                  autoComplete="new-password"
                   className="w-full px-3 py-2 border rounded-lg dark:border-zinc-700 dark:bg-zinc-800"
                   placeholder="********"
                 />

@@ -56,8 +56,8 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setRole(null);
         setAccount(null);
       }
-    } catch (e) {
-      console.error("Error fetching tenant context:", e);
+    } catch {
+      console.warn('Could not fetch tenant context.');
     } finally {
       setLoading(false);
     }
@@ -67,8 +67,8 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Initial fetch
     supabase.auth.getSession().then(({ data: { session } }) => {
       fetchTenantContext(session);
-    }).catch(err => {
-      console.warn("Could not get session:", err);
+    }).catch(() => {
+      console.warn('Could not get session.');
       fetchTenantContext(null);
     });
 
