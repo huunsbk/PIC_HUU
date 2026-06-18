@@ -208,14 +208,14 @@ export default function TeamManager() {
                   className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-xs font-black cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!canManage}
                 >
-                  <option value="none">Không hạt giống (Unseeded)</option>
+                  <option value="none">Phong trào (mặc định)</option>
                   <option value="1">Hạt giống số 1 (Seed 1)</option>
                   <option value="2">Hạt giống số 2 (Seed 2)</option>
                   <option value="3">Hạt giống số 3 (Seed 3)</option>
                   <option value="4">Hạt giống số 4 (Seed 4)</option>
                 </select>
                 <p className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 leading-normal">
-                  Chỉ số hạt giống giúp chia đều các đối thủ qua các bảng đấu, tránh chạm trán nhau ở lượt vòng ngoài.
+                  Nếu không chọn hạt giống, đội sẽ được tính là nhóm phong trào khi chia bảng.
                 </p>
               </div>
 
