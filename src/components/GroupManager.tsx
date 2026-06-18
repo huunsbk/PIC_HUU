@@ -27,6 +27,10 @@ export default function GroupManager() {
   const [numGroups, setNumGroups] = useState(4);
   const [draggedTeamId, setDraggedTeamId] = useState<string | null>(null);
   const canManage = hasPermission('manage_groups');
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string | null }>({
+    type: 'success',
+    message: null,
+  });
 
   // Custom Confirmation Modal State to bypass iframe confirm dialog blocking
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -34,12 +38,18 @@ export default function GroupManager() {
   const teamList = Object.values(teams);
   const groupList = Object.values(groups);
   const unassignedTeams = teamList.filter((t) => t.groupId === null);
+  const showNotification = (type: 'success' | 'error', message: string) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification({ type: 'success', message: null }), 4500);
+  };
 
   const handleCreateGroupsEmpty = async () => {
     try {
       await setupGroups.mutateAsync(numGroups);
+      showNotification('success', `Đã tạo ${numGroups} bảng đấu.`);
     } catch(err) {
       console.error(err);
+      showNotification('error', err instanceof Error ? err.message : 'Không tạo được bảng đấu.');
     }
   };
 
@@ -52,7 +62,13 @@ export default function GroupManager() {
       }
       return;
     }
-    await autoGroupTeams.mutateAsync({ method, numGroups });
+    try {
+      await autoGroupTeams.mutateAsync({ method, numGroups });
+      showNotification('success', 'Đã chia bảng thành công.');
+    } catch (err) {
+      console.error(err);
+      showNotification('error', err instanceof Error ? err.message : 'Không chia bảng được.');
+    }
   };
 
   // Drag & Drop HTML5 Handler cực kỳ nhịp nhàng, tối ưu
@@ -83,13 +99,28 @@ export default function GroupManager() {
     try {
       await clearAllGroups.mutateAsync();
       setShowClearConfirm(false);
+      showNotification('success', 'Đã giải tán bảng đấu.');
     } catch(err) {
       console.error(err);
+      showNotification('error', err instanceof Error ? err.message : 'Không giải tán được bảng đấu.');
     }
   };
 
   return (
     <div className="space-y-4.5" id="group-manager-view">
+      {notification.message && (
+        <div
+          className={`fixed bottom-4 right-4 p-3.5 rounded-xl shadow-2xl border text-xs flex items-center gap-2.5 z-50 ${
+            notification.type === 'success'
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-250 dark:bg-emerald-950/90 dark:text-emerald-300 dark:border-emerald-800'
+              : 'bg-red-50 text-red-850 border-red-250 dark:bg-red-950/90 dark:text-red-300 dark:border-red-800'
+          }`}
+          id="group-toast-notification"
+        >
+          <AlertCircle size={15} />
+          <span className="font-extrabold">{notification.message}</span>
+        </div>
+      )}
 
       {!canManage && (
         <div className="bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 text-amber-800 dark:text-amber-400 text-xs p-3.5 rounded-xl flex items-start gap-2.5 shadow-xs transition-all duration-300 animate-pulse">
