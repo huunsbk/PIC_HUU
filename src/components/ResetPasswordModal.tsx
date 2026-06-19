@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { KeyRound, ShieldAlert, X } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { resetAdminAccountPassword } from '../lib/api/adminAccounts';
 
 interface ResetPasswordModalProps {
   isOpen: boolean;
@@ -29,29 +29,7 @@ export default function ResetPasswordModal({ isOpen, onClose, targetUsername }: 
     setLoading(true);
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      
-      if (!token) {
-        throw new Error('Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn.');
-      }
-
-      const response = await fetch('/api/admin/accounts/reset', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          targetUsername,
-          newPassword: newPassword.trim()
-        })
-      });
-
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || 'Có lỗi xảy ra khi đổi mật khẩu.');
-      }
+      await resetAdminAccountPassword(targetUsername, newPassword.trim());
 
       setSuccessMsg('Đổi mật khẩu thành công!');
       setTimeout(() => {
@@ -60,8 +38,8 @@ export default function ResetPasswordModal({ isOpen, onClose, targetUsername }: 
         setSuccessMsg('');
       }, 1500);
 
-    } catch {
-      setErrorMsg('Không thể đổi mật khẩu lúc này. Vui lòng thử lại.');
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Không thể đổi mật khẩu lúc này. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }

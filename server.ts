@@ -27,6 +27,100 @@ async function startServer() {
       })
     : null;
 
+  const allowedTargetRoles = new Set(['TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'VIEWER']);
+
+  const getRoleName = (rolesObj: any) => rolesObj?.name || rolesObj?.[0]?.name || null;
+
+  const getActorAccount = async (userId: string) => {
+    if (!supabaseAdmin) throw new Error("Server missing SUPABASE_SERVICE_ROLE_KEY");
+    const { data, error } = await supabaseAdmin
+      .from('accounts')
+      .select('id, tenant_id, status, roles(name)')
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !data) {
+      const err: any = new Error('Không tìm thấy tài khoản quản trị đang đăng nhập.');
+      err.status = 403;
+      throw err;
+    }
+
+    const roleName = getRoleName((data as any).roles);
+    if (!['SUPER_ADMIN', 'TENANT_ADMIN'].includes(roleName || '')) {
+      const err: any = new Error('Thiếu quyền tạo hoặc chỉnh sửa tài khoản.');
+      err.status = 403;
+      throw err;
+    }
+
+    if ((data as any).status && (data as any).status !== 'active') {
+      const err: any = new Error('Tài khoản quản trị đang bị khóa.');
+      err.status = 403;
+      throw err;
+    }
+
+    return { ...(data as any), roleName };
+  };
+
+  const validateTargetAccount = async (actor: any, role: string, tenantId: string) => {
+    if (!supabaseAdmin) throw new Error("Server missing SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!allowedTargetRoles.has(role)) {
+      const err: any = new Error('Role không hợp lệ. Chỉ hỗ trợ TENANT_ADMIN, EVENT_ADMIN, REFEREE, VIEWER.');
+      err.status = 400;
+      throw err;
+    }
+
+    if (!tenantId || tenantId === 'default') {
+      const err: any = new Error('Thiếu tenant hợp lệ cho tài khoản cần tạo.');
+      err.status = 400;
+      throw err;
+    }
+
+    if (actor.roleName === 'TENANT_ADMIN') {
+      if (role === 'TENANT_ADMIN') {
+        const err: any = new Error('TENANT_ADMIN không được tạo thêm TENANT_ADMIN.');
+        err.status = 403;
+        throw err;
+      }
+      if (tenantId !== actor.tenant_id) {
+        const err: any = new Error('TENANT_ADMIN chỉ được tạo tài khoản trong tenant của mình.');
+        err.status = 403;
+        throw err;
+      }
+    }
+
+    const { data: tenant, error: tenantError } = await supabaseAdmin
+      .from('tenants')
+      .select('id, name')
+      .eq('id', tenantId)
+      .maybeSingle();
+
+    if (tenantError || !tenant) {
+      const err: any = new Error('Tenant được chọn không tồn tại.');
+      err.status = 400;
+      throw err;
+    }
+
+    const { data: roleRecord, error: roleError } = await supabaseAdmin
+      .from('roles')
+      .select('id, name')
+      .eq('name', role)
+      .maybeSingle();
+
+    if (roleError || !roleRecord) {
+      const err: any = new Error(`Role ${role} chưa tồn tại trong hệ thống. Không tự tạo role mới.`);
+      err.status = 500;
+      throw err;
+    }
+
+    return { tenant, roleRecord };
+  };
+
+  const sendApiError = (res: express.Response, error: any, fallbackStatus = 500) => {
+    const status = Number.isInteger(error?.status) ? error.status : fallbackStatus;
+    res.status(status).json({ error: error?.message || 'Có lỗi máy chủ.' });
+  };
+
   // Admin middleware to verify JWT
   const verifyToken = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers.authorization;
@@ -62,31 +156,36 @@ async function startServer() {
       if (!supabaseAdmin) throw new Error("Server missing SUPABASE_SERVICE_ROLE_KEY");
 
       const user = (req as any).user;
-      const { email, password, username, displayName, role, tenantId, isSuperAdmin } = req.body;
+      const { email, password, username, displayName, role, tenantId } = req.body;
 
-      // 1. Double check permission (Verify the caller is actually an admin in the database)
-      const { data: accountData } = await supabaseAdmin
-        .from('accounts')
-        .select('roles(name)')
-        .eq('user_id', user.id)
-        .single();
-        
-      const rolesObj: any = accountData?.roles;
-      const roleName = rolesObj?.name || rolesObj?.[0]?.name;
-      if (roleName !== 'SUPER_ADMIN' && roleName !== 'TENANT_ADMIN') {
-        res.status(403).json({ error: 'Forbidden: Requires Admin privileges' });
+      if (!email || !password || !username || !displayName) {
+        res.status(400).json({ error: 'Thiếu email, username, họ tên hoặc mật khẩu.' });
         return;
       }
 
-      // 2. Create auth user
-      let targetAuthUserId = null;
+      const normalizedEmail = String(email).trim().toLowerCase();
+      const normalizedUsername = String(username).trim().toLowerCase();
+      const actor = await getActorAccount(user.id);
+      const { roleRecord } = await validateTargetAccount(actor, role, tenantId);
+
+      const { data: existingAccount } = await supabaseAdmin
+        .from('accounts')
+        .select('id, username, user_id')
+        .eq('username', normalizedUsername)
+        .maybeSingle();
+
+      if (existingAccount) {
+        const err: any = new Error('Username đã tồn tại trong public.accounts.');
+        err.status = 409;
+        throw err;
+      }
 
       const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email,
+        email: normalizedEmail,
         password,
         email_confirm: true,
         user_metadata: {
-          username,
+          username: normalizedUsername,
           display_name: displayName,
           role,
           tenant_id: tenantId
@@ -94,67 +193,39 @@ async function startServer() {
       });
 
       if (createError) {
-        if (createError.message.includes('already been registered') || createError.message.includes('already registered')) {
-            const { data: { users }, error: listErr } = await supabaseAdmin.auth.admin.listUsers();
-            if (listErr) throw new Error(`Lỗi cập nhật người dùng có sẵn: ${listErr.message}`);
-            
-            const existingUser = users.find((u: any) => u.email === email);
-            if (existingUser) {
-                targetAuthUserId = existingUser.id;
-                await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
-                  password,
-                  user_metadata: { username, display_name: displayName, role, tenant_id: tenantId }
-                });
-            } else {
-                throw new Error(`Lỗi tạo user (auth): ${createError.message}`);
-            }
-        } else {
-            throw new Error(`Lỗi tạo user (auth): ${createError.message}`);
-        }
-      } else {
-        targetAuthUserId = authData?.user?.id;
+        const err: any = new Error(
+          createError.message.includes('already')
+            ? 'Email đã tồn tại trong Supabase Auth.'
+            : `Supabase Auth từ chối tạo user: ${createError.message}`
+        );
+        err.status = createError.message.includes('already') ? 409 : 400;
+        throw err;
       }
 
-      // Allow trigger to fire just in case
-      await new Promise(r => setTimeout(r, 500));
-
-      // 3. Obtain Role ID dynamically
-      let roleQueryName = role;
-      if (role === 'EVENT_MANAGER') roleQueryName = 'EVENT_ADMIN';
-
-      let { data: roleRecord } = await supabaseAdmin.from('roles').select('id').eq('name', roleQueryName).single();
-      let roleIdToUse = roleRecord?.id;
-      
-      if (!roleIdToUse) {
-         const { data: newRole } = await supabaseAdmin.from('roles')
-            .insert({ name: roleQueryName, description: 'Added automatically' })
-            .select('id').single();
-         roleIdToUse = newRole?.id;
-      }
-      
-      if (!roleIdToUse) {
-         throw new Error(`Tạo tài khoản bị lỗi do không tìm thấy Role_ID cho quyền: ${roleQueryName}`);
+      const targetAuthUserId = authData?.user?.id;
+      if (!targetAuthUserId) {
+        throw new Error('Supabase Auth không trả về user id sau khi tạo.');
       }
       
       const { error: upsertError } = await supabaseAdmin.from('accounts').upsert({
         user_id: targetAuthUserId,
         tenant_id: tenantId,
-        username,
+        username: normalizedUsername,
         display_name: displayName,
-        role_id: roleIdToUse,
+        role_id: roleRecord.id,
         status: 'active'
       }, { onConflict: 'user_id' });
 
       if (upsertError) {
-        console.error("Account upsert warning:", upsertError.message);
-        throw new Error(`Tạo tài khoản bị lỗi khi đồng bộ dũ liệu: ${upsertError.message}`);
+        await supabaseAdmin.auth.admin.deleteUser(targetAuthUserId);
+        throw new Error(`Tạo tài khoản bị lỗi khi đồng bộ dữ liệu: ${upsertError.message}`);
       }
 
-      res.json({ success: true, user: authData?.user });
+      res.json({ success: true, user_id: targetAuthUserId });
 
     } catch (error: any) {
-      console.error("/api/admin/accounts error:", error);
-      res.status(500).json({ error: error.message });
+      console.error("/api/admin/accounts error:", error.message);
+      sendApiError(res, error);
     }
   });
 
@@ -165,22 +236,28 @@ async function startServer() {
       const user = (req as any).user;
       // 'id' is the row ID from 'accounts' table. We need the auth.users id (user_id) if we want to update auth password.
       const accountId = req.params.id;
-      const { displayName, password, role, tenantId, status, isSuperAdmin, userId } = req.body;
+      const { displayName, password, role, tenantId, status, userId } = req.body;
 
-      const { data: accountData } = await supabaseAdmin
+      const actor = await getActorAccount(user.id);
+      const { roleRecord } = await validateTargetAccount(actor, role, tenantId);
+
+      const { data: targetAccount, error: targetError } = await supabaseAdmin
         .from('accounts')
-        .select('roles(name)')
-        .eq('user_id', user.id)
+        .select('id, tenant_id, user_id')
+        .eq('id', accountId)
         .single();
-        
-      const rolesObj: any = accountData?.roles;
-      const roleName = rolesObj?.name || rolesObj?.[0]?.name;
-      if (roleName !== 'SUPER_ADMIN' && roleName !== 'TENANT_ADMIN') {
-        res.status(403).json({ error: 'Forbidden: Requires Admin privileges' });
+
+      if (targetError || !targetAccount) {
+        res.status(404).json({ error: 'Không tìm thấy tài khoản cần cập nhật.' });
         return;
       }
 
-      let authUserId = userId;
+      if (actor.roleName === 'TENANT_ADMIN' && (targetAccount as any).tenant_id !== actor.tenant_id) {
+        res.status(403).json({ error: 'TENANT_ADMIN chỉ được cập nhật tài khoản trong tenant của mình.' });
+        return;
+      }
+
+      let authUserId = userId || (targetAccount as any).user_id;
 
       // Update auth.users if needed
       if (authUserId) {
@@ -206,27 +283,9 @@ async function startServer() {
         }
       }
 
-      // Update accounts table
-      let roleQueryName = role;
-      if (role === 'EVENT_MANAGER') roleQueryName = 'EVENT_ADMIN';
-
-      let { data: roleRecord } = await supabaseAdmin.from('roles').select('id').eq('name', roleQueryName).single();
-      let roleIdToUse = roleRecord?.id;
-      
-      if (!roleIdToUse) {
-         const { data: newRole } = await supabaseAdmin.from('roles')
-            .insert({ name: roleQueryName, description: 'Added automatically' })
-            .select('id').single();
-         roleIdToUse = newRole?.id;
-      }
-      
-      if (!roleIdToUse) {
-         throw new Error(`Cập nhật tài khoản bị lỗi do không tìm thấy Role_ID cho quyền: ${roleQueryName}`);
-      }
-
       const { error: updateError } = await supabaseAdmin.from('accounts').update({
         display_name: displayName,
-        role_id: roleIdToUse,
+        role_id: roleRecord.id,
         tenant_id: tenantId,
         status: status,
         updated_at: new Date().toISOString()
@@ -239,8 +298,8 @@ async function startServer() {
       res.json({ success: true });
 
     } catch (error: any) {
-      console.error("PUT /api/admin/accounts error:", error);
-      res.status(500).json({ error: error.message });
+      console.error("PUT /api/admin/accounts error:", error.message);
+      sendApiError(res, error);
     }
   });
 

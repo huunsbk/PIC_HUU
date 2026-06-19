@@ -38,8 +38,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }
 
     try {
+      const loginEmail = trimmedUser.includes('@') ? trimmedUser : `${trimmedUser}@pic.com`;
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: trimmedUser + '@pic.com',
+        email: loginEmail,
         password: trimmedPass
       });
 

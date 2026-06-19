@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient';
 import { Users, Plus, Search, ShieldAlert, X, Shield, Building2, CheckCircle2, Edit, Trash2 } from 'lucide-react';
 import ConfirmDialog from './ConfirmDialog';
 import SecurityAccountPanel from './SecurityAccountPanel';
+import { createAdminAccount, deleteAdminAccount, updateAdminAccount } from '../lib/api/adminAccounts';
 
 export default function AccountManager() {
   const userRole = useTournamentStore((state) => state.userRole);
@@ -58,42 +59,21 @@ export default function AccountManager() {
     setActionLoading(true);
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      
-      if (!token) {
-        throw new Error('Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn.');
-      }
-
-      const response = await fetch(`/api/admin/accounts/${editingAccount.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          displayName: editDisplayName.trim(),
-          password: editPassword.trim(),
-          role: editRole,
-          tenantId: isSuperAdmin ? editTenantId : activeTenantId,
-          status: editStatus,
-          isSuperAdmin,
-          userId: editingAccount.user_id
-        })
+      await updateAdminAccount(editingAccount.id, {
+        displayName: editDisplayName.trim(),
+        password: editPassword.trim(),
+        role: editRole,
+        tenantId: isSuperAdmin ? editTenantId : activeTenantId,
+        status: editStatus,
+        userId: editingAccount.user_id
       });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Có lỗi cập nhật tài khoản');
-      }
 
       setSuccessMsg('Cập nhật tài khoản thành công!');
       setIsEditModalOpen(false);
       fetchAccounts();
 
-    } catch {
-      setErrorMsg('Không thể cập nhật tài khoản lúc này. Vui lòng liên hệ hỗ trợ.');
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Không thể cập nhật tài khoản lúc này. Vui lòng liên hệ hỗ trợ.');
     } finally {
       setActionLoading(false);
     }
@@ -165,35 +145,23 @@ export default function AccountManager() {
     setActionLoading(true);
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      
-      if (!token) {
-        throw new Error('Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn.');
+      const rawUsername = newUsername.trim().toLowerCase();
+      const email = rawUsername.includes('@') ? rawUsername : `${rawUsername}@pic.com`;
+      const username = rawUsername.includes('@') ? rawUsername.split('@')[0] : rawUsername;
+      const tenantId = isSuperAdmin ? newTenantId : activeTenantId;
+
+      if (!tenantId || tenantId === 'default') {
+        throw new Error('Vui lòng chọn đơn vị tenant hợp lệ trước khi tạo tài khoản.');
       }
 
-      const response = await fetch('/api/admin/accounts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          email: `${newUsername.trim()}@pic.com`.toLowerCase(),
-          username: newUsername.trim(),
-          password: newPassword,
-          displayName: newDisplayName.trim(),
-          role: newRole,
-          tenantId: isSuperAdmin ? newTenantId : activeTenantId,
-          isSuperAdmin
-        })
+      await createAdminAccount({
+        email,
+        username,
+        password: newPassword,
+        displayName: newDisplayName.trim(),
+        role: newRole,
+        tenantId,
       });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Có lỗi xảy ra khi tạo tài khoản');
-      }
 
       setSuccessMsg('Tạo tài khoản thành công!');
       setIsCreateModalOpen(false);
@@ -202,8 +170,8 @@ export default function AccountManager() {
       setNewDisplayName('');
       fetchAccounts();
 
-    } catch {
-      setErrorMsg('Không thể tạo tài khoản lúc này. Vui lòng liên hệ hỗ trợ.');
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Không thể tạo tài khoản lúc này. Vui lòng liên hệ hỗ trợ.');
     } finally {
       setActionLoading(false);
     }
@@ -222,23 +190,12 @@ export default function AccountManager() {
     setActionLoading(true);
     setErrorMsg('');
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      
-      const response = await fetch(`/api/admin/accounts/${accountToDelete.id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'Có lỗi xảy ra khi xóa tài khoản');
-      }
+      await deleteAdminAccount(accountToDelete.id);
       
       setSuccessMsg('Đã xóa thành công tài khoản.');
       fetchAccounts();
-    } catch {
-      setErrorMsg('Không thể xóa tài khoản lúc này. Vui lòng liên hệ hỗ trợ.');
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Không thể xóa tài khoản lúc này. Vui lòng liên hệ hỗ trợ.');
     } finally {
       setActionLoading(false);
       setAccountToDelete(null);
@@ -411,13 +368,13 @@ export default function AccountManager() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Tên đăng nhập (Username)</label>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Tên đăng nhập hoặc Email</label>
                 <input
                   type="text"
                   value={newUsername}
                   onChange={e => setNewUsername(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg dark:border-zinc-700 dark:bg-zinc-800"
-                  placeholder="VD: hcm_admin"
+                  placeholder="VD: hcm_admin hoặc demo@example.com"
                   required
                 />
               </div>
