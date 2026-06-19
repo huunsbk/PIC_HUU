@@ -1,24 +1,26 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../supabaseClient';
+import { useEffect } from 'react';
 import { useTournamentStore } from '../store';
+import { isUsableEventId } from '../hooks/useEvents';
+import { tournamentRpc } from '../lib/api/tournamentRpc';
 
 export function useEventsQuery() {
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
+  const activeTournamentId = useTournamentStore((state) => state.activeTournamentId);
+  const tournamentId = useTournamentStore((state) => state.tournament.id);
   const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
+  const currentEventId = useTournamentStore((state) => state.currentEventId);
+  const setCurrentEvent = useTournamentStore((state) => state.setCurrentEvent);
 
-  return useQuery({
-    queryKey: ['events', activeTenantId],
+  const query = useQuery({
+    queryKey: ['events', activeTenantId, activeTournamentId || tournamentId],
     queryFn: async () => {
-      const query = supabase
-        .from('events')
-        .select('id, name, tournament_id, tenant_id, settings, created_at')
-        .is('deleted_at', null)
-        .eq('tenant_id', activeTenantId);
+      const scopedTournamentId = activeTournamentId || tournamentId;
+      if (!scopedTournamentId || scopedTournamentId === 't-1') {
+        return [];
+      }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      
-      let events = data || [];
+      let events = await tournamentRpc.listEventsByTournament(scopedTournamentId);
       
       // Client-side visual filter fallback. RLS already enforced this at DB level
       if (currentEnterpriseUser?.role === 'EVENT_ADMIN' || currentEnterpriseUser?.role === 'REFEREE') {
@@ -30,33 +32,32 @@ export function useEventsQuery() {
     },
     enabled: !!activeTenantId && activeTenantId !== 'default',
   });
+
+  useEffect(() => {
+    const events = query.data || [];
+    if (events.length === 0) return;
+
+    const hasSelectedEvent = isUsableEventId(currentEventId) && events.some((event: any) => event.id === currentEventId);
+    if (!hasSelectedEvent) {
+      setCurrentEvent(events[0].id);
+    }
+  }, [query.data, currentEventId, setCurrentEvent]);
+
+  return query;
 }
 
-// Giả định get_current_profile trả về thành viên
-// Để thiết kế Zero Trust, RPC get_event_members nên được sử dụng.
-// Ở đây fetch bằng account_event_permissions join accounts
 export function useEventMembersQuery(eventId: string | null) {
   return useQuery({
     queryKey: ['event_members', eventId],
     queryFn: async () => {
-      if (!eventId) return [];
-      const { data, error } = await supabase
-        .from('account_event_permissions')
-        .select(`
-          account_id,
-          events (name),
-          accounts (
-            id,
-            display_name,
-            username,
-            roles (name)
-          )
-        `)
-        .eq('event_id', eventId)
-        .is('deleted_at', null);
-        
-      if (error) throw error;
-      return data || [];
+      if (!eventId) {
+        return {
+          grants: [],
+          eligible_accounts: [],
+        };
+      }
+
+      return tournamentRpc.listEventAccess(eventId);
     },
     enabled: !!eventId,
   });

@@ -8,6 +8,8 @@ import { useTournamentStore } from '../store';
 import { useTeams } from '../hooks/useTeams';
 import { useGroups } from '../hooks/useGroups';
 import { useMatches } from '../hooks/useMatches';
+import { useTournamentRpcMutations } from '../hooks/useTournamentRpcMutations';
+import { isUsableEventId, useEvents } from '../hooks/useEvents';
 import { Trophy, PlayCircle, HelpCircle, AlertTriangle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { getReadableTeamName, getReadableKoMatchName, calculateGroupStandings, calculateBestThirdPlaces, getBracketDisplayName } from '../utils/tournamentEngine';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
@@ -22,11 +24,21 @@ export default function KnockoutBracket() {
     propagateKnockoutResets,
     addLog,
     hasPermission,
+    currentEventId,
   } = useTournamentStore();
 
   const { data: teamsData = [] } = useTeams();
   const { data: groupsData = [] } = useGroups();
   const { data: matchesData = [] } = useMatches();
+  const { data: eventsData = [] } = useEvents();
+  const selectedEventId = isUsableEventId(currentEventId) && eventsData.some((event) => event.id === currentEventId)
+    ? currentEventId
+    : eventsData[0]?.id;
+  const {
+    prepare_knockout_candidates_v1,
+    confirm_knockout_teams_v1,
+    generate_knockout_bracket_v1,
+  } = useTournamentRpcMutations();
 
   const teams = React.useMemo(() => {
     const record: Record<string, any> = {};
@@ -42,13 +54,17 @@ export default function KnockoutBracket() {
 
   const matches = matchesData;
 
-  const canManage = hasPermission("manage_knockout");
+  const canManage = hasPermission("manage_matches");
 
   const [sz, setSz] = useState<4 | 8 | 16 | 32>(4);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [matchesSnapshot, setMatchesSnapshot] = useState<any[]>([]);
   const [numBestThirds, setNumBestThirds] = useState<number>(3);
+  const [topPerGroup, setTopPerGroup] = useState<number>(2);
+  const [excludeBottomResults, setExcludeBottomResults] = useState(false);
+  const [overrideReason, setOverrideReason] = useState('');
+  const [koCandidates, setKoCandidates] = useState<any[]>([]);
 
   // States nâng cấp cho chế độ chỉnh sửa thủ công và hiển thị thông báo
   const [draftMatches, setDraftMatches] = useState<any[]>([]);
@@ -256,8 +272,59 @@ export default function KnockoutBracket() {
     return null;
   };
 
-  const handleGenerateBracket = () => {
-    generateKnockoutBracket(sz);
+  const handlePrepareCandidates = async () => {
+    if (!selectedEventId) return;
+    try {
+      const result = await prepare_knockout_candidates_v1.mutateAsync({
+        eventId: selectedEventId,
+        topPerGroup,
+        bestThirdCount: numBestThirds,
+        excludeBottomResults,
+      });
+      setKoCandidates(result.candidates || []);
+      setSuccessMessage(`Đã gợi ý ${result.candidate_count || result.candidates?.length || 0} đội vào vòng knockout.`);
+      setTimeout(() => setSuccessMessage(null), 3500);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Không gợi ý được đội vào knockout.');
+    }
+  };
+
+  const handleConfirmCandidates = async () => {
+    if (!selectedEventId) return;
+    if (koCandidates.length === 0) {
+      setErrorMessage('Chưa có danh sách gợi ý để xác nhận.');
+      return;
+    }
+    try {
+      const selected = koCandidates.slice(0, sz).map((candidate, index) => ({
+        team_id: candidate.team_id,
+        seed: Number(candidate.suggested_seed || index + 1),
+        source: candidate.source || 'admin',
+        source_group_id: candidate.group_id,
+        group_rank: candidate.group_rank,
+      }));
+      const result = await confirm_knockout_teams_v1.mutateAsync({
+        eventId: selectedEventId,
+        teams: selected,
+        bracketSize: sz,
+        overrideReason: overrideReason.trim() || null,
+      });
+      setSuccessMessage(`Đã xác nhận ${result.selected_count || selected.length} đội. BYE: ${result.bye_count || 0}.`);
+      setTimeout(() => setSuccessMessage(null), 3500);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Không xác nhận được danh sách knockout.');
+    }
+  };
+
+  const handleGenerateBracket = async () => {
+    if (!selectedEventId) return;
+    try {
+      await generate_knockout_bracket_v1.mutateAsync(selectedEventId);
+      setSuccessMessage('Đã tạo bracket knockout bằng RPC.');
+      setTimeout(() => setSuccessMessage(null), 3500);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Không tạo được bracket knockout.');
+    }
   };
 
   // Các hàm tiện ích bổ sung cho Draft State (Hiệu chỉnh thủ công an toàn)
@@ -624,6 +691,60 @@ export default function KnockoutBracket() {
               </div>
             )}
 
+            {!isEditMode && (
+              <div className="flex items-center gap-2 bg-zinc-55 dark:bg-zinc-950 p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase px-2 select-none">Top/bảng</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={8}
+                  value={topPerGroup}
+                  onChange={(e) => setTopPerGroup(Math.max(0, Number(e.target.value) || 0))}
+                  className="w-14 px-2 py-1 border-none rounded-lg text-xs font-black text-zinc-800 dark:text-zinc-100 bg-transparent outline-none"
+                />
+              </div>
+            )}
+
+            {!isEditMode && (
+              <label className="flex items-center gap-1.5 text-[10px] font-black text-zinc-500 uppercase">
+                <input
+                  type="checkbox"
+                  checked={excludeBottomResults}
+                  onChange={(e) => setExcludeBottomResults(e.target.checked)}
+                />
+                Trừ đội cuối bảng
+              </label>
+            )}
+
+            {!isEditMode && (
+              <input
+                value={overrideReason}
+                onChange={(e) => setOverrideReason(e.target.value)}
+                placeholder="Lý do override nếu có"
+                className="px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-xs font-semibold text-zinc-700 dark:text-zinc-200"
+              />
+            )}
+
+            {!isEditMode && (
+              <button
+                onClick={handlePrepareCandidates}
+                disabled={prepare_knockout_candidates_v1.isPending}
+                className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-white font-black rounded-xl text-xs transition-all flex items-center gap-2 shadow-md uppercase tracking-wider cursor-pointer disabled:opacity-50"
+              >
+                Gợi ý đội vào KO
+              </button>
+            )}
+
+            {!isEditMode && (
+              <button
+                onClick={handleConfirmCandidates}
+                disabled={confirm_knockout_teams_v1.isPending || koCandidates.length === 0}
+                className="px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-xs transition-all flex items-center gap-2 shadow-md uppercase tracking-wider cursor-pointer disabled:opacity-50"
+              >
+                Xác nhận đội KO
+              </button>
+            )}
+
             {/* Nút 1: Tạo nhánh tự động (Chỉ hiện khi isEditMode là false) */}
             {!isEditMode && (
               <button
@@ -637,7 +758,7 @@ export default function KnockoutBracket() {
                 className="px-5 py-3 bg-blue-600 hover:bg-blue-500 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 text-white font-black rounded-xl text-xs transition-all flex items-center gap-2 shadow-md uppercase tracking-wider cursor-pointer"
                 id="btn-generate-knockout"
               >
-                <PlayCircle size={16} /> Tạo nhánh tự động
+                <PlayCircle size={16} /> Tạo bracket RPC
               </button>
             )}
 
@@ -653,6 +774,25 @@ export default function KnockoutBracket() {
           </div>
         )}
       </div>
+
+      {koCandidates.length > 0 && !isEditMode && (
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h4 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase">Danh sách gợi ý vào knockout</h4>
+            <span className="text-[10px] font-black text-zinc-500">Bracket {sz}, BYE dự kiến {Math.max(0, sz - koCandidates.slice(0, sz).length)}</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+            {koCandidates.slice(0, sz).map((candidate, index) => (
+              <div key={`${candidate.team_id}-${index}`} className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-xs bg-zinc-50 dark:bg-zinc-950">
+                <div className="font-black text-zinc-900 dark:text-zinc-100 truncate">{candidate.suggested_seed || index + 1}. {candidate.team_name}</div>
+                <div className="text-[10px] text-zinc-500 font-bold mt-1">
+                  {candidate.group_name || 'KO'} · Hạng {candidate.group_rank || '-'} · {candidate.source || 'group_rank'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {koMatches.length === 0 ? (
         <div className="py-24 text-center text-zinc-400 bg-white dark:bg-zinc-900 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl space-y-4 shadow-inner">

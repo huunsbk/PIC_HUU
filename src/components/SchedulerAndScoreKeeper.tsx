@@ -11,8 +11,8 @@ import { useGroups } from '../hooks/useGroups';
 import { useMatches } from '../hooks/useMatches';
 import { useMatchMutations } from '../hooks/useDataMutations';
 import { useEvents } from '../hooks/useEvents';
+import { useMatchSets } from '../hooks/useMatchSets';
 import { calculateGroupStandings, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
-import { supabase } from '../supabaseClient';
 import { 
   Printer, 
   RefreshCw, 
@@ -40,6 +40,7 @@ export default function SchedulerAndScoreKeeper() {
   const { data: groupsData = [] } = useGroups();
   const { data: matchesData = [] } = useMatches();
   const { data: eventsData = [] } = useEvents();
+  const { data: matchSetsData = [] } = useMatchSets();
 
   const teams = React.useMemo(() => {
     const record: Record<string, any> = {};
@@ -61,7 +62,10 @@ export default function SchedulerAndScoreKeeper() {
     return record;
   }, [eventsData]);
 
-  const { updateMatchScore, resetMatchScore, generateForGroup, generateAllSchedules } = useMatchMutations();
+  const { updateMatchScore, updateMatchSetScore, resetMatchScore, generateForGroup, generateAllSchedules } = useMatchMutations();
+  const currentEvent = currentEventId ? events[currentEventId] : null;
+  const matchSetMode = currentEvent?.scoring_config?.matchSetMode || 'single';
+  const isBestOf3 = matchSetMode === 'best_of_3';
 
   const canManage = hasPermission('manage_matches');
 
@@ -80,6 +84,8 @@ export default function SchedulerAndScoreKeeper() {
 
   // Local state for numeric inputs to avoid lags / cursor jumps and handle incomplete edits gracefully
   const [localScores, setLocalScores] = useState<Record<string, { scoreA: string; scoreB: string }>>({});
+  const [localSetScores, setLocalSetScores] = useState<Record<string, { scoreA: string; scoreB: string }>>({});
+  const [scoreError, setScoreError] = useState<string | null>(null);
 
   // Confirmations dialogs
   const [showRegenConfirm, setShowRegenConfirm] = useState(false);
@@ -124,7 +130,12 @@ export default function SchedulerAndScoreKeeper() {
     if (scoreAStr !== '' && scoreBStr !== '') {
       const numA = Number(scoreAStr);
       const numB = Number(scoreBStr);
-      await updateMatchScore.mutateAsync({ matchId, scoreA: numA, scoreB: numB });
+      try {
+        await updateMatchScore.mutateAsync({ matchId, scoreA: numA, scoreB: numB });
+        setScoreError(null);
+      } catch (err) {
+        setScoreError(err instanceof Error ? err.message : 'Không lưu được điểm séc.');
+      }
     } else {
       // Only reset/clears the match score if there's an actual score populated in the store
       const currentMatchInStore = matches.find((m) => m.id === matchId);
@@ -132,9 +143,74 @@ export default function SchedulerAndScoreKeeper() {
         currentMatchInStore &&
         (currentMatchInStore.scoreA !== null || currentMatchInStore.scoreB !== null)
       ) {
-        await updateMatchScore.mutateAsync({ matchId, scoreA: null, scoreB: null });
+        await resetMatchScore.mutateAsync(matchId);
       }
     }
+  };
+
+  const getSetKey = (matchId: string, setNumber: number) => `${matchId}:${setNumber}`;
+
+  const getSetScoreValue = (matchId: string, setNumber: 1 | 2 | 3) => {
+    const local = localSetScores[getSetKey(matchId, setNumber)];
+    if (local) return local;
+    const existing = matchSetsData.find((row) => row.match_id === matchId && row.set_number === setNumber);
+    return {
+      scoreA: existing?.score_a !== null && existing?.score_a !== undefined ? String(existing.score_a) : '',
+      scoreB: existing?.score_b !== null && existing?.score_b !== undefined ? String(existing.score_b) : '',
+    };
+  };
+
+  const handleSetScoreInputChange = (matchId: string, setNumber: 1 | 2 | 3, team: 'A' | 'B', value: string) => {
+    if (value !== '' && !/^[0-9]+$/.test(value)) return;
+    setLocalSetScores((prev) => {
+      const key = getSetKey(matchId, setNumber);
+      const current = prev[key] || getSetScoreValue(matchId, setNumber);
+      return {
+        ...prev,
+        [key]: {
+          ...current,
+          [team === 'A' ? 'scoreA' : 'scoreB']: value,
+        },
+      };
+    });
+  };
+
+  const handleSaveSetScore = async (matchId: string, setNumber: 1 | 2 | 3) => {
+    const scores = getSetScoreValue(matchId, setNumber);
+    if (scores.scoreA === '' || scores.scoreB === '') {
+      setScoreError(`Vui lòng nhập đủ điểm cho séc ${setNumber}.`);
+      return;
+    }
+
+    try {
+      await updateMatchSetScore.mutateAsync({
+        matchId,
+        setNumber,
+        scoreA: Number(scores.scoreA),
+        scoreB: Number(scores.scoreB),
+      });
+      setScoreError(null);
+    } catch (err) {
+      setScoreError(err instanceof Error ? err.message : `Không lưu được điểm séc ${setNumber}.`);
+    }
+  };
+
+  const handleResetSingleMatch = async (matchId: string) => {
+    await resetMatchScore.mutateAsync(matchId);
+    setLocalScores((prev) => ({ ...prev, [matchId]: { scoreA: '', scoreB: '' } }));
+    setLocalSetScores((prev) => {
+      const next = { ...prev };
+      [1, 2, 3].forEach((setNumber) => delete next[getSetKey(matchId, setNumber)]);
+      return next;
+    });
+  };
+
+  const getMatchResultLabel = (match: any, teamAName: string, teamBName: string) => {
+    if (match.status !== 'finished' || match.scoreA === null || match.scoreB === null) {
+      return 'Chưa có kết quả trận';
+    }
+    const winnerName = match.winnerId === match.teamAId ? teamAName : match.winnerId === match.teamBId ? teamBName : 'Đội thắng';
+    return `${winnerName} thắng ${match.scoreA}-${match.scoreB}`;
   };
 
   // Perform whole group regeneration via Store Action
@@ -169,6 +245,13 @@ export default function SchedulerAndScoreKeeper() {
       const next = { ...prev };
       groupMatches.forEach((m) => {
         next[m.id] = { scoreA: '', scoreB: '' };
+      });
+      return next;
+    });
+    setLocalSetScores((prev) => {
+      const next = { ...prev };
+      groupMatches.forEach((m) => {
+        [1, 2, 3].forEach((setNumber) => delete next[getSetKey(m.id, setNumber)]);
       });
       return next;
     });
@@ -413,6 +496,12 @@ export default function SchedulerAndScoreKeeper() {
         </div>
       </div>
 
+      {scoreError && (
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 rounded-xl px-4 py-3 text-xs font-bold">
+          {scoreError}
+        </div>
+      )}
+
       {/* TABS ROW AND REGEN BUTTON */}
       {groupList.length > 0 && (
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-px print:hidden" id="match-scoring-tabs-container">
@@ -534,6 +623,8 @@ export default function SchedulerAndScoreKeeper() {
                           const scoreBVal = localScores[match.id]?.scoreB ?? '';
 
                           const isFinished = match.status === 'finished';
+                          const isTwoZeroFinished = isFinished && ((match.scoreA === 2 && match.scoreB === 0) || (match.scoreA === 0 && match.scoreB === 2));
+                          const resultLabel = getMatchResultLabel(match, displayedTeamAName, displayedTeamBName);
 
                           return (
                             <div
@@ -567,35 +658,90 @@ export default function SchedulerAndScoreKeeper() {
                                   </span>
                                 </div>
 
-                                {/* CENTER CONTROL: INPUT A - HYPHEN - INPUT B */}
-                                <div className="flex items-center gap-2 h-8 shrink-0">
-                                  <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    pattern="[0-9]*"
-                                    placeholder=""
-                                    value={scoreAVal}
-                                    onChange={(e) => handleScoreInputChange(match.id, 'A', e.target.value)}
-                                    disabled={!canManage}
-                                    className="w-13 h-8 border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
-                                    id={`input-match-${match.id}-scoreA`}
-                                  />
-                                  
-                                  <span className="text-zinc-300 dark:text-zinc-700 select-none font-bold text-xs">
-                                    -
-                                  </span>
-                                  
-                                  <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    pattern="[0-9]*"
-                                    placeholder=""
-                                    value={scoreBVal}
-                                    onChange={(e) => handleScoreInputChange(match.id, 'B', e.target.value)}
-                                    disabled={!canManage}
-                                    className="w-13 h-8 border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
-                                    id={`input-match-${match.id}-scoreB`}
-                                  />
+                                {/* CENTER CONTROL: real set points, aggregate result is display-only */}
+                                <div className="shrink-0 min-w-[185px]">
+                                  {!isBestOf3 ? (
+                                    <div className="space-y-1">
+                                      <div className="text-center text-[9px] font-black uppercase tracking-widest text-zinc-400">Điểm từng séc</div>
+                                      <div className="flex items-center gap-2 h-8 justify-center">
+                                        <input
+                                          type="text"
+                                          inputMode="numeric"
+                                          pattern="[0-9]*"
+                                          placeholder=""
+                                          value={scoreAVal}
+                                          onChange={(e) => handleScoreInputChange(match.id, 'A', e.target.value)}
+                                          disabled={!canManage || isFinished}
+                                          className="w-13 h-8 border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                                          id={`input-match-${match.id}-scoreA`}
+                                        />
+                                        <span className="text-zinc-300 dark:text-zinc-700 select-none font-bold text-xs">-</span>
+                                        <input
+                                          type="text"
+                                          inputMode="numeric"
+                                          pattern="[0-9]*"
+                                          placeholder=""
+                                          value={scoreBVal}
+                                          onChange={(e) => handleScoreInputChange(match.id, 'B', e.target.value)}
+                                          disabled={!canManage || isFinished}
+                                          className="w-13 h-8 border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                                          id={`input-match-${match.id}-scoreB`}
+                                        />
+                                      </div>
+                                      <div className="text-center text-[9px] font-black text-emerald-700 dark:text-emerald-400">Kết quả trận: {resultLabel}</div>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-1">
+                                      <div className="text-center text-[9px] font-black uppercase tracking-widest text-zinc-400">Điểm từng séc</div>
+                                      {([1, 2, 3] as const).map((setNumber) => {
+                                        const setScore = getSetScoreValue(match.id, setNumber);
+                                        const isSetLocked = isFinished || (setNumber === 3 && isTwoZeroFinished);
+                                        return (
+                                          <div key={setNumber} className="flex items-center justify-center gap-1.5">
+                                            <span className="w-8 text-[9px] font-black text-zinc-500">Séc {setNumber}</span>
+                                            <input
+                                              type="text"
+                                              inputMode="numeric"
+                                              pattern="[0-9]*"
+                                              value={setScore.scoreA}
+                                              onChange={(e) => handleSetScoreInputChange(match.id, setNumber, 'A', e.target.value)}
+                                              disabled={!canManage || isSetLocked}
+                                              className="w-10 h-7 border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold text-xs bg-white dark:bg-zinc-950 disabled:opacity-50"
+                                            />
+                                            <span className="text-zinc-300 text-[10px] font-bold">-</span>
+                                            <input
+                                              type="text"
+                                              inputMode="numeric"
+                                              pattern="[0-9]*"
+                                              value={setScore.scoreB}
+                                              onChange={(e) => handleSetScoreInputChange(match.id, setNumber, 'B', e.target.value)}
+                                              disabled={!canManage || isSetLocked}
+                                              className="w-10 h-7 border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold text-xs bg-white dark:bg-zinc-950 disabled:opacity-50"
+                                            />
+                                            <button
+                                              type="button"
+                                              onClick={() => handleSaveSetScore(match.id, setNumber)}
+                                              disabled={!canManage || isSetLocked}
+                                              className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-black disabled:opacity-50"
+                                            >
+                                              Lưu
+                                            </button>
+                                          </div>
+                                        );
+                                      })}
+                                      <div className="text-center text-[9px] font-black text-emerald-700 dark:text-emerald-400">Kết quả trận: {resultLabel}</div>
+                                      {isFinished && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleResetSingleMatch(match.id)}
+                                          disabled={!canManage}
+                                          className="mx-auto block text-[9px] font-black text-amber-700 dark:text-amber-400 underline disabled:opacity-50"
+                                        >
+                                          Reset trước khi sửa
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
 
                                 {/* TEAM B (RIGHT SIDE - Text aligned to the left) */}

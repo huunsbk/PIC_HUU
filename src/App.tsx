@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useParams, useNavigate, Outlet, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import { useTournamentStore } from './store';
 import { supabase } from './supabaseClient';
 
@@ -20,7 +20,9 @@ import AuthModal from './components/AuthModal';
 import AccountManager from './components/AccountManager';
 import EventManagementPage from './components/event-management-page';
 import TournamentWorkspaceListPage from './components/TournamentWorkspaceListPage';
+import TenantManagementPage from './components/TenantManagementPage';
 import EventSwitcher from './components/event-switcher';
+import { useEventsQuery } from './components/use-events-query';
 import { getAuthHashErrorMessage } from './lib/authRedirect';
 
 import {
@@ -37,31 +39,83 @@ import {
   Zap,
   Gamepad2,
   FileDown,
-  UserCheck,
   ShieldAlert,
-  User,
-  Settings,
-  RefreshCw,
-  UserCog
+  UserCog,
+  Building2
 } from 'lucide-react';
 
 // Wrapper for Admin Workspace
 function AdminWorkspace() {
   const { slug } = useParams();
-  const setTenantId = useTournamentStore((state) => state.setTenantId);
+  const setWorkspaceContext = useTournamentStore((state) => state.setWorkspaceContext);
   const activeTenantId = useTournamentStore(state => state.activeTenantId);
+  const activeTournamentId = useTournamentStore(state => state.activeTournamentId);
   const initSupabase = useTournamentStore(state => state.initSupabase);
 
   useEffect(() => {
-    if (slug) {
-       const tenantStr = slug.replace(/-/g, '_');
-       if (activeTenantId !== tenantStr) {
-          setTenantId(tenantStr);
-       } else {
-          initSupabase();
-       }
-    }
-  }, [slug, activeTenantId, setTenantId, initSupabase]);
+    let isCancelled = false;
+    const loadWorkspace = async () => {
+      if (!slug) return;
+      const routeSlug = decodeURIComponent(slug);
+      let tenantOrTournamentId = routeSlug;
+      let tournamentId = routeSlug;
+
+      const { data: workspaceContext, error: workspaceContextError } = await supabase.rpc('get_workspace_context_v1', {
+        p_slug: routeSlug,
+      });
+
+      if (!workspaceContextError && workspaceContext?.tenant_id && workspaceContext?.tournament_id) {
+        if (!isCancelled) {
+          await setWorkspaceContext({
+            tenantId: workspaceContext.tenant_id,
+            tenantName: workspaceContext.tenant_name,
+            tournamentId: workspaceContext.tournament_id,
+            tournamentName: workspaceContext.tournament_name,
+            tournamentSlug: workspaceContext.tournament_slug,
+          });
+        }
+        return;
+      }
+
+      const { data: bySlug } = await supabase
+        .from('tournament')
+        .select('id, tenant_id, slug, name')
+        .eq('slug', routeSlug)
+        .maybeSingle();
+
+      if (bySlug) {
+        tenantOrTournamentId = bySlug.tenant_id || bySlug.id;
+        tournamentId = bySlug.id;
+      } else {
+        const { data: byId } = await supabase
+          .from('tournament')
+          .select('id, tenant_id, slug, name')
+          .eq('id', routeSlug)
+          .maybeSingle();
+        if (byId) {
+          tenantOrTournamentId = byId.tenant_id || byId.id;
+          tournamentId = byId.id;
+        }
+      }
+
+      if (isCancelled) return;
+      if (activeTenantId !== tenantOrTournamentId || activeTournamentId !== tournamentId) {
+        await setWorkspaceContext({
+          tenantId: tenantOrTournamentId,
+          tournamentId,
+          tournamentName: bySlug?.name,
+          tournamentSlug: bySlug?.slug,
+        });
+      } else {
+        initSupabase();
+      }
+    };
+
+    loadWorkspace();
+    return () => {
+      isCancelled = true;
+    };
+  }, [slug, activeTenantId, activeTournamentId, setWorkspaceContext, initSupabase]);
 
   return <TournamentShell />;
 }
@@ -69,17 +123,57 @@ function AdminWorkspace() {
 // Wrapper for Public Tournament
 function PublicTournament() {
   const { slug } = useParams();
-  const setTenantId = useTournamentStore((state) => state.setTenantId);
+  const setWorkspaceContext = useTournamentStore((state) => state.setWorkspaceContext);
   const activeTenantId = useTournamentStore(state => state.activeTenantId);
+  const activeTournamentId = useTournamentStore(state => state.activeTournamentId);
   const initSupabase = useTournamentStore(state => state.initSupabase);
   const setSelectedTab = useTournamentStore(state => state.setSelectedTab);
 
   useEffect(() => {
+    let isCancelled = false;
+    const loadTournament = async () => {
     if (slug) {
-       const tenantStr = slug.replace(/-/g, '_');
-       if (activeTenantId !== tenantStr) {
-          setTenantId(tenantStr).then(() => {
-             // force public view
+       const routeSlug = decodeURIComponent(slug);
+       let tenantOrTournamentId = routeSlug;
+       let tournamentId = routeSlug;
+       const { data: workspaceContext, error: workspaceContextError } = await supabase.rpc('get_workspace_context_v1', {
+         p_slug: routeSlug,
+       });
+       if (!workspaceContextError && workspaceContext?.tenant_id && workspaceContext?.tournament_id) {
+          if (!isCancelled) {
+            await setWorkspaceContext({
+              tenantId: workspaceContext.tenant_id,
+              tenantName: workspaceContext.tenant_name,
+              tournamentId: workspaceContext.tournament_id,
+              tournamentName: workspaceContext.tournament_name,
+              tournamentSlug: workspaceContext.tournament_slug,
+            });
+            if(useTournamentStore.getState().userRole === 'guest') setSelectedTab('live');
+          }
+          return;
+       }
+       const { data: bySlug } = await supabase
+         .from('tournament')
+         .select('id, tenant_id, slug, name')
+         .eq('slug', routeSlug)
+         .maybeSingle();
+       if (bySlug) {
+          tenantOrTournamentId = bySlug.tenant_id || bySlug.id;
+          tournamentId = bySlug.id;
+       } else {
+          const { data: byId } = await supabase
+            .from('tournament')
+            .select('id, tenant_id, slug, name')
+            .eq('id', routeSlug)
+            .maybeSingle();
+          if (byId) {
+            tenantOrTournamentId = byId.tenant_id || byId.id;
+            tournamentId = byId.id;
+          }
+       }
+       if (isCancelled) return;
+       if (activeTenantId !== tenantOrTournamentId || activeTournamentId !== tournamentId) {
+          setWorkspaceContext({ tenantId: tenantOrTournamentId, tournamentId }).then(() => {
              if(useTournamentStore.getState().userRole === 'guest') setSelectedTab('live');
           });
        } else {
@@ -88,7 +182,13 @@ function PublicTournament() {
           });
        }
     }
-  }, [slug, activeTenantId, setTenantId, initSupabase, setSelectedTab]);
+    };
+
+    loadTournament();
+    return () => {
+      isCancelled = true;
+    };
+  }, [slug, activeTenantId, activeTournamentId, setWorkspaceContext, initSupabase, setSelectedTab]);
 
   return <TournamentShell />;
 }
@@ -97,12 +197,25 @@ function PublicTournament() {
 function RootEntry() {
   const initSupabase = useTournamentStore(state => state.initSupabase);
   const setTenantId = useTournamentStore(state => state.setTenantId);
+  const navigate = useNavigate();
   
   useEffect(() => {
+      const legacyHash = window.location.hash.replace(/^#\/?/, '').trim();
+      if (legacyHash) {
+        supabase
+          .from('tournament')
+          .select('id, slug')
+          .eq('id', legacyHash)
+          .maybeSingle()
+          .then(({ data }) => {
+            navigate(`/admin/workspace/${data?.slug || legacyHash}`, { replace: true });
+          });
+        return;
+      }
       setTenantId('default').then(() => {
          initSupabase();
       });
-  }, [setTenantId, initSupabase]);
+  }, [setTenantId, initSupabase, navigate]);
 
   return <TournamentShell />;
 }
@@ -157,6 +270,10 @@ function TournamentShell() {
   const userRole = useTournamentStore((state) => state.userRole);
   const permissions = useTournamentStore((state) => state.permissions);
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
+  const activeTenantName = useTournamentStore((state) => state.activeTenantName);
+  const currentEventId = useTournamentStore((state) => state.currentEventId);
+  const { data: headerEvents = [] } = useEventsQuery();
+  const currentHeaderEvent = headerEvents.find((event: any) => event.id === currentEventId) || headerEvents[0];
 
   const [isLoginOpen, setIsLoginOpen] = React.useState(false);
 
@@ -230,19 +347,20 @@ function TournamentShell() {
 
   const navItems = React.useMemo(() => {
     const allNavItems = [
-      { id: 'dashboard', label: 'Trang chủ', icon: Trophy, permission: 'view_dashboard', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'dashboard', label: 'Tổng quan giải', icon: Trophy, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
       { id: 'teams', label: 'Quản lý đội', icon: Users, permission: 'manage_teams', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
       { id: 'groups', label: 'Chia bảng', icon: Layers, permission: 'manage_groups', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
-      { id: 'scoreEntry', label: 'Nhập điểm', icon: Gamepad2, permission: 'enter_score', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
+      { id: 'scoreEntry', label: 'Nhập điểm', icon: Gamepad2, permission: 'enter_scores', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
       { id: 'matches', label: 'Lịch & Kết quả', icon: CalendarDays, permission: 'manage_matches', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
-      { id: 'standings', label: 'Tuyển chọn vòng trong', icon: FileSpreadsheet, permission: 'view_standings', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
-      { id: 'knockout', label: 'Sơ đồ trực tiếp', icon: Network, permission: 'manage_knockout', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
-      { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv, permission: 'view_live', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'guest'] },
-      { id: 'export', label: 'Xuất file', icon: FileDown, permission: 'export_data', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
-      { id: 'workspaces', label: 'Enterprise Workspaces', icon: Layers, permission: 'manage_system', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
-      { id: 'events_center', label: 'Event Center', icon: CalendarDays, permission: 'manage_system', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
-      { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList, permission: 'view_logs', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
-      { id: 'accounts', label: 'Quản lý tài khoản', icon: UserCog, permission: 'manage_users', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
+      { id: 'standings', label: 'Xếp hạng & Vào vòng trong', icon: FileSpreadsheet, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
+      { id: 'knockout', label: 'Sơ đồ Knockout', icon: Network, permission: 'manage_matches', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'guest'] },
+      { id: 'export', label: 'Xuất file', icon: FileDown, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'tenants', label: 'Quản lý đơn vị', icon: Building2, permission: 'manage_tenants', roles: ['SUPER_ADMIN'] },
+      { id: 'workspaces', label: 'Quản lý giải đấu', icon: Layers, permission: 'manage_tournaments', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
+      { id: 'events_center', label: 'Nội dung thi đấu', icon: CalendarDays, permission: 'manage_events', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
+      { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList, permission: 'view_audit_logs', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
+      { id: 'accounts', label: 'Quản lý tài khoản', icon: UserCog, permission: 'manage_accounts', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
     ];
     
     if (userRole === 'guest') {
@@ -250,7 +368,8 @@ function TournamentShell() {
     }
 
     return allNavItems.filter(item => {
-      if (hasPermission('*') || hasPermission('manage_tournaments')) return true;
+      if (!item.roles.includes(userRole)) return false;
+      if (hasPermission('*')) return true;
       return hasPermission(item.permission) || hasPermission('*');
     });
   }, [permissions, userRole, hasPermission]);
@@ -323,6 +442,11 @@ function TournamentShell() {
               <h2 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 max-w-full sm:max-w-2xl whitespace-normal break-words">
                 {tournament.name || 'HỆ THỐNG QUẢN LÝ GIẢI ĐẤU PICKLEBALL'}
               </h2>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-bold text-zinc-500 dark:text-zinc-400">
+                <span>Đơn vị: {activeTenantName || currentEnterpriseUser?.tenant?.name || activeTenantId || 'Chưa chọn'}</span>
+                <span>Giải: {tournament.name || 'Chưa chọn'}</span>
+                <span>Nội dung thi đấu: {currentHeaderEvent?.name || 'Chưa chọn'}</span>
+              </div>
             </div>
             
             <div className="flex items-center gap-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
@@ -342,7 +466,7 @@ function TournamentShell() {
           </header>
 
           <main className="flex-1 p-4 lg:p-6 w-full print:p-0 print:w-full" id="main-content-panel">
-            {selectedTab !== 'live' && selectedTab !== 'workspaces' && selectedTab !== 'events_center' && selectedTab !== 'logs' && selectedTab !== 'export' && selectedTab !== 'scoreEntry' && selectedTab !== 'accounts' && <EventBar />}
+            {selectedTab !== 'live' && selectedTab !== 'tenants' && selectedTab !== 'workspaces' && selectedTab !== 'events_center' && selectedTab !== 'logs' && selectedTab !== 'export' && selectedTab !== 'scoreEntry' && selectedTab !== 'accounts' && <EventBar />}
             <div className="animate-fade-in">
               {(() => {
                 const isTabAllowed = navItems.some(item => item.id === selectedTab);
@@ -366,6 +490,7 @@ function TournamentShell() {
                     {selectedTab === 'knockout' && <KnockoutBracket />}
                     {selectedTab === 'live' && <LiveDashboard />}
                     {selectedTab === 'export' && <ExportManager />}
+                    {selectedTab === 'tenants' && <TenantManagementPage />}
                     {selectedTab === 'workspaces' && <TournamentWorkspaceListPage />}
                     {selectedTab === 'events_center' && <EventManagementPage />}
                     {selectedTab === 'logs' && <AuditLogger />}

@@ -32,8 +32,8 @@ export default function EventManagementPage() {
     <div className="space-y-6">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
         <div>
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Event Management Center</h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Quản lý toàn bộ giải đấu trong hệ thống (Enterprise)</p>
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Quản lý nội dung thi đấu</h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Quản lý các nội dung như Đôi Nam, Đôi Nữ, Đôi Nam Nữ trong giải hiện tại.</p>
         </div>
         
         <div className="flex items-center gap-3">
@@ -53,7 +53,7 @@ export default function EventManagementPage() {
             onClick={() => setIsCreateModalOpen(true)}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-sm"
           >
-            <Plus size={16} /> Tạo giải đấu
+            <Plus size={16} /> Tạo nội dung
           </button>
         </div>
       </header>
@@ -64,12 +64,12 @@ export default function EventManagementPage() {
         </div>
       ) : error ? (
         <div className="p-4 bg-red-50 text-red-600 rounded-lg border border-red-200">
-           Đã xảy ra lỗi khi tải danh sách giải đấu.
+           Đã xảy ra lỗi khi tải danh sách nội dung thi đấu.
         </div>
       ) : filteredEvents.length === 0 ? (
         <div className="text-center py-16 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl border-dashed">
           <Archive className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
-          <p className="text-zinc-500 font-medium">Chưa có giải đấu nào.</p>
+          <p className="text-zinc-500 font-medium">Chưa có nội dung thi đấu nào.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

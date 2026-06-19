@@ -158,7 +158,7 @@ export default function GroupManager() {
               id="select-num-groups"
               disabled={!canManage}
             >
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 32].map((n) => {
+              {Array.from({ length: 32 }, (_, index) => index + 1).map((n) => {
                 const getAlphabetLabel = (index: number) => {
                   let name = '';
                   let temp = index;

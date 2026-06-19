@@ -1,32 +1,45 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../supabaseClient';
 import { useTournamentStore } from '../store';
-import { generateRoundRobinMatches, balanceMatchesRestTime } from '../utils/tournamentEngine';
 import { CreateTeamSchema } from '../lib/validation/schemas';
+import { tournamentRpc, type TeamImportRow } from '../lib/api/tournamentRpc';
+import type { SeedType } from '../types';
+import { isUsableEventId, useEvents } from './useEvents';
+
+const SELECT_TENANT_MESSAGE = 'Vui lòng chọn hoặc tạo đơn vị trước.';
+const SELECT_TOURNAMENT_MESSAGE = 'Vui lòng chọn hoặc tạo giải đấu trước.';
+const SELECT_EVENT_MESSAGE = 'Vui lòng chọn hoặc tạo nội dung thi đấu trước.';
+
+function resolveSelectedEventId(currentEventId: string | null | undefined, eventsData: Array<{ id: string }>) {
+  if (isUsableEventId(currentEventId) && eventsData.some((event) => event.id === currentEventId)) {
+    return currentEventId;
+  }
+  return eventsData[0]?.id || null;
+}
 
 export function useTeamMutations() {
   const queryClient = useQueryClient();
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
-  const currentEventId = useTournamentStore((state) => state.currentEventId);
+  const activeTournamentId = useTournamentStore((state) => state.activeTournamentId);
   const tournamentId = useTournamentStore((state) => state.tournament.id);
+  const currentEventId = useTournamentStore((state) => state.currentEventId);
+  const { data: eventsData = [] } = useEvents();
+  const selectedEventId = resolveSelectedEventId(currentEventId, eventsData);
   const invalidateDashboardStats = () => {
     queryClient.invalidateQueries({ queryKey: ['dashboard-stats', activeTenantId] });
   };
   const requireTenantContext = () => {
-    if (!currentEventId) {
-      throw new Error('Chưa có nội dung thi đấu hiện hành.');
-    }
     if (!activeTenantId || activeTenantId === 'default') {
-      throw new Error('Chưa có tenant hợp lệ. Vui lòng đăng nhập lại trước khi thao tác.');
+      throw new Error(SELECT_TENANT_MESSAGE);
     }
+    if (!(activeTournamentId || tournamentId) || tournamentId === 't-1') {
+      throw new Error(SELECT_TOURNAMENT_MESSAGE);
+    }
+    if (!isUsableEventId(selectedEventId)) {
+      throw new Error(SELECT_EVENT_MESSAGE);
+    }
+    return selectedEventId;
   };
 
-  const createTeamId = () => `team-${crypto.randomUUID()}`;
-  const getTeamScope = () => ({
-    event_id: currentEventId,
-    tenant_id: activeTenantId !== 'default' ? activeTenantId : null,
-    tournament_id: tournamentId || null,
-  });
   const splitImportLine = (line: string) => {
     if (line.includes('\t')) return line.split('\t').map((cell) => cell.trim());
     if (line.includes(';')) return line.split(';').map((cell) => cell.trim());
@@ -49,22 +62,9 @@ export function useTeamMutations() {
       if (!trimmedName) {
         throw new Error('Tên đội không được để trống.');
       }
-      if (!currentEventId) {
-        throw new Error('Chưa có nội dung thi đấu hiện hành để thêm đội.');
-      }
+      const eventId = requireTenantContext();
 
-      const { data: result, error } = await supabase
-        .from('teams')
-        .insert([{
-          id: createTeamId(),
-          name: trimmedName,
-          seed,
-          ...getTeamScope(),
-        }])
-        .select()
-        .single();
-      if (error) throw error;
-      return result;
+      return tournamentRpc.createTeam(eventId, trimmedName, seed as SeedType);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
@@ -74,14 +74,10 @@ export function useTeamMutations() {
 
   const updateTeam = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string, name?: string, seed?: string, group_id?: string | null }) => {
-      const { data, error } = await supabase
-        .from('teams')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      return tournamentRpc.updateTeam(id, {
+        name: updates.name,
+        seed: updates.seed as SeedType | undefined,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
@@ -92,18 +88,7 @@ export function useTeamMutations() {
   const deleteTeam = useMutation({
     mutationFn: async (id: string) => {
       requireTenantContext();
-      // Soft delete
-      const deletedAt = new Date().toISOString();
-      const { error } = await supabase
-        .from('teams')
-        .update({ deleted_at: deletedAt })
-        .eq('id', id)
-        .eq('event_id', currentEventId)
-        .eq('tenant_id', activeTenantId)
-        .select('id')
-        .single();
-      if (error) throw error;
-      return id;
+      return tournamentRpc.archiveTeam(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
@@ -123,7 +108,7 @@ export function useTeamMutations() {
       }
 
       const rawInputs = lines.slice(startIndex).map(splitImportLine);
-      const inserts = [];
+      const imports: TeamImportRow[] = [];
 
       for (const columns of rawInputs) {
         const nameIndex = isRowNumber(columns[0]) && columns[1] ? 1 : 0;
@@ -140,24 +125,13 @@ export function useTeamMutations() {
           continue;
         }
         
-        inserts.push({
-           id: createTeamId(),
-           name,
-           seed,
-           ...getTeamScope(),
-        });
+        imports.push({ name, seed: seed as SeedType });
       }
 
-      const CHUNK_SIZE = 100;
-      let insertedCount = 0;
-      for (let i = 0; i < inserts.length; i += CHUNK_SIZE) {
-         const chunk = inserts.slice(i, i + CHUNK_SIZE);
-         const { error } = await supabase.from('teams').insert(chunk);
-         if (error) throw error;
-         insertedCount += chunk.length;
-         console.log(`[Chunk Import Engine] Đã đồng bộ thành công ${insertedCount}/${inserts.length} đội.`);
-      }
-      return insertedCount;
+      const eventId = requireTenantContext();
+
+      const result = await tournamentRpc.importTeams(eventId, imports);
+      return result.imported_count ?? imports.length;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
@@ -171,55 +145,53 @@ export function useTeamMutations() {
 export function useGroupMutations() {
   const queryClient = useQueryClient();
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
+  const activeTournamentId = useTournamentStore((state) => state.activeTournamentId);
+  const tournamentId = useTournamentStore((state) => state.tournament.id);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
+  const { data: eventsData = [] } = useEvents();
+  const selectedEventId = resolveSelectedEventId(currentEventId, eventsData);
   const invalidateDashboardStats = () => {
     queryClient.invalidateQueries({ queryKey: ['dashboard-stats', activeTenantId] });
   };
   const requireTenantContext = () => {
-    if (!currentEventId) {
-      throw new Error('Chưa có nội dung thi đấu hiện hành.');
-    }
     if (!activeTenantId || activeTenantId === 'default') {
-      throw new Error('Chưa có tenant hợp lệ. Vui lòng đăng nhập lại trước khi thao tác.');
+      throw new Error(SELECT_TENANT_MESSAGE);
     }
+    if (!(activeTournamentId || tournamentId) || tournamentId === 't-1') {
+      throw new Error(SELECT_TOURNAMENT_MESSAGE);
+    }
+    if (!isUsableEventId(selectedEventId)) {
+      throw new Error(SELECT_EVENT_MESSAGE);
+    }
+    return selectedEventId;
   };
 
-  type GroupingMode = 'empty' | 'seed' | 'random';
+  type GroupingMode = 'balanced' | 'seed' | 'random';
 
-  const setupGroupsContract = async (numGroups: number, mode: GroupingMode = 'empty') => {
-    requireTenantContext();
+  const setupGroupsContract = async (numGroups: number, mode: GroupingMode = 'balanced') => {
+    const eventId = requireTenantContext();
 
-    const { data, error } = await supabase.rpc('setup_groups_v3', {
-      p_event_id: currentEventId,
-      p_num_groups: numGroups,
-      p_mode: mode,
-    });
-    if (error) throw error;
-
-    return data as {
+    return tournamentRpc.setupGroups(eventId, numGroups, mode) as Promise<{
       success?: boolean;
       event_id?: string;
       num_groups?: number;
+      group_count?: number;
       mode?: GroupingMode;
       group_ids?: string[];
       assigned_teams?: number;
-    } | null;
+    } | null>;
   };
 
   const clearAllGroups = useMutation({
      mutationFn: async () => {
-       requireTenantContext();
-       const { data, error } = await supabase.rpc('dissolve_groups_v2', {
-         p_event_id: currentEventId,
-       });
-       if (error) throw error;
-       return data as {
+       const eventId = requireTenantContext();
+       return tournamentRpc.dissolveGroups(eventId) as Promise<{
          success?: boolean;
          event_id?: string;
          teams_cleared?: number;
          groups_dissolved?: number;
          matches_soft_deleted?: number;
-       } | null;
+       } | null>;
      },
      onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
@@ -231,7 +203,7 @@ export function useGroupMutations() {
 
   const setupGroups = useMutation({
      mutationFn: async (numGroups: number) => {
-        return setupGroupsContract(numGroups, 'empty');
+        return setupGroupsContract(numGroups, 'balanced');
      },
      onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
@@ -258,13 +230,10 @@ export function useGroupMutations() {
     mutationFn: async ({ teamId, toGroupId }: { teamId: string, toGroupId: string | null }) => {
       requireTenantContext();
       const dbGroupId = toGroupId === 'unassigned' ? null : toGroupId;
-      const { data, error } = await supabase.rpc('assign_team_to_group_v1', {
-        p_event_id: currentEventId,
-        p_team_id: teamId,
-        p_group_id: dbGroupId,
-      });
-      if (error) throw error;
-      return data;
+      if (!dbGroupId) {
+        throw new Error('RPC assign_team_to_group_v2 yêu cầu group_id hợp lệ. Dùng dissolve_groups_v4 để đưa tất cả đội về trạng thái chưa chia bảng.');
+      }
+      return tournamentRpc.assignTeamToGroup(teamId, dbGroupId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
@@ -280,40 +249,33 @@ export function useGroupMutations() {
 export function useMatchMutations() {
   const queryClient = useQueryClient();
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
+  const activeTournamentId = useTournamentStore((state) => state.activeTournamentId);
+  const tournamentId = useTournamentStore((state) => state.tournament.id);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
-  const tournament = useTournamentStore((state) => state.tournament);
+  const { data: eventsData = [] } = useEvents();
+  const selectedEventId = resolveSelectedEventId(currentEventId, eventsData);
   const invalidateDashboardStats = () => {
     queryClient.invalidateQueries({ queryKey: ['dashboard-stats', activeTenantId] });
   };
-  const tenantId = activeTenantId !== 'default' ? activeTenantId : null;
-  const mapMatchToDbInsert = (match: any) => ({
-    id: match.id,
-    group_id: match.groupId,
-    team_a_id: match.teamAId,
-    team_b_id: match.teamBId,
-    score_a: match.scoreA,
-    score_b: match.scoreB,
-    winner_id: match.winnerId,
-    status: match.status,
-    round: match.round,
-    event_id: currentEventId,
-    tenant_id: tenantId,
-    tournament_id: tournament.id || null,
-    placeholder_a: match.placeholderA || null,
-    placeholder_b: match.placeholderB || null,
-    knockout_round_name: match.knockoutRoundName || null,
-    knockout_match_id: match.knockoutMatchId || null,
-    next_match_id: match.nextMatchId || null,
-    next_match_slot: match.nextMatchSlot || null,
-  });
-
+  const requireBusinessContext = () => {
+    if (!activeTenantId || activeTenantId === 'default') {
+      throw new Error(SELECT_TENANT_MESSAGE);
+    }
+    if (!(activeTournamentId || tournamentId) || tournamentId === 't-1') {
+      throw new Error(SELECT_TOURNAMENT_MESSAGE);
+    }
+    if (!isUsableEventId(selectedEventId)) {
+      throw new Error(SELECT_EVENT_MESSAGE);
+    }
+    return selectedEventId;
+  };
   const updateMatchScore = useMutation({
     mutationFn: async ({ matchId, scoreA, scoreB }: { matchId: string, scoreA: number | null, scoreB: number | null }) => {
+      requireBusinessContext();
       if (scoreA !== null && scoreB !== null) {
-         await supabase.rpc('update_match_score_v1', { p_match_id: matchId, p_score_a: scoreA, p_score_b: scoreB });
+         return tournamentRpc.updateMatchScore(matchId, scoreA, scoreB);
       } else {
-         const { error } = await supabase.from('matches').update({ score_a: null, score_b: null, winner_id: null, status: 'pending' }).eq('id', matchId);
-         if (error) throw error;
+         return tournamentRpc.resetMatchScore(matchId);
       }
     },
     onSuccess: () => {
@@ -324,8 +286,8 @@ export function useMatchMutations() {
 
   const resetMatchScore = useMutation({
     mutationFn: async (matchId: string) => {
-      const { error } = await supabase.from('matches').update({ score_a: null, score_b: null, winner_id: null, status: 'pending' }).eq('id', matchId);
-      if (error) throw error;
+      requireBusinessContext();
+      return tournamentRpc.resetMatchScore(matchId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
@@ -334,17 +296,9 @@ export function useMatchMutations() {
   });
 
   const generateForGroup = useMutation({
-    mutationFn: async ({ groupId, teamIds }: { groupId: string, teamIds: string[] }) => {
-      // 1. Delete old matches for this group
-      await supabase.from('matches').delete().eq('group_id', groupId);
-      // 2. Local generation
-      const newMatches = generateRoundRobinMatches(groupId, teamIds, tournament.settings);
-      // 3. Map to DB inserts
-      const dbMatches = newMatches.map(mapMatchToDbInsert);
-      if (dbMatches.length > 0) {
-        const { error } = await supabase.from('matches').insert(dbMatches);
-        if (error) throw error;
-      }
+    mutationFn: async (_params: { groupId: string, teamIds: string[] }) => {
+      const eventId = requireBusinessContext();
+      return tournamentRpc.generateSchedule(eventId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
@@ -353,25 +307,9 @@ export function useMatchMutations() {
   });
 
   const generateAllSchedules = useMutation({
-    mutationFn: async (groups: any[]) => {
-      // Delete old group matches
-      await supabase.from('matches').delete().eq('event_id', currentEventId).neq('group_id', 'knockout');
-      let allNewMatches: any[] = [];
-      
-      groups.forEach(group => {
-        if (group && group.teamIds && group.teamIds.length > 0) {
-          const generated = generateRoundRobinMatches(group.id, group.teamIds, tournament.settings);
-          allNewMatches = [...allNewMatches, ...generated];
-        }
-      });
-      
-      const latestMatched = balanceMatchesRestTime(allNewMatches);
-      const dbMatches = latestMatched.map(mapMatchToDbInsert);
-      
-      if (dbMatches.length > 0) {
-        const { error } = await supabase.from('matches').insert(dbMatches);
-        if (error) throw error;
-      }
+    mutationFn: async (_groups: any[]) => {
+      const eventId = requireBusinessContext();
+      return tournamentRpc.generateSchedule(eventId);
     },
     onSuccess: () => {
        queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
@@ -381,8 +319,14 @@ export function useMatchMutations() {
 
   const updateMatchStatus = useMutation({
     mutationFn: async ({ matchId, status }: { matchId: string, status: 'pending' | 'playing' | 'finished' }) => {
-      const { error } = await supabase.from('matches').update({ status }).eq('id', matchId);
-      if (error) throw error;
+      requireBusinessContext();
+      if (status === 'pending') {
+        return tournamentRpc.resetMatchScore(matchId);
+      }
+      if (status === 'playing') {
+        return { success: true, match_id: matchId, status: 'playing' };
+      }
+      throw new Error('Trạng thái finished phải được cập nhật thông qua RPC nhập điểm.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
@@ -390,5 +334,17 @@ export function useMatchMutations() {
     }
   });
 
-  return { updateMatchScore, resetMatchScore, generateForGroup, generateAllSchedules, updateMatchStatus };
+  const updateMatchSetScore = useMutation({
+    mutationFn: async ({ matchId, setNumber, scoreA, scoreB }: { matchId: string, setNumber: 1 | 2 | 3, scoreA: number, scoreB: number }) => {
+      requireBusinessContext();
+      return tournamentRpc.updateMatchSetScore(matchId, setNumber, scoreA, scoreB);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      queryClient.invalidateQueries({ queryKey: ['match-sets', activeTenantId, currentEventId] });
+      invalidateDashboardStats();
+    }
+  });
+
+  return { updateMatchScore, updateMatchSetScore, resetMatchScore, generateForGroup, generateAllSchedules, updateMatchStatus };
 }

@@ -20,26 +20,39 @@ const safeCount = (count: number | null) => count ?? 0;
 
 export function useDashboardStats() {
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
+  const activeTournamentId = useTournamentStore((state) => state.activeTournamentId);
+  const tournamentId = useTournamentStore((state) => state.tournament.id);
+  const scopedTournamentId = activeTournamentId || tournamentId;
 
   return useQuery({
-    queryKey: ['dashboard-stats', activeTenantId],
+    queryKey: ['dashboard-stats', activeTenantId, scopedTournamentId],
     queryFn: async (): Promise<DashboardStats> => {
+      let teamsQuery = supabase
+        .from('teams')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', activeTenantId)
+        .is('deleted_at', null);
+      let groupsQuery = supabase
+        .from('groups')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', activeTenantId)
+        .is('deleted_at', null);
+      let matchesQuery = supabase
+        .from('matches')
+        .select('id, group_id, status')
+        .eq('tenant_id', activeTenantId)
+        .is('deleted_at', null);
+
+      if (scopedTournamentId && scopedTournamentId !== 't-1') {
+        teamsQuery = teamsQuery.eq('tournament_id', scopedTournamentId);
+        groupsQuery = groupsQuery.eq('tournament_id', scopedTournamentId);
+        matchesQuery = matchesQuery.eq('tournament_id', scopedTournamentId);
+      }
+
       const [teamsResult, groupsResult, matchesResult] = await Promise.all([
-        supabase
-          .from('teams')
-          .select('id', { count: 'exact', head: true })
-          .eq('tenant_id', activeTenantId)
-          .is('deleted_at', null),
-        supabase
-          .from('groups')
-          .select('id', { count: 'exact', head: true })
-          .eq('tenant_id', activeTenantId)
-          .is('deleted_at', null),
-        supabase
-          .from('matches')
-          .select('id, group_id, status')
-          .eq('tenant_id', activeTenantId)
-          .is('deleted_at', null),
+        teamsQuery,
+        groupsQuery,
+        matchesQuery,
       ]);
 
       if (teamsResult.error) throw teamsResult.error;

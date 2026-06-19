@@ -12,6 +12,43 @@ export interface TournamentSettings {
   numBestThirds?: number; // Số đội đứng thứ ba xuất sắc nhất
 }
 
+export type MatchSetMode = 'single' | 'best_of_3';
+export type EventFormatType = 'round_robin_only' | 'knockout_only' | 'group_then_knockout';
+export type CompetitionType = 'singles' | 'doubles' | 'team' | 'individual_time' | 'custom';
+
+export interface ScoringConfig {
+  matchSetMode: MatchSetMode;
+  numberOfSets: 1 | 3;
+  setsToWin: 1 | 2;
+  maxScore: number;
+  capScore: number;
+  winByTwo: boolean;
+  allowDraw?: boolean;
+}
+
+export interface RankingConfig {
+  pointsWin?: number;
+  pointsLoss?: number;
+  pointsDraw?: number;
+  tieBreakers?: Array<'points' | 'setDiff' | 'pointDiff' | 'pointsWon' | 'headToHead' | 'manual'>;
+  bestThirds?: {
+    enabled: boolean;
+    count: number;
+    excludeBottomTeamResults?: boolean;
+  };
+}
+
+export interface Sport {
+  id: string;
+  name: string;
+  slug: string;
+  scoring_type: 'sets' | string;
+  default_settings: Partial<ScoringConfig> & Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+}
+
 export interface Tournament {
   id: string;
   name: string;
@@ -60,6 +97,22 @@ export interface Match {
   placeholderB?: string;
   tenant_id?: string;
   event_id?: string;
+  matchSets?: MatchSet[];
+}
+
+export interface MatchSet {
+  id: string;
+  match_id: string;
+  tenant_id: string;
+  event_id: string;
+  set_number: number;
+  score_a: number | null;
+  score_b: number | null;
+  winner_id: string | null;
+  status: 'pending' | 'playing' | 'finished';
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
 }
 
 export interface AuditLog {
@@ -110,6 +163,12 @@ export interface EventData {
   groups: Record<string, Group>;
   matches: Match[];
   tenant_id?: string;
+  sport_id?: string;
+  sport?: Sport;
+  competition_type?: CompetitionType;
+  format_type?: EventFormatType;
+  scoring_config?: Partial<ScoringConfig>;
+  ranking_config?: RankingConfig;
   settings: TournamentSettings;
   activeGroupId: string | null;
   advanceSelectionMode: 'auto' | 'manual';

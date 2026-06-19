@@ -1,29 +1,46 @@
 import React, { useState } from 'react';
-import { Copy, ExternalLink, Info, Trash2, Users, Archive, Link } from 'lucide-react';
+import { Copy, ExternalLink, Archive, Pencil, RotateCcw } from 'lucide-react';
 import { TournamentWorkspaceStat } from '../hooks/useTournamentWorkspaces';
-import { useArchiveTournamentWorkspace } from '../hooks/useTournamentMutations';
+import { useArchiveTournamentWorkspace, useRestoreTournamentWorkspace, useUpdateTournamentWorkspace } from '../hooks/useTournamentMutations';
 import TournamentWorkspaceDetailsDrawer from './TournamentWorkspaceDetailsDrawer';
 import ConfirmDialog from './ConfirmDialog';
 
 interface TournamentWorkspaceCardProps {
   tournament: TournamentWorkspaceStat;
-  onManageAdmin: (tournament: TournamentWorkspaceStat) => void;
 }
 
-export default function TournamentWorkspaceCard({ tournament, onManageAdmin }: TournamentWorkspaceCardProps) {
+export default function TournamentWorkspaceCard({ tournament }: TournamentWorkspaceCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
   const archiveMutation = useArchiveTournamentWorkspace();
+  const restoreMutation = useRestoreTournamentWorkspace();
+  const updateMutation = useUpdateTournamentWorkspace();
 
   const handleArchive = () => {
     setIsArchiveConfirmOpen(true);
+  };
+
+  const handleEdit = () => {
+    const name = window.prompt('Tên giải đấu', tournament.name);
+    if (!name || name.trim() === tournament.name) return;
+    updateMutation.mutate({
+      tournamentId: tournament.tournament_id,
+      name: name.trim(),
+      slug: tournament.slug,
+      location: tournament.location || null,
+      startDate: tournament.start_date || null,
+      status: tournament.status || null,
+    }, {
+      onSuccess: () => alert('Đã cập nhật giải đấu.'),
+      onError: (err: any) => alert(`Lỗi: ${err.message}`),
+    });
   };
 
   const handleConfirmArchive = () => {
     archiveMutation.mutate(tournament.tournament_id, {
       onSuccess: () => {
         setIsArchiveConfirmOpen(false);
-        alert('Đã lưu trữ workspace.');
+        alert('Đã lưu trữ giải đấu.');
       },
       onError: (err: any) => {
         setIsArchiveConfirmOpen(false);
@@ -62,7 +79,7 @@ export default function TournamentWorkspaceCard({ tournament, onManageAdmin }: T
 
         <div className="flex-1 space-y-2 mb-5">
           <div className="text-sm text-zinc-600 dark:text-zinc-400">
-             <span className="font-semibold">Owner:</span> {tournament.owner_name || 'Chưa phân quyền'}
+             <span className="font-semibold">Đơn vị:</span> {tournament.tenant_id || 'Chưa rõ'}
           </div>
           <div className="text-sm text-zinc-600 dark:text-zinc-400">
              <span className="font-semibold">Ngày tạo:</span> {new Date(tournament.created_at).toLocaleDateString('vi-VN')}
@@ -71,15 +88,15 @@ export default function TournamentWorkspaceCard({ tournament, onManageAdmin }: T
           <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
              <div className="text-center">
                 <p className="text-lg font-black text-indigo-600">{tournament.events_count}</p>
-                <p className="text-[10px] uppercase font-bold text-zinc-500">Events</p>
+                <p className="text-[10px] uppercase font-bold text-zinc-500">Nội dung</p>
              </div>
              <div className="text-center">
                 <p className="text-lg font-black text-emerald-600">{tournament.teams_count}</p>
-                <p className="text-[10px] uppercase font-bold text-zinc-500">Teams</p>
+                <p className="text-[10px] uppercase font-bold text-zinc-500">Đội</p>
              </div>
              <div className="text-center">
                 <p className="text-lg font-black text-orange-600">{tournament.matches_count}</p>
-                <p className="text-[10px] uppercase font-bold text-zinc-500">Matches</p>
+                <p className="text-[10px] uppercase font-bold text-zinc-500">Trận</p>
              </div>
           </div>
           
@@ -91,16 +108,24 @@ export default function TournamentWorkspaceCard({ tournament, onManageAdmin }: T
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
-          <button onClick={openAdminWorkspace} className="flex-1 py-2 flex items-center justify-center gap-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors col-span-2">
-            <ExternalLink size={14} /> Open Workspace
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <button onClick={openAdminWorkspace} className="flex-1 py-2 flex items-center justify-center gap-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+            <ExternalLink size={14} /> Mở giải
           </button>
-          <button onClick={() => onManageAdmin(tournament)} className="py-2 flex items-center justify-center text-xs font-bold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors" title="Transfer Owner">
-            <Users size={14} />
-          </button>
-          <button onClick={handleArchive} disabled={archiveMutation.isPending} className="py-2 flex items-center justify-center text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50" title="Archive">
-            <Archive size={14} />
-          </button>
+          <div className="flex gap-2">
+            <button onClick={handleEdit} disabled={updateMutation.isPending} className="py-2 px-2 flex items-center justify-center text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors disabled:opacity-50" title="Sửa giải">
+              <Pencil size={14} />
+            </button>
+            {tournament.status === 'archived' ? (
+              <button onClick={() => restoreMutation.mutate(tournament.tournament_id)} disabled={restoreMutation.isPending} className="py-2 px-2 flex items-center justify-center text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors disabled:opacity-50" title="Khôi phục">
+                <RotateCcw size={14} />
+              </button>
+            ) : (
+              <button onClick={handleArchive} disabled={archiveMutation.isPending} className="py-2 px-2 flex items-center justify-center text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50" title="Lưu trữ">
+                <Archive size={14} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -110,8 +135,8 @@ export default function TournamentWorkspaceCard({ tournament, onManageAdmin }: T
 
       <ConfirmDialog
         isOpen={isArchiveConfirmOpen}
-        title="Lưu trữ workspace"
-        message={`Bạn có chắc chắn muốn lưu trữ workspace "${tournament.name}"? Tất cả dữ liệu liên quan sẽ bị ẩn.`}
+        title="Lưu trữ giải đấu"
+        message={`Bạn có chắc chắn muốn lưu trữ giải đấu "${tournament.name}"? Tất cả dữ liệu liên quan sẽ bị ẩn.`}
         confirmText="Lưu trữ"
         cancelText="Hủy bỏ"
         isDanger={true}

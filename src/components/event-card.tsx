@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Copy, ExternalLink, Users, Edit, Archive, Trash2, ShieldAlert } from 'lucide-react';
+import { Copy, ExternalLink, Users, Archive, Trash2 } from 'lucide-react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { supabase } from '../supabaseClient';
 import EventMembersManager from './event-members-manager';
 import ConfirmDialog from './ConfirmDialog';
+import { tournamentRpc } from '../lib/api/tournamentRpc';
 
 interface EventCardProps {
   event: any;
@@ -17,8 +17,13 @@ export default function EventCard({ event }: EventCardProps) {
   // Basic Mutation example for soft locking/archiving
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
-      const { error } = await supabase.from('events').update({ status: newStatus }).eq('id', event.id);
-      if (error) throw error;
+      if (newStatus === 'archived') {
+        return tournamentRpc.archiveEvent(event.id);
+      }
+      if (newStatus === 'active') {
+        return tournamentRpc.restoreEvent(event.id);
+      }
+      return tournamentRpc.updateEventStatus(event, newStatus);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -48,7 +53,7 @@ export default function EventCard({ event }: EventCardProps) {
   };
 
   const handleDeleteConfirm = () => {
-    supabase.from('events').update({ deleted_at: new Date().toISOString() }).eq('id', event.id)
+    tournamentRpc.archiveEvent(event.id)
       .then(() => {
         queryClient.invalidateQueries({ queryKey: ['events'] });
         setIsConfirmOpen(false);
@@ -78,7 +83,7 @@ export default function EventCard({ event }: EventCardProps) {
           <button onClick={() => window.open(getAppUrl(`/dashboard/event/${event.id}`), '_blank')} className="p-2 flex justify-center items-center text-zinc-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Open Dashboard">
             <ExternalLink size={16} />
           </button>
-          <button onClick={() => setShowMembers(true)} className="p-2 flex justify-center items-center text-zinc-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Members">
+          <button onClick={() => setShowMembers(true)} className="p-2 flex justify-center items-center text-zinc-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Cấp quyền trọng tài">
             <Users size={16} />
           </button>
           <button onClick={() => updateStatusMutation.mutate(event.status === 'archived' ? 'active' : 'archived')} className="p-2 flex justify-center items-center text-zinc-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title={event.status === 'archived' ? 'Unarchive' : 'Archive'}>
@@ -96,9 +101,9 @@ export default function EventCard({ event }: EventCardProps) {
 
       <ConfirmDialog
         isOpen={isConfirmOpen}
-        title="Xóa sự kiện"
-        message={`Bạn có chắc chắn muốn xóa sự kiện "${event.name}" không? Hành động này sẽ chuyển trạng thái của sự kiện.`}
-        confirmText="Xóa sự kiện"
+        title="Lưu trữ nội dung thi đấu"
+        message={`Bạn có chắc chắn muốn lưu trữ nội dung "${event.name}" không?`}
+        confirmText="Lưu trữ"
         cancelText="Hủy bỏ"
         isDanger={true}
         onConfirm={handleDeleteConfirm}

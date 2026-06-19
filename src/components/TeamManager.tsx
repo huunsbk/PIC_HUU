@@ -7,16 +7,19 @@ import React, { useState, useRef } from 'react';
 import { useTournamentStore } from '../store';
 import { useTeams } from '../hooks/useTeams';
 import { useGroups } from '../hooks/useGroups';
+import { isUsableEventId, useEvents } from '../hooks/useEvents';
 import { useTeamMutations } from '../hooks/useDataMutations';
 import { Trash2, Edit2, Plus, Upload, FileType, Check, AlertCircle, Sparkles, HelpCircle, FileSpreadsheet } from 'lucide-react';
 import { SeedType } from '../types';
 
 export default function TeamManager() {
-  const { addLog, hasPermission } = useTournamentStore();
+  const { addLog, hasPermission, currentEventId } = useTournamentStore();
   const { data: teamsData = [], isLoading: isLoadingTeams } = useTeams();
   const { data: groupsData = [] } = useGroups();
+  const { data: eventsData = [] } = useEvents();
   const { addTeam, deleteTeam, updateTeam, importTeams } = useTeamMutations();
-  const canManage = hasPermission('manage_teams');
+  const hasSelectedRealEvent = isUsableEventId(currentEventId) && eventsData.some((event) => event.id === currentEventId);
+  const canManage = hasPermission('manage_teams') && hasSelectedRealEvent;
   
   const groups: Record<string, any> = {};
   groupsData.forEach(g => { groups[g.id] = g; });
@@ -154,7 +157,11 @@ export default function TeamManager() {
           <AlertCircle size={16} className="text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
           <div className="space-y-0.5">
             <p className="font-extrabold text-sm flex items-center gap-1.5">Trạng thái: Chỉ Xem (Khách vãng lai)</p>
-            <p className="text-[11px] font-semibold opacity-90">Vui lòng nhấp vào nút <strong>🔒 Đăng nhập Admin</strong> ở góc trên bên phải để bắt đầu thêm đội, sửa đổi, xếp bảng và nhập điểm số.</p>
+            <p className="text-[11px] font-semibold opacity-90">
+              {hasPermission('manage_teams')
+                ? 'Vui lòng chọn nội dung thi đấu như Đôi Nam hoặc Đôi Nữ trước khi thêm đội.'
+                : <>Vui lòng nhấp vào nút <strong>🔒 Đăng nhập Admin</strong> ở góc trên bên phải để bắt đầu thêm đội, sửa đổi, xếp bảng và nhập điểm số.</>}
+            </p>
           </div>
         </div>
       )}
@@ -332,7 +339,7 @@ export default function TeamManager() {
               <div className="py-14 text-center text-zinc-400 text-xs space-y-3">
                 <Sparkles size={36} className="mx-auto text-zinc-300 dark:text-zinc-700" />
                 <p className="text-zinc-650 dark:text-zinc-400 font-bold text-sm">Chưa tìm thấy đội thi đấu nào khớp.</p>
-                <p className="text-[11px] text-zinc-500">Bấm nạp dữ liệu mô phỏng nhanh ở Trang chủ hoặc thêm thủ công bên trái.</p>
+                <p className="text-[11px] text-zinc-500">Bấm nạp dữ liệu mô phỏng nhanh ở Tổng quan giải hoặc thêm thủ công bên trái.</p>
               </div>
             ) : (
               <div className="overflow-x-auto rounded-lg border border-zinc-100 dark:border-zinc-805">
