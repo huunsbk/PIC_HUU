@@ -310,6 +310,30 @@ rg "11111111-1111-1111-1111-111111111111" src: no results.
 rg "SUPABASE_SERVICE_ROLE_KEY|DATABASE_URL|JWT_SECRET|refresh_token|service_role" .: variable/documentation references only; no secret values found.
 ```
 
+## Prompt 07-J Current Status
+
+Prompt 07-J completed on Supabase beta.
+
+Demo E2E data is now available for tournament `thang-oanh`:
+
+- Đôi Nam (`evt_6da72de38f5c469d8e829348c92dfde2`): 16 teams, 4 groups, 24 group matches, 24 finished group matches, 8 confirmed knockout teams, 7 knockout matches.
+- Đôi Nữ (`evt_4b8ff313ce2c43fb8aa796cf6a9da464`): 8 teams, 2 groups, 12 group matches, 4 finished group matches.
+- Đôi Nam Nữ (`evt_86d3121231e2486c99590615a11d5407`): 8 teams, 2 groups, 12 group matches, no scores entered.
+
+Verification:
+
+- Event isolation: PASS.
+- `selectedEventId` shape: PASS, demo event ids are `evt_...`.
+- Tournament id as event id: PASS, blocked with `INVALID_CONTEXT`.
+- Tenant id as event id: PASS, blocked with `INVALID_CONTEXT`.
+- Cross-tenant REFEREE grants: PASS, 0 grants.
+
+Remaining:
+
+- REFEREE E2E remains blocked by data because tenant `CLB Thắng Oanh` has 0 active REFEREE accounts.
+- No `auth.users` record was created.
+- Prompt 08 has not been run.
+
 ## Prompt 07-I Status: Business RPC Context Validation
 
 Current phase: Prompt 07-I completed.

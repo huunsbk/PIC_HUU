@@ -734,3 +734,44 @@ Pre-push verification:
 - `.env.db.local`, `dist/`, and `node_modules/` are ignored and were not staged.
 - No database reset was performed.
 - Prompt 08 was not run.
+
+## Prompt 07-J: Demo E2E Data And Flow Verification
+
+- Created complete demo E2E data for tournament `thang-oanh` in tenant `CLB Thắng Oanh`.
+- Did not reset the database globally.
+- Did not delete or modify `auth.users`.
+- Did not modify accounts, roles, permissions, or sports.
+- Did not run Prompt 08.
+- Demo cleanup was scoped to the three demo events under tournament `thang-oanh`.
+- Team/group/schedule/score/knockout creation used the required RPCs:
+  - `import_teams_v1`
+  - `setup_groups_v4`
+  - `generate_schedule_v1`
+  - `update_match_score_v1`
+  - `prepare_knockout_candidates_v1`
+  - `confirm_knockout_teams_v1`
+  - `generate_knockout_bracket_v1`
+- Locked direct-write tables were respected; old match score cleanup uses `reset_match_score_v1`.
+
+Verification:
+
+| Check | Result |
+|---|---|
+| Đôi Nam teams/groups/group matches | Pass, 16 teams, 4 groups, 24 group matches |
+| Đôi Nam scores | Pass, all 24 group matches finished |
+| Đôi Nam knockout | Pass, 8 confirmed teams and 7 knockout matches |
+| Đôi Nữ teams/groups/group matches | Pass, 8 teams, 2 groups, 12 group matches |
+| Đôi Nữ partial scores | Pass, 4 finished group matches |
+| Đôi Nam Nữ teams/groups/group matches | Pass, 8 teams, 2 groups, 12 group matches |
+| Event isolation | Pass, no Đôi Nam/Đôi Nữ team mixing and no cross-event match/team mismatch |
+| Event id shape | Pass, all selected demo event ids begin with `evt_` |
+| Tournament id as event id | Pass, blocked with `INVALID_CONTEXT` |
+| Tenant id as event id | Pass, blocked with `INVALID_CONTEXT` |
+| REFEREE demo account | Blocked by data, 0 active REFEREE accounts in demo tenant |
+| Cross-tenant REFEREE grant | Pass, 0 grants |
+
+Files:
+
+- `tests/enterprise/seed_demo_e2e_07j.sql`
+- `tests/enterprise/verify_demo_e2e_07j.sql`
+- `docs/cto/DEMO_E2E_07J_REPORT.md`

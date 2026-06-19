@@ -56,6 +56,11 @@
 | PB-016 | Group UI RPC wiring | Static scan + code review | Main UI calls `setup_groups_v4`, `assign_team_to_group_v2`, `dissolve_groups_v4` | Pass | Prompt 07 |
 | PB-017 | Schedule UI RPC wiring | Static scan + code review | Main UI calls `generate_schedule_v1` | Pass | Prompt 07 |
 | PB-018 | Single scoring UI RPC wiring | Static scan + build | UI calls `update_match_score_v1`, no frontend `winner_id` input | Pass | Prompt 07 |
+| PB-019 | Demo E2E dataset | `seed_demo_e2e_07j.sql` + verify SQL | Đôi Nam/Nữ/Nam Nữ have scoped demo teams, groups, schedules, and expected scores | Pass | Prompt 07-J |
+| PB-020 | Đôi Nam knockout demo | `prepare_knockout_candidates_v1`, `confirm_knockout_teams_v1`, `generate_knockout_bracket_v1` | Top 2 per group confirmed into bracket 8; 7 knockout matches created | Pass | Prompt 07-J |
+| PB-021 | Event isolation demo | `verify_demo_e2e_07j.sql` | No team/match data crosses Đôi Nam, Đôi Nữ, Đôi Nam Nữ | Pass | Prompt 07-J |
+| PB-022 | Invalid context guards | Negative SQL for tournament/tenant ids as event ids | Both calls blocked with `INVALID_CONTEXT` | Pass | Prompt 07-J |
+| PB-023 | Referee demo grant | Demo tenant account lookup | No active demo REFEREE account exists; E2E blocked by data without creating `auth.users` | Blocked | Prompt 07-J |
 | PB-019 | Best-of-3 scoring UI RPC wiring | Static scan + build | `ScoreEntry` calls `update_match_set_score_v1` per set | Pass | Prompt 07 |
 | PB-020 | Knockout UI RPC wiring | Static scan + build | UI calls prepare/confirm/generate knockout RPCs | Pass | Prompt 07 |
 | PB-021 | Single set real score input | Static UI review + build | UI accepts real set points such as `11-4`, not aggregate `1-0` input | Pass | Prompt 07 supplemental |

@@ -31,8 +31,19 @@
   - Signs the user out after success and requires login again.
 - Added `Đổi email của tôi`.
   - Validates non-empty valid email format.
-  - Calls `supabase.auth.updateUser({ email: newEmail })`.
+  - Calls `supabase.auth.updateUser({ email: newEmail }, { emailRedirectTo })`.
   - Shows a confirmation message for Supabase email confirmation flow.
+
+## Supabase Email Redirect
+
+- Supabase Site URL configured to `https://huunsbk.github.io/PIC_HUU/`.
+- Supabase Redirect URLs configured:
+  - `https://huunsbk.github.io/PIC_HUU/`
+  - `https://huunsbk.github.io/PIC_HUU/**`
+- Email-change redirect now uses `getAppAuthRedirectUrl()` generated from `window.location.origin` and `import.meta.env.BASE_URL`.
+- GitHub Pages runtime redirect target is `https://huunsbk.github.io/PIC_HUU/`.
+- Localhost auth redirect references removed from frontend email-change flow.
+- Expired or invalid email verification hash errors are shown as a friendly Vietnamese message and then removed from the URL.
 
 ## CTO Note: Changing Other Users
 
