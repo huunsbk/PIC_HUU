@@ -36,4 +36,15 @@ Note: after deploy run `#132`, `/PIC_HUU/404.html` existed, but direct `/PIC_HUU
 ## Production Verification
 
 - Deploy run `#132`: PASS, but direct route still returned empty 404 before physical route fallback.
-- Pending redeploy with physical pretty-route fallback.
+- Deploy run `#133`: PASS.
+- Root route `https://huunsbk.github.io/PIC_HUU/`: PASS, HTTP 200, SPA shell returned.
+- Direct workspace route `https://huunsbk.github.io/PIC_HUU/admin/workspace/thang-oanh`: PASS, HTTP 200, SPA shell returned.
+- Refresh-equivalent trailing route `https://huunsbk.github.io/PIC_HUU/admin/workspace/thang-oanh/`: PASS, HTTP 200, SPA shell returned.
+- Public tournament route `https://huunsbk.github.io/PIC_HUU/tournament/thang-oanh`: PASS, HTTP 200, SPA shell returned.
+- JS asset `/PIC_HUU/assets/index-BMW3qZ6w.js`: PASS, HTTP 200.
+- CSS asset `/PIC_HUU/assets/index-DoU9ZdX_.css`: PASS, HTTP 200.
+
+Browser console verification:
+
+- Browser-control tooling was not available in this Codex session.
+- HTTP verification confirms no document 404 for the required direct workspace route and no JS/CSS asset 404.
