@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "build:pages": "vite build",
+    "build": "vite build && node scripts/copy-spa-fallback.mjs && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build:pages": "vite build && node scripts/copy-spa-fallback.mjs",
     "db:diagnose:team-tournament": "node scripts/supabase-sql-runner.mjs supabase/diagnostics/commercial_beta_v1/diagnose_team_tournament.sql",
     "start": "node dist/server.cjs",
     "lint": "eslint .",

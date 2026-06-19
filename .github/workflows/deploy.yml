@@ -40,7 +40,9 @@ jobs:
         run: npm run lint --if-present
 
       - name: Xây dựng dự án cho GitHub Pages
-        run: npm run build:pages
+        run: |
+          npm run build:pages
+          cp dist/index.html dist/404.html
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
