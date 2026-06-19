@@ -58,3 +58,32 @@
 
 - `EVENT_MANAGER` is removed from `src`.
 - Runtime login checks for TENANT_ADMIN and VIEWER require actual auth users with those roles. Prompt 03 does not create or delete `auth.users`.
+## Prompt 07-E Tenant Management Notes
+
+| Action | SUPER_ADMIN | TENANT_ADMIN | EVENT_ADMIN | REFEREE | VIEWER |
+|---|---|---|---|---|---|
+| List tenants | Yes | No | No | No | No |
+| Create tenant | Yes | No | No | No | No |
+| Update tenant | Yes | No | No | No | No |
+| Archive/restore tenant | Yes | No | No | No | No |
+
+Tenant management RPCs still perform server-side permission checks even though the UI only shows `Quản lý đơn vị` to SUPER_ADMIN.
+
+## Prompt 07-H Event Access Notes
+
+Event-scoped access uses `account_event_permissions`, not a separate `referees` table.
+
+| Event access action | SUPER_ADMIN | TENANT_ADMIN | EVENT_ADMIN | REFEREE | VIEWER |
+|---|---:|---:|---:|---:|---:|
+| List event access | Yes | Yes, same tenant | Yes, assigned event and `manage_events` | No | No |
+| Grant `enter_scores` to REFEREE | Yes | Yes, same tenant | Yes, assigned event and `manage_events` | No | No |
+| Grant event management to EVENT_ADMIN | Yes | Yes, same tenant | Yes, assigned event and `manage_events` | No | No |
+| Revoke event access | Yes | Yes, same tenant | Yes, assigned event and `manage_events` | No | No |
+
+Validation rules:
+
+- Target account must be active and in the same tenant as the event.
+- Target role must be `REFEREE` or `EVENT_ADMIN`.
+- `REFEREE` can only receive `enter_scores`.
+- `anon` has no execute grant on event-access admin RPCs.
+- `authenticated` has execute grant, but RPCs enforce role/tenant/event checks internally.

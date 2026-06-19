@@ -1,24 +1,29 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../supabaseClient';
 import { useTournamentStore } from '../store';
+import { isUsableEventId, useEvents } from './useEvents';
 
 export function useGroups() {
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
+  const { data: eventsData = [] } = useEvents();
+  const selectedEventId = isUsableEventId(currentEventId) && eventsData.some((event) => event.id === currentEventId)
+    ? currentEventId
+    : eventsData[0]?.id;
 
   return useQuery({
-    queryKey: ['groups', activeTenantId, currentEventId],
+    queryKey: ['groups', activeTenantId, selectedEventId],
     queryFn: async () => {
       const query = supabase
         .from('groups')
         .select('id, name, team_ids')
-        .eq('event_id', currentEventId)
+        .eq('event_id', selectedEventId)
         .eq('tenant_id', activeTenantId)
         .is('deleted_at', null);
       const teamsQuery = supabase
         .from('teams')
         .select('id, group_id')
-        .eq('event_id', currentEventId)
+        .eq('event_id', selectedEventId)
         .eq('tenant_id', activeTenantId)
         .is('deleted_at', null);
 
@@ -42,6 +47,6 @@ export function useGroups() {
         teamIds: teamIdsByGroup.get(group.id) || (Array.isArray(group.team_ids) ? group.team_ids : []),
       }));
     },
-    enabled: !!activeTenantId && activeTenantId !== 'default' && !!currentEventId,
+    enabled: !!activeTenantId && activeTenantId !== 'default' && !!selectedEventId,
   });
 }

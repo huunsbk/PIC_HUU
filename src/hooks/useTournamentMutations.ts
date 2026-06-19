@@ -5,8 +5,9 @@ import { useTournamentStore } from '../store';
 interface CreateTournamentWorkspaceParams {
   tournamentName: string;
   slug: string;
-  plan: string;
-  ownerAccountId: string; 
+  tenantId?: string | null;
+  location?: string | null;
+  startDate?: string | null;
 }
 
 export function useCreateTournamentWorkspace() {
@@ -15,11 +16,17 @@ export function useCreateTournamentWorkspace() {
 
   return useMutation({
     mutationFn: async (params: CreateTournamentWorkspaceParams) => {
-      const { data, error } = await supabase.rpc('create_tournament_workspace_v6', {
-        p_tournament_name: params.tournamentName,
+      const tenantId = params.tenantId || activeTenantId;
+      if (!tenantId || tenantId === 'default') {
+        throw new Error('Vui lòng chọn đơn vị trước khi tạo giải đấu.');
+      }
+
+      const { data, error } = await supabase.rpc('create_tournament_v1', {
+        p_tenant_id: tenantId,
+        p_name: params.tournamentName,
         p_slug: params.slug,
-        p_plan: params.plan,
-        p_account_id: params.ownerAccountId
+        p_location: params.location || null,
+        p_start_date: params.startDate || null
       });
 
       if (error) {
@@ -27,12 +34,13 @@ export function useCreateTournamentWorkspace() {
       }
       
       if (data && data.success === false) {
-         throw new Error(data.error || 'Failed to create workspace');
+         throw new Error(data.error || 'Không thể tạo giải đấu');
       }
 
       return data;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
       queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
     }
   });
@@ -42,42 +50,91 @@ export function useArchiveTournamentWorkspace() {
    const queryClient = useQueryClient();
    return useMutation({
      mutationFn: async (tournamentId: string) => {
-       const { data, error } = await supabase.rpc('archive_tournament_workspace_v6', {
+       const { data, error } = await supabase.rpc('archive_tournament_v1', {
          p_tournament_id: tournamentId
        });
  
        if (error) throw error;
        if (data && data.success === false) {
-          throw new Error(data.error || 'Failed to archive workspace');
+          throw new Error(data.error || 'Không thể lưu trữ giải đấu');
        }
  
        return data;
      },
      onSuccess: () => {
+       queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
        queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
      }
    });
  }
- 
- export function useTransferTournamentAdmin() {
+
+export function useUpdateTournamentWorkspace() {
    const queryClient = useQueryClient();
-   
    return useMutation({
-     mutationFn: async ({ tournamentId, newAccountId }: { tournamentId: string, newAccountId: string }) => {
-       const { data, error } = await supabase.rpc('transfer_tournament_owner_v6', {
-         p_tournament_id: tournamentId,
-         p_new_account_id: newAccountId
+     mutationFn: async (params: {
+       tournamentId: string;
+       name: string;
+       slug: string;
+       location?: string | null;
+       startDate?: string | null;
+       status?: string | null;
+     }) => {
+       const { data, error } = await supabase.rpc('update_tournament_v1', {
+         p_tournament_id: params.tournamentId,
+         p_name: params.name,
+         p_slug: params.slug,
+         p_location: params.location || null,
+         p_start_date: params.startDate || null,
+         p_status: params.status || null
        });
- 
+
        if (error) throw error;
        if (data && data.success === false) {
-          throw new Error(data.error || 'Failed to transfer ownership');
+          throw new Error(data.error || 'Không thể cập nhật giải đấu');
        }
- 
+
        return data;
+     },
+     onSuccess: () => {
+       queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
+       queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
+     }
+   });
+}
+
+export function useRestoreTournamentWorkspace() {
+   const queryClient = useQueryClient();
+   return useMutation({
+     mutationFn: async (tournamentId: string) => {
+       const { data, error } = await supabase.rpc('restore_tournament_v1', {
+         p_tournament_id: tournamentId
+       });
+
+       if (error) throw error;
+       if (data && data.success === false) {
+          throw new Error(data.error || 'Không thể khôi phục giải đấu');
+       }
+
+       return data;
+     },
+     onSuccess: () => {
+       queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
+       queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
+     }
+   });
+}
+
+export function useTransferTournamentAdmin() {
+   const queryClient = useQueryClient();
+
+   return useMutation({
+     mutationFn: async ({ tournamentId, newAccountId }: { tournamentId: string, newAccountId: string }) => {
+       void tournamentId;
+       void newAccountId;
+       throw new Error('Chuyển owner giải đấu chưa được nối lại trong Prompt 07-C.');
      },
      onSuccess: () => {
        queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
      }
    });
- }
+}

@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { Plus, Trophy, ShieldAlert, ArrowRight, Loader2 } from 'lucide-react';
-import { useTournamentWorkspaces, TournamentWorkspaceStat } from '../hooks/useTournamentWorkspaces';
+import { useTournamentWorkspaces } from '../hooks/useTournamentWorkspaces';
 import { useTournamentStore } from '../store';
 import TournamentWorkspaceCard from './TournamentWorkspaceCard';
 import CreateTournamentWorkspaceDialog from './CreateTournamentWorkspaceDialog';
-import ManageTournamentAdminDialog from './ManageTournamentAdminDialog';
 
 export default function TournamentWorkspaceListPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [manageAdminFor, setManageAdminFor] = useState<TournamentWorkspaceStat | null>(null);
   
   const limit = 50;
   const { data: workspacesResponse, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useTournamentWorkspaces(limit);
@@ -19,7 +17,7 @@ export default function TournamentWorkspaceListPage() {
       <div className="flex flex-col items-center justify-center p-12 text-center bg-white dark:bg-zinc-900 rounded-2xl border border-red-100 dark:border-red-900/30 min-h-[400px]">
         <ShieldAlert className="w-16 h-16 text-red-500 mb-6 animate-pulse" />
         <h3 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mb-2">Truy Cập Bị Từ Chối</h3>
-        <p className="text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">Bạn phải đăng nhập bằng tài khoản SUPER_ADMIN hoặc TENANT_ADMIN để quản lý nền tảng workspace.</p>
+        <p className="text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">Bạn phải đăng nhập bằng tài khoản SUPER_ADMIN hoặc TENANT_ADMIN để quản lý giải đấu.</p>
       </div>
     );
   }
@@ -35,9 +33,9 @@ export default function TournamentWorkspaceListPage() {
         <div className="relative z-10">
           <h1 className="text-3xl font-black text-white mb-2 flex items-center gap-3">
              <Trophy className="text-amber-400" />
-             Enterprise Workspaces
+             Quản lý giải đấu
           </h1>
-          <p className="text-blue-200 font-medium">Quản lý toàn bộ cấu trúc workspace tournament cho doanh nghiệp</p>
+          <p className="text-blue-200 font-medium">Quản lý danh sách giải đấu theo đơn vị đang chọn</p>
         </div>
         
         <div className="flex items-center gap-4 relative z-10">
@@ -45,7 +43,7 @@ export default function TournamentWorkspaceListPage() {
             onClick={() => setIsCreateModalOpen(true)}
             className="flex items-center gap-2 bg-white text-blue-900 hover:bg-blue-50 px-6 py-3 rounded-xl font-black text-sm transition-all shadow-md hover:shadow-xl transform hover:-translate-y-0.5"
           >
-            <Plus size={18} /> TẠO WORKSPACE MỚI
+            <Plus size={18} /> TẠO GIẢI ĐẤU
           </button>
         </div>
       </header>
@@ -53,19 +51,19 @@ export default function TournamentWorkspaceListPage() {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center p-24">
           <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div>
-          <p className="text-zinc-500 font-medium animate-pulse">Đang nạp dữ liệu workspace...</p>
+          <p className="text-zinc-500 font-medium animate-pulse">Đang nạp dữ liệu giải đấu...</p>
         </div>
       ) : error ? (
         <div className="p-6 bg-red-50 text-red-600 rounded-xl border border-red-200">
-           Đã xảy ra lỗi khi tải danh sách workspace: {(error as any).message}
+           Đã xảy ra lỗi khi tải danh sách giải đấu: {(error as any).message}
         </div>
       ) : (!tournaments || tournaments.length === 0) ? (
         <div className="flex flex-col items-center justify-center py-24 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl border-dashed">
           <div className="bg-zinc-100 dark:bg-zinc-800 p-6 rounded-full mb-6">
              <Trophy className="w-16 h-16 text-zinc-400 dark:text-zinc-500" />
           </div>
-          <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">Chưa có workspace nào</h3>
-          <p className="text-zinc-500 dark:text-zinc-400 mb-6 text-center max-w-sm">Hệ thống chưa có workspace nào được khởi tạo. Bấm tạo mới để cấp phát workspace.</p>
+          <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">Chưa có giải đấu nào</h3>
+          <p className="text-zinc-500 dark:text-zinc-400 mb-6 text-center max-w-sm">Đơn vị hiện tại chưa có giải đấu nào. Bấm tạo mới để khởi tạo giải.</p>
           <button
              onClick={() => setIsCreateModalOpen(true)}
              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold"
@@ -79,8 +77,7 @@ export default function TournamentWorkspaceListPage() {
             {tournaments.map(tour => (
               <TournamentWorkspaceCard 
                 key={tour.tournament_id} 
-                tournament={tour} 
-                onManageAdmin={(t) => setManageAdminFor(t)}
+                tournament={tour}
               />
             ))}
           </div>
@@ -95,7 +92,7 @@ export default function TournamentWorkspaceListPage() {
                 {isFetchingNextPage ? (
                   <><Loader2 size={16} className="animate-spin" /> Đang tải...</>
                 ) : (
-                  'Tải thêm Workspace'
+                  'Tải thêm giải đấu'
                 )}
               </button>
             </div>
@@ -105,10 +102,6 @@ export default function TournamentWorkspaceListPage() {
 
       {isCreateModalOpen && (
         <CreateTournamentWorkspaceDialog onClose={() => setIsCreateModalOpen(false)} />
-      )}
-      
-      {manageAdminFor && (
-        <ManageTournamentAdminDialog tournament={manageAdminFor} onClose={() => setManageAdminFor(null)} />
       )}
     </div>
   );

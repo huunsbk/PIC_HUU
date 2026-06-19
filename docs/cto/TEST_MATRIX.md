@@ -25,6 +25,14 @@
 | AUTH-011 | Direct `match_sets` write lock | Table privileges and direct insert attempts | anon/authenticated cannot insert/update/delete directly | Pass | Prompt 05 |
 | AUTH-012 | Prompt 06 admin RPC grants | information_schema routine privileges | `authenticated` execute, no `anon` execute | Pass | Prompt 06 |
 | AUTH-013 | Team/group admin permissions | Simulated SUPER_ADMIN/EVENT_ADMIN/REFEREE/anon | SUPER/EVENT_ADMIN pass when allowed; REFEREE/anon blocked | Pass | VIEWER not run; no active auth-linked account |
+| AUTH-014 | Prompt 07-H event access RPC grants | Post-apply SQL | list/grant/revoke event-access RPCs exist; authenticated execute; anon blocked | Pass | Migration 009 applied |
+| AUTH-015 | Prompt 07-H demo referee grant | SQL demo tenant check | Grant Đôi Nam if active REFEREE exists in demo tenant | Blocked by data | No active REFEREE in demo tenant; no `auth.users` created |
+| AUTH-016 | Prompt 07-H cross-tenant referee protection | SQL account/tenant review | Existing REFEREE from another tenant is not granted demo event access | Pass | Đôi Nam/Đôi Nữ grant counts remain 0 |
+| AUTH-017 | Prompt 07-I validation helper grants | Post-apply SQL | Internal validation helpers/core not executable by anon/authenticated | Pass | Public wrappers remain executable where needed |
+| AUTH-018 | Prompt 07-I invalid event id | Negative SQL | Empty event id returns `INVALID_EVENT_ID` | Pass | `create_team_v1('', ...)` |
+| AUTH-019 | Prompt 07-I wrong context ids | Negative SQL | Tournament/tenant ids used as event ids return `INVALID_CONTEXT` | Pass | `create_team_v1(tournament_id/tenant_id, ...)` |
+| AUTH-020 | Prompt 07-I missing match id | Negative SQL | Missing match returns `MATCH_NOT_FOUND` | Pass | `reset_match_score_v1(missing)` |
+| AUTH-021 | Prompt 07-I REFEREE management block | Negative SQL | Existing REFEREE from another tenant cannot manage Đôi Nam teams | Pass | Blocked with `INVALID_CONTEXT`; demo-tenant REFEREE E2E still pending |
 
 ## Nghiem Thu Nghiep Vu Pickleball
 
@@ -44,6 +52,31 @@
 | PB-012 | Knockout candidates | `prepare_knockout_candidates_v1` | 8 top-2 candidates, 10 with best thirds | Pass | Prompt 06 |
 | PB-013 | Confirm KO teams | `confirm_knockout_teams_v1` | Confirms 8 or 6/8 with BYE; invalid inputs blocked | Pass | Prompt 06 |
 | PB-014 | Generate KO bracket | `generate_knockout_bracket_v1` | QF/SF/F ids, next links, BYE placeholders | Pass | Prompt 06 |
+| PB-015 | Team UI RPC wiring | Static scan + code review | Main UI calls `create/update/archive/import` team RPCs | Pass | Prompt 07 |
+| PB-016 | Group UI RPC wiring | Static scan + code review | Main UI calls `setup_groups_v4`, `assign_team_to_group_v2`, `dissolve_groups_v4` | Pass | Prompt 07 |
+| PB-017 | Schedule UI RPC wiring | Static scan + code review | Main UI calls `generate_schedule_v1` | Pass | Prompt 07 |
+| PB-018 | Single scoring UI RPC wiring | Static scan + build | UI calls `update_match_score_v1`, no frontend `winner_id` input | Pass | Prompt 07 |
+| PB-019 | Best-of-3 scoring UI RPC wiring | Static scan + build | `ScoreEntry` calls `update_match_set_score_v1` per set | Pass | Prompt 07 |
+| PB-020 | Knockout UI RPC wiring | Static scan + build | UI calls prepare/confirm/generate knockout RPCs | Pass | Prompt 07 |
+| PB-021 | Single set real score input | Static UI review + build | UI accepts real set points such as `11-4`, not aggregate `1-0` input | Pass | Prompt 07 supplemental |
+| PB-022 | Best-of-3 set rows | Static UI review + build | UI renders Séc 1, Séc 2, Séc 3 with score A/B inputs | Pass | Prompt 07 supplemental |
+| PB-023 | Best-of-3 2-0 lock | Static UI review + build | Set 3 locks after finished 2-0 result; reset required before edit | Pass | Prompt 07 supplemental |
+| PB-024 | Score reset UI | Static UI review + build | UI calls `reset_match_score_v1` and clears local score inputs | Pass | Prompt 07 supplemental |
+| PB-025 | Team import uses real event id | Static scan + build | Team/group/schedule/KO RPC paths resolve `selectedEventId` from `public.events`; placeholder id not present in `src` | Pass | Manual network test pending |
+| PB-026 | Workspace context route | Static scan + build | `/admin/workspace/<slug>` resolves tenant/tournament context and does not use legacy placeholder hash | Pass | SQL migration/manual browser test pending |
+| PB-027 | Tenant management UI | Static scan + build | SUPER_ADMIN-only UI calls tenant management RPCs | Pass | Migration 006 not run in this turn |
+| PB-028 | Tournament management UI | Static scan + build | Tournament list/create/archive uses tournament RPCs | Pass | Migration 007 not run in this turn |
+| PB-029 | Migration 005-006-007 preflight | Orphan/FK preflight SQL | No orphan FK rows before applying migrations | Pass | Business test data reset cleared orphan rows |
+| PB-030 | Business test data reset | Count SQL before/after | Business tables reset to 0; protected auth/roles/accounts/sports preserved | Pass | `auth.users=8`, active SUPER_ADMIN=1 |
+| PB-031 | 005-006-007 RPC existence/grants | Post-apply SQL | RPCs exist; authenticated execute; anon blocked | Pass | 006/007 patched and re-applied to revoke anon |
+| PB-032 | Prompt 07-BASE demo tenant | `list_tenants_v1` + SQL verify | `CLB Thắng Oanh` exists once and is active | Pass | Tenant id `49fdb58c-1c70-4bb6-8ffc-d6ffe711195b` |
+| PB-033 | Prompt 07-BASE demo subscription | SQL verify | Demo tenant has one active subscription with sufficient plan | Pass | Enterprise plan; direct insert because no billing RPC exists |
+| PB-034 | Prompt 07-BASE demo tournament | `list_tournaments_v1` + context RPC | `thang-oanh` exists and resolves through `get_workspace_context_v1` | Pass | No events/teams created |
+| PB-035 | Prompt 07-G event RPCs | Post-apply SQL | list/create/update/archive/restore event RPCs exist; authenticated execute; anon blocked | Pass | Migration 008 applied |
+| PB-036 | Prompt 07-G demo events | SQL verify | Đôi Nam, Đôi Nữ, Đôi Nam Nữ exist in tournament `thang-oanh` | Pass | teams/groups/matches remain 0 |
+| PB-037 | Event UI RPC wiring | Static scan + build | Nội dung thi đấu list/create/archive/restore uses RPCs | Pass | Legacy Dashboard import/delete remains out of scope |
+| PB-038 | Event referee access UI wiring | Static scan + build | "Cấp quyền trọng tài" modal uses list/grant/revoke RPCs, no direct `account_event_permissions` write | Pass | Prompt 07-H |
+| PB-039 | Business mutation context guards | Static review + build | Team/group/schedule/score/KO mutations require tenant/tournament/event context | Pass | Prompt 07-I |
 
 ## Nghiem Thu Multi-Sport
 
@@ -58,6 +91,8 @@
 | SPORT-007 | Sports RLS | Simulated authenticated REFEREE | REFEREE cannot create sport | Pass | RLS blocks insert |
 | SPORT-008 | Event config RPC validation | `update_event_config_v1` transaction tests | Valid configs pass, invalid configs fail | Pass | Prompt 05 |
 | SPORT-009 | REFEREE event config denial | Simulated REFEREE | REFEREE cannot update event config | Pass | Prompt 05 |
+| SPORT-010 | Event config UI fields | Static UI review | sport, competition, format, scoring mode, groupCount/ranking options available | Pass | Prompt 07 |
+| SPORT-011 | Event config UI RPC | Static scan + build | Business config saves through `update_event_config_v1` | Pass | Prompt 07 |
 
 ## Nghiem Thu Realtime
 
@@ -66,9 +101,12 @@
 | RT-001 | Event-scoped updates | TBD | User receives updates only for selected event | Not run |  |
 | RT-002 | MatchSets RLS foundation | Simulated roles | anon cannot write; REFEREE needs event access | Pass | Prompt 04 |
 | RT-003 | MatchSets final write path | Direct write + scoring RPC tests | Direct write blocked; RPC write succeeds | Pass | Prompt 05 |
+| RT-004 | Frontend `match_sets` direct write scan | `rg` static scan | No direct insert/update/delete in `src` | Pass | Prompt 07 |
+| RT-005 | Frontend KO selections direct write scan | `rg` static scan | No direct insert/update/delete in `src` | Pass | Prompt 07 |
 
 ## Nghiem Thu Performance
 
 | ID | Hang muc | Cach kiem tra | Ket qua mong doi | Trang thai | Ghi chu |
 |---|---|---|---|---|---|
 | PERF-001 | Dashboard 100 tournaments | TBD | Load time under 2 seconds | Not run |  |
+| PERF-002 | Prompt 07 build bundle | `npm run build` | Build succeeds | Pass | Existing Vite chunk-size warning remains |

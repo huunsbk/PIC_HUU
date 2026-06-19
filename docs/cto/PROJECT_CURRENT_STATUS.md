@@ -286,6 +286,492 @@ rg "service_role|SUPABASE_SERVICE_ROLE_KEY|DATABASE_URL|JWT_SECRET|refresh_token
 Matches are variable names, documentation warnings, and session-token references only. No secret values were printed or committed.
 ```
 
+## GitHub Test Preview Status
+
+- Branch: `enterprise-completion-v1`.
+- Preview intent: push current work to GitHub for user online testing.
+- Release status: not a stable release.
+- Included scope: tenant/tournament/event context, tenant management, tournament management, event management RPCs, and referee event-access modal.
+- Demo tenant: `CLB Thắng Oanh`.
+- Demo tournament slug: `thang-oanh`.
+- Demo events: `Đôi Nam`, `Đôi Nữ`, `Đôi Nam Nữ`.
+- Manual browser tests remain pending.
+- REFEREE E2E remains blocked because the demo tenant does not yet have an active REFEREE account.
+- No database reset was performed.
+- Prompt 08 was not run.
+
+Pre-push verification:
+
+```text
+npm.cmd run build: PASS, Vite chunk-size warning remains.
+npm.cmd run lint: PASS.
+rg "EVENT_MANAGER" src: no results.
+rg "11111111-1111-1111-1111-111111111111" src: no results.
+rg "SUPABASE_SERVICE_ROLE_KEY|DATABASE_URL|JWT_SECRET|refresh_token|service_role" .: variable/documentation references only; no secret values found.
+```
+
+## Prompt 07-I Status: Business RPC Context Validation
+
+Current phase: Prompt 07-I completed.
+
+Completed:
+
+- Created and applied `supabase/migrations/enterprise_completion_v1/010_business_rpc_context_validation.sql`.
+- Added validation helpers for event context, event admin context, match scoring context, and event permission checks.
+- Updated `p06_require_event_admin_v1` so Prompt 06 RPCs inherit stricter event id/context validation.
+- Wrapped scoring RPCs so `match_id` is validated before core score logic runs.
+- Locked internal helper/core functions away from `anon` and `authenticated`.
+- Kept public scoring wrappers executable by `authenticated`; `anon` remains blocked.
+- Added frontend guard messages for missing tenant, tournament, and event.
+- `selectedEventId` must now be a real id beginning with `evt_`.
+
+SQL test results:
+
+```text
+post_apply_check_010_context_validation.sql: PASS
+auth.users count: 8
+active SUPER_ADMIN count: 1
+validated demo event: evt_6da72de38f5c469d8e829348c92dfde2
+validated role: SUPER_ADMIN
+empty event id: INVALID_EVENT_ID
+tournament id as event id: INVALID_CONTEXT
+tenant id as event id: INVALID_CONTEXT
+missing match id: MATCH_NOT_FOUND
+REFEREE tt create team on Đôi Nam: INVALID_CONTEXT
+```
+
+Frontend/build:
+
+```text
+npm.cmd run build: PASS, Vite chunk-size warning remains.
+npm.cmd run lint: PASS.
+rg "EVENT_MANAGER" src: No results.
+Secret scan: variable/documentation references only; no secret value printed or committed.
+```
+
+Remaining:
+
+- REFEREE E2E still requires a REFEREE account in tenant `CLB Thắng Oanh`.
+- Prompt 07-J and Prompt 08 were not run.
+
+## Prompt 07-H Status: Event-Scoped Referee Access
+
+Current phase: Prompt 07-H completed pending manual browser test with a demo-tenant REFEREE account.
+
+Completed:
+
+- Created and applied `supabase/migrations/enterprise_completion_v1/009_event_access_referee_rpcs.sql`.
+- Standardized event access on `account_event_permissions`; no `referees` table was created.
+- Added/verified RPCs:
+  - `list_event_access_v1(p_event_id text)`
+  - `grant_event_access_v1(p_event_id text, p_account_id text, p_permission text)`
+  - `revoke_event_access_v1(p_event_id text, p_account_id text, p_permission text)`
+- Verified `authenticated` has EXECUTE and `anon` does not have EXECUTE on the new event-access admin RPC signatures.
+- Updated frontend modal "Cấp quyền trọng tài" to call RPCs instead of direct writes.
+- Kept `auth.users` unchanged.
+- Confirmed active SUPER_ADMIN remains available.
+
+Demo data status:
+
+- Demo tenant `CLB Thắng Oanh` currently has no active REFEREE account.
+- No demo REFEREE grant was created.
+- Existing active REFEREE account `tt` belongs to another tenant and was not granted cross-tenant event access.
+
+Tests run:
+
+```text
+post_apply_check_009_event_access.sql: PASS
+auth.users count: 8
+active SUPER_ADMIN count: 1
+eligible demo REFEREE count: 0
+Đôi Nam REFEREE grant count: 0
+Đôi Nữ REFEREE grant count: 0
+rg "EVENT_MANAGER" src: No results.
+npm.cmd run build: PASS, Vite chunk-size warning remains.
+npm.cmd run lint: PASS.
+```
+
+Remaining:
+
+- Manual browser test of the modal is pending.
+- End-to-end REFEREE login isolation test requires a REFEREE account in tenant `CLB Thắng Oanh`; this prompt intentionally did not create `auth.users`.
+
+## Prompt 07-C/D/E/F Current Status
+
+### Phase
+
+Prompt 07-C/D/E/F implemented locally. Prompt 08 not started.
+
+### Migrations Created
+
+```text
+supabase/migrations/enterprise_completion_v1/005_context_scope_hardening.sql
+supabase/migrations/enterprise_completion_v1/006_tenant_management_rpcs.sql
+supabase/migrations/enterprise_completion_v1/007_tournament_management_rpcs.sql
+```
+
+### Migrations Run
+
+```text
+Not run in this turn.
+No database reset.
+No auth.users changes.
+```
+
+### Frontend Status
+
+```text
+activeTenantId, activeTenantName, activeTournamentId, and selectedEventId are separated.
+/admin/workspace/<slug> resolves workspace context through get_workspace_context_v1 when available.
+Menu labels were renamed to Vietnamese product terms.
+SUPER_ADMIN tenant management UI was added.
+Tournament management UI now calls list/create/archive tournament RPCs.
+```
+
+### Tests Run
+
+```text
+npm.cmd run build: PASS
+npm.cmd run lint: PASS
+rg "11111111-1111-1111-1111-111111111111" src: no results
+old menu label scan in src: no results
+old workspace v6 RPC scan in src: no active results
+```
+
+### Remaining Work
+
+```text
+Apply migrations 005, 006, 007 to Supabase.
+Manual browser test for Thắng Oanh route slug, event visibility, and separated team counts.
+```
+
+## Migration 005-006-007 Preflight Apply Status
+
+### Static SQL Safety
+
+```text
+Scanned migrations 005, 006, 007 for TRUNCATE, DELETE FROM, DROP TABLE, auth.users.
+Result: no destructive reset command found; no auth.users mutation found.
+```
+
+### Preflight SQL Result
+
+```text
+auth_users_count = 8
+active_super_admin_count = 1
+orphan_events_tournament_id_count = 0
+orphan_teams_event_id_count = 10
+orphan_groups_event_id_count = 0
+orphan_matches_event_id_count = 0
+orphan_match_sets_event_id_count = 0
+duplicate_active_tournament_tenant_slug_count = 0
+duplicate_tenant_slug_count = 0
+```
+
+### Blocking Orphan Detail
+
+```text
+teams.event_id = 11111111-1111-1111-1111-111111111111__event-7im6lk9
+orphan team names = t1, t2, t3, t4, t5, t6, t7, t8, t9, t10
+tournament_id on these rows = 11111111-1111-1111-1111-111111111111
+```
+
+### Decision
+
+```text
+Migrations 005, 006, 007 were not applied.
+Reason: preflight found orphan teams.event_id rows; per safety requirement, apply stopped.
+No database reset.
+No auth.users changes.
+Prompt 07-G and Prompt 08 were not run.
+```
+
+## Business Test Data Reset And 005-006-007 Apply Status
+
+### Reset
+
+```text
+User confirmed all current Supabase business data is test data.
+Business test data reset completed with DELETE statements.
+No TRUNCATE CASCADE.
+No DROP TABLE.
+No auth.users changes.
+No accounts/roles/permissions/role_permissions/sports changes.
+```
+
+### Counts After Reset
+
+```text
+auth.users = 8
+accounts = 5
+roles = 5
+permissions = 12
+role_permissions = 20
+sports = 1
+tenants = 2
+active SUPER_ADMIN = 1
+
+match_sets = 0
+matches = 0
+event_knockout_selections = 0
+groups = 0
+teams = 0
+account_event_permissions = 0
+events = 0
+tournament = 0
+tenant_subscriptions = 0
+invoices = 0
+payments = 0
+audit_logs = 0
+```
+
+### Post-Reset Preflight
+
+```text
+orphan_events_tournament_id_count = 0
+orphan_teams_event_id_count = 0
+orphan_groups_event_id_count = 0
+orphan_matches_event_id_count = 0
+orphan_match_sets_event_id_count = 0
+duplicate_active_tournament_tenant_slug_count = 0
+duplicate_tenant_slug_count = 0
+```
+
+### Migrations
+
+```text
+005_context_scope_hardening.sql = applied
+006_tenant_management_rpcs.sql = applied
+007_tournament_management_rpcs.sql = applied
+```
+
+### RPC/Grant Check
+
+```text
+All expected 005/006/007 RPCs exist.
+authenticated EXECUTE = true
+anon EXECUTE = false
+auth.users remained 8
+active SUPER_ADMIN remained 1
+```
+
+### Build/Lint
+
+```text
+npm.cmd run build = PASS
+npm.cmd run lint = PASS
+```
+
+### Current Caveat
+
+```text
+No tournament/event/team demo data exists after reset.
+The old Thắng Oanh route cannot be manually verified until a new tournament with that slug is created.
+tenant_subscriptions = 0, so PLAN_LIMIT_EXCEEDED may appear if quota triggers require a subscription.
+```
+
+## Prompt 07-BASE Status
+
+### Demo SaaS Foundation
+
+```text
+Tenant demo:
+name = CLB Thắng Oanh
+slug = clb-thang-oanh
+id = 49fdb58c-1c70-4bb6-8ffc-d6ffe711195b
+status = active
+
+Subscription demo:
+plan = Enterprise
+plan_id = 8e88d676-023d-4861-82d9-addd1b4d5783
+status = active
+creation path = direct insert scoped to demo tenant because no billing RPC exists yet
+
+Tournament demo:
+name = Giải Pickleball Thắng Oanh 2026
+slug = thang-oanh
+id = tournament-ee121f28-e882-466b-acfc-866179df715a
+```
+
+### Verification
+
+```text
+list_tenants_v1 includes CLB Thắng Oanh = pass
+list_tournaments_v1 includes thang-oanh = pass
+get_workspace_context_v1('thang-oanh') = pass
+auth.users = 8
+active SUPER_ADMIN = 1
+events = 0
+teams = 0
+npm.cmd run build = PASS
+npm.cmd run lint = PASS
+```
+
+### Manual Browser Test
+
+```text
+Not executed in this turn because no browser-control tool was available.
+Expected: /PIC_HUU/admin/workspace/thang-oanh remains route-based and does not return to #/11111111...
+Expected: header shows Đơn vị / Giải / Nội dung thi đấu.
+Expected: Nội dung thi đấu is empty until Prompt 07-G creates events.
+```
+
+## Prompt 07-G Status
+
+### Migration
+
+```text
+008_event_management_rpcs.sql = applied
+```
+
+### RPCs
+
+```text
+list_events_by_tournament_v1 = exists
+create_event_v1 = exists
+update_event_v1 = exists
+archive_event_v1 = exists
+restore_event_v1 = exists
+
+authenticated EXECUTE = true
+anon EXECUTE = false
+```
+
+### Demo Events
+
+```text
+Tournament slug = thang-oanh
+Tournament id = tournament-ee121f28-e882-466b-acfc-866179df715a
+
+Đôi Nam = evt_6da72de38f5c469d8e829348c92dfde2
+Đôi Nữ = evt_4b8ff313ce2c43fb8aa796cf6a9da464
+Đôi Nam Nữ = evt_86d3121231e2486c99590615a11d5407
+
+All 3 events share the same tournament_id.
+teams = 0
+groups = 0
+matches = 0
+```
+
+### Build/Lint
+
+```text
+npm.cmd run build = PASS
+npm.cmd run lint = PASS
+```
+
+### Manual Browser Test
+
+```text
+Not executed in this turn because no browser-control tool was available.
+Expected: Nội dung thi đấu page shows Đôi Nam, Đôi Nữ, Đôi Nam Nữ.
+Expected: selecting an event sets selectedEventId to the real evt_... id.
+```
+
+## Prompt 07 Current Status
+
+- Prompt/phase current: Prompt 07 frontend RPC wiring.
+- Prompt/phase completed: Prompt 02, Prompt 03, Prompt 04, Prompt 05, Prompt 06, Prompt 07 code wiring.
+- Migration created: none in Prompt 07.
+- Migration run: none in Prompt 07.
+- Database reset: not performed.
+- `auth.users`: not modified.
+- Seed 100 tournaments: not created.
+
+### Prompt 07 Files Changed
+
+- `src/lib/api/tournamentRpc.ts`
+- `src/hooks/useTournamentRpcMutations.ts`
+- `src/hooks/useDataMutations.ts`
+- `src/hooks/useEvents.ts`
+- `src/hooks/useMatchSets.ts`
+- `src/components/create-event-modal.tsx`
+- `src/components/GroupManager.tsx`
+- `src/components/ScoreEntry.tsx`
+- `src/components/KnockoutBracket.tsx`
+- `docs/cto/FRONTEND_RPC_WIRING.md`
+- `docs/cto/UI_MANUAL_TESTS.md`
+- `docs/cto/PROJECT_CURRENT_STATUS.md`
+- `docs/cto/TEST_MATRIX.md`
+- `docs/cto/IMPLEMENTATION_REPORT.md`
+
+### Prompt 07 Verification
+
+```text
+npm run build: PASS
+npm run lint: PASS
+npm run typecheck: Project chưa cấu hình typecheck.
+rg "EVENT_MANAGER" src: no results
+```
+
+### Prompt 07 RPC Usage Check
+
+```text
+src/lib/api/tournamentRpc.ts contains calls to:
+update_event_config_v1
+create_team_v1
+update_team_v1
+archive_team_v1
+import_teams_v1
+setup_groups_v4
+assign_team_to_group_v2
+dissolve_groups_v4
+generate_schedule_v1
+update_match_score_v1
+update_match_set_score_v1
+reset_match_score_v1
+prepare_knockout_candidates_v1
+confirm_knockout_teams_v1
+generate_knockout_bracket_v1
+
+src/hooks/useTournamentRpcMutations.ts exposes the same RPC names for UI mutations.
+src/components/KnockoutBracket.tsx uses knockout candidate/confirm/generate RPC mutations.
+```
+
+### Prompt 07 Direct Write Static Check
+
+```text
+rg teams write:
+src/store.ts:539
+src/components/Dashboard.tsx:600
+src/components/Dashboard.tsx:601
+src/components/Dashboard.tsx:606
+
+rg groups write:
+src/store.ts:541
+src/components/Dashboard.tsx:621
+src/components/Dashboard.tsx:622
+src/components/Dashboard.tsx:627
+
+rg matches write:
+src/store.ts:537
+src/components/Dashboard.tsx:579
+src/components/Dashboard.tsx:580
+src/components/Dashboard.tsx:585
+
+rg match_sets write:
+no results
+
+rg event_knockout_selections write:
+no results
+```
+
+Remaining direct writes are legacy event delete and Dashboard JSON import/replace paths. Primary team/group/schedule/scoring/knockout UI flows are now RPC-wired.
+
+### Prompt 07 Secret Scan
+
+```text
+rg "service_role|SUPABASE_SERVICE_ROLE_KEY|DATABASE_URL|JWT_SECRET|refresh_token|access_token" .
+Results are variable names, environment placeholders, documentation warnings, and session-token references only. No secret values were printed or committed.
+```
+
+### Prompt 07 Remaining Risks
+
+- Event creation itself still uses the existing create-event path because no `create_event_v1` RPC exists yet; event business config is saved through `update_event_config_v1`.
+- Legacy Dashboard JSON import/replace and store event-delete paths still write directly to business tables.
+- `SchedulerAndScoreKeeper` remains a compact aggregate scoring surface; the dedicated `ScoreEntry` view is the Prompt 07 best-of-3 scoring UI.
+- Manual browser flow tests are documented but not executed with live UI data in this prompt.
+
 ### Build And Lint
 
 ```text

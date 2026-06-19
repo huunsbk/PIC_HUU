@@ -67,7 +67,7 @@ export default function ManageTournamentAdminDialog({ tournament, onClose }: Man
 
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             <div>
-               <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">Workspace</p>
+               <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">Giải đấu</p>
                <p className="text-lg font-bold text-blue-600">{tournament.name}</p>
                <p className="text-xs text-zinc-500 mt-1">Owner hiện tại: {tournament.owner_name || 'Không có'}</p>
             </div>
@@ -106,7 +106,7 @@ export default function ManageTournamentAdminDialog({ tournament, onClose }: Man
       <ConfirmDialog
         isOpen={isConfirmOpen}
         title="Chuyển quyền sở hữu"
-        message={`Bạn có chắc chắn muốn chuyển quyền sở hữu Workspace "${tournament.name}" sang tài khoản này không?`}
+        message={`Bạn có chắc chắn muốn chuyển quyền sở hữu giải đấu "${tournament.name}" sang tài khoản này không?`}
         confirmText="Chuyển quyền"
         cancelText="Hủy bỏ"
         isDanger={false}

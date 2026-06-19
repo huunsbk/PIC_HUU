@@ -18,7 +18,16 @@ const getTenantHashPath = (tenantId: string) => `#/${tenantId.replace(/_/g, '-')
 
 const getCurrentTenantHash = () => window.location.hash.replace(/^#\/?/, '').trim();
 
+const isRouteWorkspacePath = () => {
+  const basePath = getBasePath().replace(/\/$/, '');
+  const appPath = window.location.pathname.startsWith(basePath)
+    ? window.location.pathname.slice(basePath.length)
+    : window.location.pathname;
+  return appPath.startsWith('/admin/workspace/') || appPath.startsWith('/tournament/');
+};
+
 const navigateToTenantHash = (tenantId: string, reload = false) => {
+  if (isRouteWorkspacePath()) return;
   const targetUrl = `${window.location.origin}${getBasePath()}${getTenantHashPath(tenantId)}`;
   if (window.location.href !== targetUrl) {
     window.location.href = targetUrl;
@@ -59,9 +68,12 @@ interface AppState {
   currentEnterpriseUser: any | null; // Will store full EnterpriseAccount details
   userRole: 'guest' | string;
   activeTenantId: string; // 'default' or UUID of tenant
+  activeTenantName: string | null;
+  activeTournamentId: string | null;
   setAuthStatus: (role: 'guest' | string, username: string | null, tenantId: string, enterpriseUser?: any) => Promise<void>;
   logout: () => Promise<void>;
   setTenantId: (tenantId: string) => Promise<void>;
+  setWorkspaceContext: (context: { tenantId: string; tenantName?: string | null; tournamentId?: string | null; tournamentName?: string | null; tournamentSlug?: string | null; }) => Promise<void>;
 
   permissions: string[];
   hasPermission: (permissionName: string) => boolean;
@@ -319,6 +331,8 @@ export const useTournamentStore = create<AppState>()(
         currentEnterpriseUser: null,
         userRole: 'guest',
         activeTenantId: 'default',
+        activeTenantName: null,
+        activeTournamentId: null,
         isLoadingSupabase: false,
         setAuthStatus: async (role, username, tenantId, enterpriseUser) => {
           console.log('[Auth Setup] Bắt đầu thiết lập Auth.');
@@ -334,6 +348,7 @@ export const useTournamentStore = create<AppState>()(
             currentUser: username,
             currentEnterpriseUser: normalizedEnterpriseUser,
             activeTenantId: tenantId,
+            activeTenantName: normalizedEnterpriseUser?.tenant?.name || null,
             permissions: normalizedEnterpriseUser?.permissions || [],
             isAdmin: false /* deprecated */,
             selectedTab: (role === 'EVENT_ADMIN' || (normalizedEnterpriseUser?.permissions?.includes('enter_scores') && !normalizedEnterpriseUser?.permissions?.includes('*'))) ? 'scoreEntry' : 'dashboard',
@@ -343,6 +358,7 @@ export const useTournamentStore = create<AppState>()(
           if (normalizedEnterpriseUser && normalizedEnterpriseUser.id) {
             // Đảm bảo URL trên trình duyệt đồng bộ với tenant được cấp quyền, tránh nhầm lẫn
             requestAnimationFrame(() => {
+              if (isRouteWorkspacePath()) return;
               const expectedTenantHash = tenantId.replace(/_/g, '-');
               if (getCurrentTenantHash() !== expectedTenantHash || window.location.pathname !== getBasePath()) {
                 navigateToTenantHash(tenantId);
@@ -368,6 +384,8 @@ export const useTournamentStore = create<AppState>()(
             currentUser: null,
             currentEnterpriseUser: null,
             activeTenantId: 'default',
+            activeTenantName: null,
+            activeTournamentId: null,
             permissions: [],
             isAdmin: false,
           });
@@ -399,7 +417,7 @@ export const useTournamentStore = create<AppState>()(
               console.warn(`Chuyển đổi CSDL không hợp lệ cho tài khoản này. Đã khóa để bảo vệ. Expected ${normalizedAllowed}, got ${tenantId.toLowerCase()}`);
               // Chuyển hướng người dùng về đúng khu vực của họ thay vì đăng xuất ngay lập tức gây khó chịu, nhưng nếu có hack cố tình thì chặn
               const expectedTenantHash = normalizedAllowed.replace(/_/g, '-');
-              if (getCurrentTenantHash() !== expectedTenantHash || window.location.pathname !== getBasePath()) {
+              if (!isRouteWorkspacePath() && (getCurrentTenantHash() !== expectedTenantHash || window.location.pathname !== getBasePath())) {
                 navigateToTenantHash(normalizedAllowed, true);
                 return;
               }
@@ -411,6 +429,25 @@ export const useTournamentStore = create<AppState>()(
           
           originalSet({ activeTenantId: tenantId, isLoadingSupabase: true });
           await get().initSupabase();
+        },
+        setWorkspaceContext: async (context) => {
+          const currentTournament = get().tournament;
+          originalSet({
+            activeTenantId: context.tenantId,
+            activeTenantName: context.tenantName || null,
+            activeTournamentId: context.tournamentId || null,
+            isLoadingSupabase: true,
+            tournament: {
+              ...currentTournament,
+              id: context.tournamentId || currentTournament.id,
+              name: context.tournamentName || currentTournament.name,
+            },
+          });
+          if (context.tournamentId) {
+            await get().initSupabase();
+          } else {
+            originalSet({ isLoadingSupabase: false });
+          }
         },
         isAdmin: false,
         setAdminStatus: (status: boolean) => {
@@ -592,7 +629,20 @@ export const useTournamentStore = create<AppState>()(
         },
 
         setCurrentEvent: (id) => {
-          if (!get().events[id]) return;
+          if (!id) return;
+          if (!get().events[id]) {
+            set({
+              currentEventId: id,
+              teams: {},
+              groups: {},
+              matches: [],
+              activeGroupId: null,
+              advanceSelectionMode: 'auto',
+              manualQualifiedTeamIds: [],
+            });
+            logToStore('Hệ Thống', `Chuyển sang nội dung thi đấu từ cơ sở dữ liệu: "${id}"`);
+            return;
+          }
           set({ currentEventId: id });
           logToStore('Hệ Thống', `Chuyển sang điều hành nội dung: "${get().events[id]?.name}"`);
         },
@@ -1893,7 +1943,7 @@ export const useTournamentStore = create<AppState>()(
             // Lấy trạng thái dữ liệu trong store cục bộ trước khi query (khôi phục từ localStorage)
             const localState = get();
             const realTenantId = await getCurrentTenantId();
-            const activeTenantId = realTenantId || localState.activeTenantId || 'default';
+            const activeTenantId = localState.activeTenantId || realTenantId || 'default';
             // Only add eq(tenant_id) if it is a real UUID! Default is invalid for UUID type.
             const validTenantUUID = activeTenantId !== 'default' ? activeTenantId : null;
             
@@ -1914,7 +1964,7 @@ export const useTournamentStore = create<AppState>()(
             const regularTournaments = tData || [];
 
             // TÌNH HUỐNG 2: SUPABASE ĐÃ CÓ VỀ HOẶC CẦN KHỞI TẠO NỘI DUNG RIÊNG CHO TENANT
-            const targetTid = localState.activeTenantId === 'default' ? 't-1' : localState.activeTenantId;
+            const targetTid = localState.activeTournamentId || (localState.activeTenantId === 'default' ? 't-1' : localState.activeTenantId);
             let dbTournament = regularTournaments.find((rowId: any) => rowId.id === targetTid) || null;
             if (!dbTournament) {
               let tournamentDetailsName = DEFAULT_TOURNAMENT.name;
@@ -1965,6 +2015,8 @@ export const useTournamentStore = create<AppState>()(
             // Lưu dữ liệu trực tuyến đồng bộ hoàn chỉnh vào Zustand store
             originalSet({
               tournament: tournamentState,
+              activeTenantId,
+              activeTournamentId: dbTournament.id,
               currentEventId: currentEventId,
               supabaseConnected: true,
               isLoadingSupabase: false,
