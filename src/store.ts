@@ -438,11 +438,12 @@ export const useTournamentStore = create<AppState>()(
         setWorkspaceContext: async (context) => {
           const currentState = get();
           const currentTournament = currentState.tournament;
-          const nextTournamentId = context.tournamentId || null;
+          const hasTournamentContext = Object.prototype.hasOwnProperty.call(context, 'tournamentId');
+          const nextTournamentId = hasTournamentContext ? context.tournamentId || null : currentState.activeTournamentId || null;
           const nextTournament = {
             ...currentTournament,
-            id: nextTournamentId || currentTournament.id,
-            name: context.tournamentName || currentTournament.name,
+            id: nextTournamentId || '',
+            name: nextTournamentId ? context.tournamentName || currentTournament.name : 'Chưa có giải',
           };
 
           const isSameContext =

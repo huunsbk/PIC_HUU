@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     const accountId = String(req.query.id || '').trim();
     if (!accountId) throw apiError('Thiếu accountId.', 400);
 
-    if (req.method === 'PUT') {
+    if (req.method === 'PUT' || req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
       const displayName = String(body.displayName || '').trim();
       const password = String(body.password || '');
@@ -105,7 +105,7 @@ export default async function handler(req, res) {
       return sendJson(res, 200, { success: true });
     }
 
-    res.setHeader('Allow', 'PUT, DELETE');
+    res.setHeader('Allow', 'PUT, POST, DELETE');
     return sendJson(res, 405, { error: 'Method not allowed' });
   } catch (error) {
     return handleError(res, error);

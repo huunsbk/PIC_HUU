@@ -59,6 +59,7 @@ function AdminWorkspace() {
   const activeTenantId = useTournamentStore(state => state.activeTenantId);
   const activeTournamentId = useTournamentStore(state => state.activeTournamentId);
   const initSupabase = useTournamentStore(state => state.initSupabase);
+  const setSelectedTab = useTournamentStore(state => state.setSelectedTab);
 
   useEffect(() => {
     let isCancelled = false;
@@ -67,6 +68,51 @@ function AdminWorkspace() {
       const routeSlug = decodeURIComponent(slug);
       let tenantOrTournamentId = routeSlug;
       let tournamentId = routeSlug;
+
+      const { data: tenantByRouteSlug } = await supabase
+        .from('tenants')
+        .select('id, name, slug')
+        .eq('slug', routeSlug)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (tenantByRouteSlug) {
+        const { data: latestTournament } = await supabase
+          .from('tournament')
+          .select('id, tenant_id, slug, name')
+          .eq('tenant_id', tenantByRouteSlug.id)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!latestTournament) {
+          if (!isCancelled && activeTenantId !== tenantByRouteSlug.id) {
+            await setWorkspaceContext({
+              tenantId: tenantByRouteSlug.id,
+              tenantName: tenantByRouteSlug.name,
+              tournamentId: null,
+              tournamentName: null,
+              tournamentSlug: null,
+            });
+          }
+          if (!isCancelled) setSelectedTab('workspaces');
+          return;
+        }
+
+        tenantOrTournamentId = tenantByRouteSlug.id;
+        tournamentId = latestTournament.id;
+        if (!isCancelled) {
+          await setWorkspaceContext({
+            tenantId: tenantByRouteSlug.id,
+            tenantName: tenantByRouteSlug.name,
+            tournamentId: latestTournament.id,
+            tournamentName: latestTournament.name,
+            tournamentSlug: latestTournament.slug,
+          });
+        }
+        return;
+      }
 
       const { data: workspaceContext, error: workspaceContextError } = await supabase.rpc('get_workspace_context_v1', {
         p_slug: routeSlug,
@@ -123,7 +169,7 @@ function AdminWorkspace() {
     return () => {
       isCancelled = true;
     };
-  }, [slug, activeTenantId, activeTournamentId, setWorkspaceContext, initSupabase]);
+  }, [slug, activeTenantId, activeTournamentId, setWorkspaceContext, initSupabase, setSelectedTab]);
 
   return <TournamentShell />;
 }
