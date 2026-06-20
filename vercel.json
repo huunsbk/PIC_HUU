@@ -3,6 +3,14 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/admin/accounts",
+      "destination": "/api/admin/accounts/index"
+    },
+    {
+      "source": "/api/admin/accounts/:id",
+      "destination": "/api/admin/account-item?id=:id"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

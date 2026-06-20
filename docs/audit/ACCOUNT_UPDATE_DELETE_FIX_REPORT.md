@@ -19,17 +19,27 @@ Standardized Vercel API routing to:
 
 - `api/admin/accounts/index.js` for create account.
 - `api/admin/accounts/[id].js` for update/delete account.
+- `api/admin/account-item.js` as a flat Vercel function fallback for update/delete.
 - `api/admin/accounts/reset.js` for reset password.
 
 Kept GitHub Pages fallback through Supabase Edge Functions. Vercel production uses the same-origin API routes.
 
+After the first deploy, production still returned static `index.html` 405 for `PUT`/`DELETE`
+on `/api/admin/accounts/:id`, which showed Vercel was not matching the nested dynamic
+function. Added explicit Vercel rewrites before the SPA fallback:
+
+- `/api/admin/accounts` -> `/api/admin/accounts/index`
+- `/api/admin/accounts/:id` -> `/api/admin/account-item?id=:id`
+
 ## Files Changed
 
 - `api/admin/accounts/index.js`
+- `api/admin/account-item.js`
 - `api/admin/accounts/[id].js`
 - `api/admin/accounts/reset.js`
 - `api/admin/_accountService.js`
 - `src/App.tsx`
+- `vercel.json`
 - deleted `api/admin/accounts.js`
 
 ## API Behavior
@@ -115,4 +125,3 @@ Production authenticated UI test:
 
 - Pending in this environment because no reusable SUPER_ADMIN browser session/token is available to the agent.
 - After deploy, expected non-authenticated API probes can confirm route deployment no longer returns 405.
-
