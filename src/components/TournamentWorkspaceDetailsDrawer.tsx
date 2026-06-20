@@ -8,6 +8,8 @@ interface TournamentWorkspaceDetailsDrawerProps {
 }
 
 export default function TournamentWorkspaceDetailsDrawer({ tournament, onClose }: TournamentWorkspaceDetailsDrawerProps) {
+  const tenantDisplayName = tournament.tenant_name || tournament.tenant_id || '';
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm animate-fade-in">
       <div className="w-full max-w-md bg-white dark:bg-zinc-900 h-full shadow-2xl flex flex-col animate-slide-in-right">
@@ -52,8 +54,8 @@ export default function TournamentWorkspaceDetailsDrawer({ tournament, onClose }
           <div className="pt-6 border-t border-zinc-200 dark:border-zinc-800">
              <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-4 uppercase tracking-wider">Đơn vị</h4>
              <div className="bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                {tournament.tenant_id ? (
-                   <p className="font-bold text-lg text-zinc-900 dark:text-zinc-100">{tournament.tenant_id}</p>
+                {tenantDisplayName ? (
+                   <p className="font-bold text-lg text-zinc-900 dark:text-zinc-100">{tenantDisplayName}</p>
                 ) : (
                    <p className="text-zinc-500 italic">Chưa rõ đơn vị</p>
                 )}

@@ -23,6 +23,18 @@ export default function TournamentWorkspaceListPage() {
   }
 
   const tournaments = workspacesResponse?.pages.flatMap(page => page.data) || [];
+  const groupedTournaments = React.useMemo(() => {
+    const groups = new Map<string, typeof tournaments>();
+
+    tournaments.forEach((tour) => {
+      const tenantName = tour.tenant_name || tour.tenant_id || 'Chưa rõ đơn vị';
+      const current = groups.get(tenantName) || [];
+      current.push(tour);
+      groups.set(tenantName, current);
+    });
+
+    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b, 'vi'));
+  }, [tournaments]);
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -72,15 +84,29 @@ export default function TournamentWorkspaceListPage() {
           </button>
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {tournaments.map(tour => (
-              <TournamentWorkspaceCard 
-                key={tour.tournament_id} 
-                tournament={tour}
-              />
-            ))}
-          </div>
+        <div className="space-y-8">
+          {groupedTournaments.map(([tenantName, tenantTournaments]) => (
+            <section key={tenantName} className="space-y-4">
+              <div className="flex items-center justify-between gap-4 border-b border-zinc-200 pb-3 dark:border-zinc-800">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Đơn vị</p>
+                  <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100">{tenantName}</h2>
+                </div>
+                <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                  {tenantTournaments.length} giải đấu
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {tenantTournaments.map(tour => (
+                  <TournamentWorkspaceCard
+                    key={tour.tournament_id}
+                    tournament={tour}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
 
           {hasNextPage && (
             <div className="flex justify-center pt-8 pb-4">

@@ -41,7 +41,8 @@ import {
   FileDown,
   ShieldAlert,
   UserCog,
-  Building2
+  Building2,
+  UserCircle
 } from 'lucide-react';
 
 function isRouteWorkspacePathname() {
@@ -363,6 +364,23 @@ function TournamentShell() {
   const currentEventId = useTournamentStore((state) => state.currentEventId);
   const { data: headerEvents = [] } = useEventsQuery();
   const currentHeaderEvent = headerEvents.find((event: any) => event.id === currentEventId) || headerEvents[0];
+  const isAuthenticated = !!currentEnterpriseUser || userRole !== 'guest' || !!currentUser;
+  const roleLabels: Record<string, string> = {
+    SUPER_ADMIN: 'Quản trị hệ thống',
+    TENANT_ADMIN: 'Quản trị đơn vị',
+    EVENT_ADMIN: 'Quản trị giải đấu',
+    REFEREE: 'Trọng tài',
+    VIEWER: 'Người xem',
+    guest: 'Khách',
+  };
+  const profileName =
+    currentEnterpriseUser?.displayName ||
+    currentEnterpriseUser?.display_name ||
+    currentEnterpriseUser?.username ||
+    currentUser ||
+    'Chưa đăng nhập';
+  const profileRole = roleLabels[currentEnterpriseUser?.role_name || currentEnterpriseUser?.role || userRole] || currentEnterpriseUser?.role_name || currentEnterpriseUser?.role || userRole;
+  const profileTournamentName = tournament.name || 'Chưa chọn giải';
 
   const [isLoginOpen, setIsLoginOpen] = React.useState(false);
 
@@ -420,7 +438,7 @@ function TournamentShell() {
   }, [hasPermission]);
 
   const handleAdminAuth = () => {
-    if (hasPermission("manage_events")) {
+    if (isAuthenticated) {
       useTournamentStore.getState().logout();
     } else {
       setIsLoginOpen(true);
@@ -539,9 +557,17 @@ function TournamentShell() {
               </div>
             </div>
             
-            <div className="flex items-center gap-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-               {hasPermission("manage_events") ? (
-                <div className="flex items-center gap-2 text-xs">
+            <div className="flex flex-wrap items-center justify-end gap-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+               {isAuthenticated ? (
+                <div className="flex flex-wrap items-center justify-end gap-2 text-xs">
+                  <div className="flex max-w-[260px] items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-left shadow-xs dark:border-zinc-800 dark:bg-zinc-950/70">
+                    <UserCircle size={18} className="shrink-0 text-blue-600 dark:text-blue-400" />
+                    <div className="min-w-0 leading-tight">
+                      <p className="truncate text-[11px] font-black text-zinc-900 dark:text-zinc-100">{profileName}</p>
+                      <p className="truncate text-[10px] font-bold text-zinc-500 dark:text-zinc-400">{profileRole}</p>
+                      <p className="truncate text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">Giải: {profileTournamentName}</p>
+                    </div>
+                  </div>
                   <EventSwitcher />
                   <button onClick={() => useTournamentStore.getState().logout()} className="cursor-pointer text-[10px] font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-red-650 dark:text-red-400 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded transition-colors">
                     Đăng xuất

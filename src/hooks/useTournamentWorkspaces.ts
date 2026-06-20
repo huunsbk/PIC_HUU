@@ -10,6 +10,7 @@ export interface TournamentWorkspaceStat {
   settings: any;
   status: string;
   tenant_id?: string;
+  tenant_name?: string | null;
   location?: string | null;
   start_date?: string | null;
   owner_name: string | null;
@@ -42,9 +43,26 @@ export function useTournamentWorkspaces(limit: number = 50) {
       }
 
       const rows = Array.isArray(data) ? data : [];
+      const tenantIds = Array.from(
+        new Set(rows.map((row: any) => row.tenant_id).filter((id: string | null | undefined): id is string => !!id))
+      );
+      const tenantNameById = new Map<string, string>();
+
+      if (tenantIds.length > 0) {
+        const { data: tenantRows } = await supabase
+          .from('tenants')
+          .select('id, name')
+          .in('id', tenantIds);
+
+        (tenantRows || []).forEach((tenant: any) => {
+          if (tenant.id && tenant.name) tenantNameById.set(tenant.id, tenant.name);
+        });
+      }
+
       const mapped = rows.slice(0, limit).map((row: any) => ({
         tournament_id: row.tournament_id,
         tenant_id: row.tenant_id,
+        tenant_name: row.tenant_name || tenantNameById.get(row.tenant_id) || null,
         name: row.name,
         slug: row.slug,
         created_at: row.created_at,

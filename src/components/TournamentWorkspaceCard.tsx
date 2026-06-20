@@ -66,6 +66,7 @@ export default function TournamentWorkspaceCard({ tournament }: TournamentWorksp
   };
 
   const publicUrl = getAppUrl(`/tournament/${tournament.slug}`);
+  const tenantDisplayName = tournament.tenant_name || tournament.tenant_id || 'Chưa rõ';
 
   return (
     <>
@@ -79,7 +80,7 @@ export default function TournamentWorkspaceCard({ tournament }: TournamentWorksp
 
         <div className="flex-1 space-y-2 mb-5">
           <div className="text-sm text-zinc-600 dark:text-zinc-400">
-             <span className="font-semibold">Đơn vị:</span> {tournament.tenant_id || 'Chưa rõ'}
+             <span className="font-semibold">Đơn vị:</span> {tenantDisplayName}
           </div>
           <div className="text-sm text-zinc-600 dark:text-zinc-400">
              <span className="font-semibold">Ngày tạo:</span> {new Date(tournament.created_at).toLocaleDateString('vi-VN')}

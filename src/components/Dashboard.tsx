@@ -27,6 +27,8 @@ export default function Dashboard() {
     supabaseConnected,
     supabaseSyncError,
     checkConnection,
+    activeTenantId,
+    activeTenantName,
   } = useTournamentStore();
 
   const [name, setName] = useState(tournament.name);
@@ -39,6 +41,14 @@ export default function Dashboard() {
   const [maxSc, setMaxSc] = useState(tournament.settings.maxScore);
   const [capSc, setCapSc] = useState(tournament.settings.capScore);
   const [advCount, setAdvCount] = useState(tournament.settings.advanceCount);
+  const isTenantWorkspace = activeTenantId !== 'default';
+  const lockedOrganizationName = activeTenantName || tournament.organization || '';
+
+  React.useEffect(() => {
+    if (isTenantWorkspace && lockedOrganizationName && org !== lockedOrganizationName) {
+      setOrg(lockedOrganizationName);
+    }
+  }, [isTenantWorkspace, lockedOrganizationName, org]);
 
   // States for custom modals & backups
   const [jsonInput, setJsonInput] = useState('');
@@ -111,7 +121,7 @@ export default function Dashboard() {
     try {
       await updateTournament({
         name,
-        organization: org,
+        organization: isTenantWorkspace ? lockedOrganizationName || org : org,
         location: loc,
         date,
       });
@@ -984,11 +994,18 @@ export default function Dashboard() {
               <label className="block text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Đơn Vị Chủ Trì (BTC)</label>
               <input
                 type="text"
-                value={org}
+                value={isTenantWorkspace ? lockedOrganizationName || org : org}
+                disabled={isTenantWorkspace}
+                readOnly={isTenantWorkspace}
                 onChange={(e) => setOrg(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-xs"
+                className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-900 focus:outline-none font-semibold text-xs disabled:cursor-not-allowed disabled:text-zinc-600 dark:disabled:text-zinc-300"
                 required
               />
+              {isTenantWorkspace && (
+                <p className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">
+                  Tự động lấy theo đơn vị đang mở trong URL.
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
