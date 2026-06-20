@@ -4,12 +4,17 @@ import {
   getActorAccount,
   getAdminClient,
   handleError,
+  handleOptions,
   sendJson,
+  setCorsHeaders,
 } from '../_accountService.js';
 
 export default async function handler(req, res) {
+  setCorsHeaders(req, res);
+  if (req.method === 'OPTIONS') return handleOptions(req, res);
+
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
+    res.setHeader('Allow', 'POST, OPTIONS');
     return sendJson(res, 405, { error: 'Method not allowed' });
   }
 

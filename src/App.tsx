@@ -52,6 +52,10 @@ function isRouteWorkspacePathname() {
   return appPath.startsWith('/admin/workspace/') || appPath.startsWith('/tournament/');
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
 // Wrapper for Admin Workspace
 function AdminWorkspace() {
   const { slug } = useParams();
@@ -76,21 +80,34 @@ function AdminWorkspace() {
         .is('deleted_at', null)
         .maybeSingle();
 
-      if (tenantByRouteSlug) {
+      let tenantByRouteId = null as null | { id: string; name: string; slug: string };
+      if (!tenantByRouteSlug && isUuid(routeSlug)) {
+        const { data } = await supabase
+          .from('tenants')
+          .select('id, name, slug')
+          .eq('id', routeSlug)
+          .is('deleted_at', null)
+          .maybeSingle();
+        tenantByRouteId = data;
+      }
+
+      const tenantByRoute = tenantByRouteSlug || tenantByRouteId;
+
+      if (tenantByRoute) {
         const { data: latestTournament } = await supabase
           .from('tournament')
           .select('id, tenant_id, slug, name')
-          .eq('tenant_id', tenantByRouteSlug.id)
+          .eq('tenant_id', tenantByRoute.id)
           .is('deleted_at', null)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
         if (!latestTournament) {
-          if (!isCancelled && activeTenantId !== tenantByRouteSlug.id) {
+          if (!isCancelled && activeTenantId !== tenantByRoute.id) {
             await setWorkspaceContext({
-              tenantId: tenantByRouteSlug.id,
-              tenantName: tenantByRouteSlug.name,
+              tenantId: tenantByRoute.id,
+              tenantName: tenantByRoute.name,
               tournamentId: null,
               tournamentName: null,
               tournamentSlug: null,
@@ -100,12 +117,12 @@ function AdminWorkspace() {
           return;
         }
 
-        tenantOrTournamentId = tenantByRouteSlug.id;
+        tenantOrTournamentId = tenantByRoute.id;
         tournamentId = latestTournament.id;
         if (!isCancelled) {
           await setWorkspaceContext({
-            tenantId: tenantByRouteSlug.id,
-            tenantName: tenantByRouteSlug.name,
+            tenantId: tenantByRoute.id,
+            tenantName: tenantByRoute.name,
             tournamentId: latestTournament.id,
             tournamentName: latestTournament.name,
             tournamentSlug: latestTournament.slug,
@@ -261,8 +278,26 @@ function RootEntry() {
           .select('id, slug')
           .eq('id', legacyHash)
           .maybeSingle()
-          .then(({ data }) => {
-            navigate(`/admin/workspace/${data?.slug || legacyHash}`, { replace: true });
+          .then(async ({ data }) => {
+            if (data?.slug) {
+              navigate(`/admin/workspace/${data.slug}`, { replace: true });
+              return;
+            }
+
+            if (isUuid(legacyHash)) {
+              const { data: tenant } = await supabase
+                .from('tenants')
+                .select('slug')
+                .eq('id', legacyHash)
+                .is('deleted_at', null)
+                .maybeSingle();
+              if (tenant?.slug) {
+                navigate(`/admin/workspace/${tenant.slug}`, { replace: true });
+                return;
+              }
+            }
+
+            navigate('/', { replace: true });
           });
         return;
       }

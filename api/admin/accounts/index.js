@@ -4,13 +4,18 @@ import {
   getActorAccount,
   getAdminClient,
   handleError,
+  handleOptions,
   sendJson,
+  setCorsHeaders,
   validateTargetAccount,
-} from './_accountService.js';
+} from '../_accountService.js';
 
 export default async function handler(req, res) {
+  setCorsHeaders(req, res);
+  if (req.method === 'OPTIONS') return handleOptions(req, res);
+
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
+    res.setHeader('Allow', 'POST, OPTIONS');
     return sendJson(res, 405, { error: 'Method not allowed' });
   }
 
@@ -35,6 +40,7 @@ export default async function handler(req, res) {
       .from('accounts')
       .select('id')
       .eq('username', username)
+      .is('deleted_at', null)
       .maybeSingle();
     if (existingAccount) {
       throw apiError('Username đã tồn tại trong public.accounts.', 409);

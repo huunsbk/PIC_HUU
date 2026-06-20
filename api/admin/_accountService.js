@@ -1,6 +1,28 @@
 import { createClient } from '@supabase/supabase-js';
 
 const allowedTargetRoles = new Set(['TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'VIEWER']);
+const allowedOrigins = new Set([
+  'https://giai-dau-pickleball.vercel.app',
+  'https://huunsbk.github.io',
+  'http://localhost:5173',
+  'http://127.0.0.1:4173',
+]);
+
+export function setCorsHeaders(req, res) {
+  const origin = req.headers.origin || '';
+  const allowedOrigin =
+    allowedOrigins.has(origin) || origin.endsWith('.vercel.app') ? origin : 'https://giai-dau-pickleball.vercel.app';
+
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  res.setHeader('Access-Control-Allow-Headers', 'authorization, content-type, x-client-info, apikey');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Vary', 'Origin');
+}
+
+export function handleOptions(req, res) {
+  setCorsHeaders(req, res);
+  return res.status(204).end();
+}
 
 export function sendJson(res, status, body) {
   res.status(status).json(body);
@@ -66,7 +88,7 @@ export async function getActorAccount(req, admin) {
   return { ...actor, roleName, authUserId: userData.user.id };
 }
 
-export async function validateTargetAccount(admin, actor, role, tenantId) {
+export async function validateTargetAccount(admin, actor, role, tenantId, options = {}) {
   if (!allowedTargetRoles.has(role)) {
     throw apiError('Role không hợp lệ. Chỉ hỗ trợ TENANT_ADMIN, EVENT_ADMIN, REFEREE, VIEWER.', 400);
   }
@@ -128,7 +150,19 @@ export async function validateTargetAccount(admin, actor, role, tenantId) {
     .eq('tenant_id', tenantId)
     .maybeSingle();
 
-  const usersUsed = Number(usage?.users_used ?? 0);
+  let usersUsed = Number(usage?.users_used ?? 0);
+  if (options.excludeAccountId) {
+    const { data: existingAccount } = await admin
+      .from('accounts')
+      .select('id, tenant_id')
+      .eq('id', options.excludeAccountId)
+      .maybeSingle();
+
+    if (existingAccount?.tenant_id === tenantId) {
+      usersUsed = Math.max(0, usersUsed - 1);
+    }
+  }
+
   const usersLimit = Number(usage?.users_limit ?? subscription.subscription_plans?.max_users ?? 1);
   if (usersUsed >= usersLimit) {
     throw apiError(`Tenant đã vượt giới hạn tài khoản (${usersUsed}/${usersLimit}).`, 403);

@@ -4,12 +4,17 @@ import {
   getActorAccount,
   getAdminClient,
   handleError,
+  handleOptions,
   getRoleName,
   sendJson,
+  setCorsHeaders,
   validateTargetAccount,
 } from '../_accountService.js';
 
 export default async function handler(req, res) {
+  setCorsHeaders(req, res);
+  if (req.method === 'OPTIONS') return handleOptions(req, res);
+
   try {
     const admin = getAdminClient();
     const actor = await getActorAccount(req, admin);
@@ -29,17 +34,21 @@ export default async function handler(req, res) {
         throw apiError('Trạng thái tài khoản không hợp lệ.', 400);
       }
 
-      const { roleRecord } = await validateTargetAccount(admin, actor, role, tenantId);
       const { data: targetAccount, error: targetError } = await admin
         .from('accounts')
         .select('id, tenant_id, user_id, username')
         .eq('id', accountId)
+        .is('deleted_at', null)
         .single();
 
       if (targetError || !targetAccount) throw apiError('Không tìm thấy tài khoản cần cập nhật.', 404);
       if (actor.roleName === 'TENANT_ADMIN' && targetAccount.tenant_id !== actor.tenant_id) {
         throw apiError('TENANT_ADMIN chỉ được cập nhật tài khoản trong tenant của mình.', 403);
       }
+
+      const { roleRecord } = await validateTargetAccount(admin, actor, role, tenantId, {
+        excludeAccountId: accountId,
+      });
 
       if (targetAccount.user_id) {
         const updateData = {
@@ -73,39 +82,63 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      if (actor.roleName !== 'SUPER_ADMIN') throw apiError('Chỉ SUPER_ADMIN được xóa vĩnh viễn tài khoản.', 403);
+      if (actor.roleName !== 'SUPER_ADMIN') throw apiError('Chỉ SUPER_ADMIN được xóa hoặc khóa tài khoản.', 403);
 
       const { data: targetAccount, error: targetError } = await admin
         .from('accounts')
         .select('id, tenant_id, user_id, username, roles(name)')
         .eq('id', accountId)
+        .is('deleted_at', null)
         .single();
       if (targetError || !targetAccount) throw apiError('Không tìm thấy tài khoản để xóa.', 404);
 
-      if (getRoleName(targetAccount.roles) === 'SUPER_ADMIN') {
-        throw apiError('Không xóa SUPER_ADMIN bằng thao tác này.', 403);
+      if (targetAccount.user_id === actor.authUserId) {
+        throw apiError('Không thể tự xóa hoặc khóa chính tài khoản đang đăng nhập.', 403);
+      }
+
+      const targetRoleName = getRoleName(targetAccount.roles);
+      if (targetRoleName === 'SUPER_ADMIN') {
+        const { count: activeSuperAdminCount, error: countError } = await admin
+          .from('accounts')
+          .select('id, roles!inner(name)', { count: 'exact', head: true })
+          .eq('roles.name', 'SUPER_ADMIN')
+          .eq('status', 'active')
+          .is('deleted_at', null);
+
+        if (countError) {
+          throw apiError(`Không thể kiểm tra số lượng SUPER_ADMIN: ${countError.message}`, 500);
+        }
+
+        if ((activeSuperAdminCount || 0) <= 1) {
+          throw apiError('Không thể xóa SUPER_ADMIN cuối cùng.', 403);
+        }
       }
 
       await admin.from('active_sessions').delete().eq('account_id', accountId);
       await admin.from('login_logs').delete().eq('account_id', accountId);
       await admin.from('account_permissions').delete().eq('account_id', accountId);
-      await admin.from('account_event_permissions').delete().eq('account_id', accountId);
+      await admin
+        .from('account_event_permissions')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('account_id', accountId)
+        .is('deleted_at', null);
 
-      const { error: deleteAccountError } = await admin.from('accounts').delete().eq('id', accountId);
-      if (deleteAccountError) throw apiError(`Lỗi khi xóa trong DB accounts: ${deleteAccountError.message}`, 500);
+      const { error: softDeleteError } = await admin
+        .from('accounts')
+        .update({
+          status: 'locked',
+          deleted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', accountId)
+        .is('deleted_at', null);
+      if (softDeleteError) throw apiError(`Lỗi khi khóa tài khoản: ${softDeleteError.message}`, 500);
 
-      if (targetAccount.user_id) {
-        const { error: deleteAuthError } = await admin.auth.admin.deleteUser(targetAccount.user_id);
-        if (deleteAuthError) {
-          throw apiError(`Đã xóa account DB nhưng lỗi khi xóa Auth user: ${deleteAuthError.message}`, 500);
-        }
-      }
-
-      await audit(admin, targetAccount.tenant_id, 'account.delete', `Deleted account ${targetAccount.username}`);
+      await audit(admin, targetAccount.tenant_id, 'account.archive', `Soft-deleted account ${targetAccount.username}`);
       return sendJson(res, 200, { success: true });
     }
 
-    res.setHeader('Allow', 'PUT, POST, DELETE');
+    res.setHeader('Allow', 'PUT, POST, DELETE, OPTIONS');
     return sendJson(res, 405, { error: 'Method not allowed' });
   } catch (error) {
     return handleError(res, error);
