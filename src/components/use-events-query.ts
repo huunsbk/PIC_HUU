@@ -13,7 +13,7 @@ export function useEventsQuery() {
   const setCurrentEvent = useTournamentStore((state) => state.setCurrentEvent);
 
   const query = useQuery({
-    queryKey: ['events', activeTenantId, activeTournamentId || tournamentId],
+    queryKey: ['events', activeTournamentId || tournamentId],
     queryFn: async () => {
       const scopedTournamentId = activeTournamentId || tournamentId;
       if (!scopedTournamentId || scopedTournamentId === 't-1') {
@@ -30,7 +30,7 @@ export function useEventsQuery() {
 
       return events;
     },
-    enabled: !!activeTenantId && activeTenantId !== 'default',
+    enabled: !!activeTenantId && activeTenantId !== 'default' && !!(activeTournamentId || tournamentId),
   });
 
   useEffect(() => {

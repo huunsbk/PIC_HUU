@@ -12,7 +12,7 @@ export function useTeams() {
     : eventsData[0]?.id;
 
   return useQuery({
-    queryKey: ['teams', activeTenantId, selectedEventId],
+    queryKey: ['teams', selectedEventId],
     queryFn: async () => {
       const query = supabase
         .from('teams')

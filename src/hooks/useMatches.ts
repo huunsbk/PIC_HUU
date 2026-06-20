@@ -12,7 +12,7 @@ export function useMatches() {
     : eventsData[0]?.id;
 
   return useQuery({
-    queryKey: ['matches', activeTenantId, selectedEventId],
+    queryKey: ['matches', selectedEventId],
     queryFn: async () => {
       const query = supabase
         .from('matches')

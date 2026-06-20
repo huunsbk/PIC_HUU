@@ -25,7 +25,7 @@ export function useTeamMutations() {
   const { data: eventsData = [] } = useEvents();
   const selectedEventId = resolveSelectedEventId(currentEventId, eventsData);
   const invalidateDashboardStats = () => {
-    queryClient.invalidateQueries({ queryKey: ['dashboard-stats', activeTenantId] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
   };
   const requireTenantContext = () => {
     if (!activeTenantId || activeTenantId === 'default') {
@@ -67,7 +67,7 @@ export function useTeamMutations() {
       return tournamentRpc.createTeam(eventId, trimmedName, seed as SeedType);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
       invalidateDashboardStats();
     }
   });
@@ -80,7 +80,7 @@ export function useTeamMutations() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
       invalidateDashboardStats();
     }
   });
@@ -91,9 +91,9 @@ export function useTeamMutations() {
       return tournamentRpc.archiveTeam(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
-      queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
-      queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
       invalidateDashboardStats();
     }
   });
@@ -134,7 +134,7 @@ export function useTeamMutations() {
       return result.imported_count ?? imports.length;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
       invalidateDashboardStats();
     }
   });
@@ -151,7 +151,7 @@ export function useGroupMutations() {
   const { data: eventsData = [] } = useEvents();
   const selectedEventId = resolveSelectedEventId(currentEventId, eventsData);
   const invalidateDashboardStats = () => {
-    queryClient.invalidateQueries({ queryKey: ['dashboard-stats', activeTenantId] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
   };
   const requireTenantContext = () => {
     if (!activeTenantId || activeTenantId === 'default') {
@@ -194,9 +194,9 @@ export function useGroupMutations() {
        } | null>;
      },
      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
-        queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
-        queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+        queryClient.invalidateQueries({ queryKey: ['groups'] });
+        queryClient.invalidateQueries({ queryKey: ['teams'] });
+        queryClient.invalidateQueries({ queryKey: ['matches'] });
         invalidateDashboardStats();
      }
   });
@@ -206,9 +206,9 @@ export function useGroupMutations() {
         return setupGroupsContract(numGroups, 'balanced');
      },
      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
-        queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
-        queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+        queryClient.invalidateQueries({ queryKey: ['groups'] });
+        queryClient.invalidateQueries({ queryKey: ['teams'] });
+        queryClient.invalidateQueries({ queryKey: ['matches'] });
         invalidateDashboardStats();
      }
   });
@@ -219,9 +219,9 @@ export function useGroupMutations() {
       return setupGroupsContract(requestedGroups, params?.method || 'seed');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
-      queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
-      queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
       invalidateDashboardStats();
     }
   });
@@ -236,9 +236,9 @@ export function useGroupMutations() {
       return tournamentRpc.assignTeamToGroup(teamId, dbGroupId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
-      queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
-      queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
       invalidateDashboardStats();
     }
   });
@@ -255,7 +255,7 @@ export function useMatchMutations() {
   const { data: eventsData = [] } = useEvents();
   const selectedEventId = resolveSelectedEventId(currentEventId, eventsData);
   const invalidateDashboardStats = () => {
-    queryClient.invalidateQueries({ queryKey: ['dashboard-stats', activeTenantId] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
   };
   const requireBusinessContext = () => {
     if (!activeTenantId || activeTenantId === 'default') {
@@ -279,7 +279,7 @@ export function useMatchMutations() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
       invalidateDashboardStats();
     }
   });
@@ -290,7 +290,7 @@ export function useMatchMutations() {
       return tournamentRpc.resetMatchScore(matchId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
       invalidateDashboardStats();
     }
   });
@@ -301,7 +301,7 @@ export function useMatchMutations() {
       return tournamentRpc.generateSchedule(eventId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
       invalidateDashboardStats();
     }
   });
@@ -312,7 +312,7 @@ export function useMatchMutations() {
       return tournamentRpc.generateSchedule(eventId);
     },
     onSuccess: () => {
-       queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+       queryClient.invalidateQueries({ queryKey: ['matches'] });
        invalidateDashboardStats();
     }
   });
@@ -329,7 +329,7 @@ export function useMatchMutations() {
       throw new Error('Trạng thái finished phải được cập nhật thông qua RPC nhập điểm.');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
       invalidateDashboardStats();
     }
   });
@@ -340,8 +340,8 @@ export function useMatchMutations() {
       return tournamentRpc.updateMatchSetScore(matchId, setNumber, scoreA, scoreB);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
-      queryClient.invalidateQueries({ queryKey: ['match-sets', activeTenantId, currentEventId] });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
+      queryClient.invalidateQueries({ queryKey: ['match-sets'] });
       invalidateDashboardStats();
     }
   });

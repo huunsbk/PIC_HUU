@@ -13,7 +13,7 @@ export function useMatchSets() {
     : eventsData[0]?.id;
 
   return useQuery({
-    queryKey: ['match-sets', activeTenantId, selectedEventId],
+    queryKey: ['match-sets', selectedEventId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('match_sets')

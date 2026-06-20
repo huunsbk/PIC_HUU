@@ -366,6 +366,11 @@ export const useTournamentStore = create<AppState>()(
             });
           }
           
+          if (isRouteWorkspacePath()) {
+            originalSet({ isLoadingSupabase: false, supabaseConnected: true });
+            return;
+          }
+
           console.log('[Auth Setup] Đã đồng bộ cấu hình tài khoản. Đang khởi chạy tải lại cơ sở dữ liệu initSupabase()...');
           await get().initSupabase();
         },
@@ -431,23 +436,35 @@ export const useTournamentStore = create<AppState>()(
           await get().initSupabase();
         },
         setWorkspaceContext: async (context) => {
-          const currentTournament = get().tournament;
+          const currentState = get();
+          const currentTournament = currentState.tournament;
+          const nextTournamentId = context.tournamentId || null;
+          const nextTournament = {
+            ...currentTournament,
+            id: nextTournamentId || currentTournament.id,
+            name: context.tournamentName || currentTournament.name,
+          };
+
+          const isSameContext =
+            currentState.activeTenantId === context.tenantId &&
+            currentState.activeTenantName === (context.tenantName || null) &&
+            currentState.activeTournamentId === nextTournamentId &&
+            currentTournament.id === nextTournament.id &&
+            currentTournament.name === nextTournament.name;
+
+          if (isSameContext) {
+            originalSet({ isLoadingSupabase: false, supabaseConnected: true });
+            return;
+          }
+
           originalSet({
             activeTenantId: context.tenantId,
             activeTenantName: context.tenantName || null,
-            activeTournamentId: context.tournamentId || null,
-            isLoadingSupabase: true,
-            tournament: {
-              ...currentTournament,
-              id: context.tournamentId || currentTournament.id,
-              name: context.tournamentName || currentTournament.name,
-            },
+            activeTournamentId: nextTournamentId,
+            isLoadingSupabase: false,
+            supabaseConnected: true,
+            tournament: nextTournament,
           });
-          if (context.tournamentId) {
-            await get().initSupabase();
-          } else {
-            originalSet({ isLoadingSupabase: false });
-          }
         },
         isAdmin: false,
         setAdminStatus: (status: boolean) => {
@@ -1889,7 +1906,8 @@ export const useTournamentStore = create<AppState>()(
             });
           }
           
-          originalSet({ isLoadingSupabase: true });
+          const routedWorkspace = isRouteWorkspacePath();
+          originalSet({ isLoadingSupabase: !routedWorkspace });
           
           // --- BẢO ĐẢM AUTH STATE ĐƯỢC ĐỒNG BỘ TRƯỚC TIÊN ---
           try {
@@ -1920,6 +1938,7 @@ export const useTournamentStore = create<AppState>()(
                         permittedEventIds: eventIds
                       };
 
+                      const routeState = get();
                       originalSet({
                         currentUser: {
                           id: accountData.account_id,
@@ -1928,7 +1947,7 @@ export const useTournamentStore = create<AppState>()(
                         },
                         currentEnterpriseUser: restoredEnterpriseUser,
                         userRole: mappedRole,
-                        activeTenantId: tenantIdStr,
+                        activeTenantId: routedWorkspace ? routeState.activeTenantId : tenantIdStr,
                         permissions: fetchedPermissions,
                         isAdmin: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'].includes(mappedRole)
                       });
@@ -1939,6 +1958,11 @@ export const useTournamentStore = create<AppState>()(
              console.warn('Lỗi khi phục hồi session trước tiên.');
           }
 
+          if (routedWorkspace) {
+            originalSet({ supabaseConnected: true, isLoadingSupabase: false });
+            return;
+          }
+
           try {
             // Lấy trạng thái dữ liệu trong store cục bộ trước khi query (khôi phục từ localStorage)
             const localState = get();
@@ -1947,7 +1971,7 @@ export const useTournamentStore = create<AppState>()(
             // Only add eq(tenant_id) if it is a real UUID! Default is invalid for UUID type.
             const validTenantUUID = activeTenantId !== 'default' ? activeTenantId : null;
             
-            console.log(`Khởi tạo và đồng bộ dữ liệu cho CSDL phân rã: "${validTenantUUID || 'default'}" từ Supabase...`);
+            console.log(`[LegacyInit] Loading tenant-scoped fallback data for "${validTenantUUID || 'default'}" from Supabase...`);
             
             // 1. Đọc giải đấu (Tournament metadata) - Bảng cấu hình chung nhỏ gọn (no select *)
             const { data: tData, error: tError } = await supabase.from('tournament').select('id, name, organization, location, date, settings, current_event_id');

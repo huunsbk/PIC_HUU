@@ -23,12 +23,12 @@ function useRpcInvalidation() {
   const currentEventId = useTournamentStore((state) => state.currentEventId);
 
   const invalidateEventScope = () => {
-    queryClient.invalidateQueries({ queryKey: ['events', activeTenantId] });
-    queryClient.invalidateQueries({ queryKey: ['teams', activeTenantId, currentEventId] });
-    queryClient.invalidateQueries({ queryKey: ['groups', activeTenantId, currentEventId] });
-    queryClient.invalidateQueries({ queryKey: ['matches', activeTenantId, currentEventId] });
-    queryClient.invalidateQueries({ queryKey: ['match-sets', activeTenantId, currentEventId] });
-    queryClient.invalidateQueries({ queryKey: ['dashboard-stats', activeTenantId] });
+    queryClient.invalidateQueries({ queryKey: ['events'] });
+    queryClient.invalidateQueries({ queryKey: ['teams'] });
+    queryClient.invalidateQueries({ queryKey: ['groups'] });
+    queryClient.invalidateQueries({ queryKey: ['matches'] });
+    queryClient.invalidateQueries({ queryKey: ['match-sets'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
   };
 
   return { activeTenantId, activeTournamentId, tournamentId, currentEventId, invalidateEventScope };

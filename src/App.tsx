@@ -44,6 +44,14 @@ import {
   Building2
 } from 'lucide-react';
 
+function isRouteWorkspacePathname() {
+  const basePath = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+  const appPath = window.location.pathname.startsWith(basePath)
+    ? window.location.pathname.slice(basePath.length)
+    : window.location.pathname;
+  return appPath.startsWith('/admin/workspace/') || appPath.startsWith('/tournament/');
+}
+
 // Wrapper for Admin Workspace
 function AdminWorkspace() {
   const { slug } = useParams();
@@ -281,6 +289,7 @@ function TournamentShell() {
   useEffect(() => {
     let debounceTimer: number;
     const triggerFullSync = () => {
+       if (isRouteWorkspacePathname()) return;
        window.clearTimeout(debounceTimer);
        debounceTimer = window.setTimeout(() => {
           useTournamentStore.getState().initSupabase();
