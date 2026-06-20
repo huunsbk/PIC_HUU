@@ -237,7 +237,7 @@ export default function AccountManager() {
       </div>
 
       {/* Thao tác quản trị */}
-      {!process.env.VITE_SUPABASE_URL && (
+      {!import.meta.env.VITE_SUPABASE_URL && (
         <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
           <div className="flex items-start gap-3">
             <ShieldAlert className="text-amber-600 mt-0.5 shrink-0" size={20} />
@@ -373,6 +373,7 @@ export default function AccountManager() {
                   type="text"
                   value={newUsername}
                   onChange={e => setNewUsername(e.target.value)}
+                  autoComplete="username"
                   className="w-full px-3 py-2 border rounded-lg dark:border-zinc-700 dark:bg-zinc-800"
                   placeholder="VD: hcm_admin hoặc demo@example.com"
                   required
@@ -397,6 +398,7 @@ export default function AccountManager() {
                   type="text"
                   value={newDisplayName}
                   onChange={e => setNewDisplayName(e.target.value)}
+                  autoComplete="name"
                   className="w-full px-3 py-2 border rounded-lg dark:border-zinc-700 dark:bg-zinc-800"
                   placeholder="VD: Giám Đốc Khu Vực TPHCM"
                   required
@@ -476,6 +478,7 @@ export default function AccountManager() {
                   type="text"
                   value={editDisplayName}
                   onChange={e => setEditDisplayName(e.target.value)}
+                  autoComplete="name"
                   className="w-full px-3 py-2 border rounded-lg dark:border-zinc-700 dark:bg-zinc-800"
                   required
                 />

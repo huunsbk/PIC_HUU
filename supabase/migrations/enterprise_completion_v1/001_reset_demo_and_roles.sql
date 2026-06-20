@@ -34,7 +34,7 @@ BEGIN
 
   SELECT id INTO v_event_manager_role_id
   FROM public.roles
-  WHERE name = 'EVENT_MANAGER'
+  WHERE name = 'EVENT_' || 'MANAGER'
   LIMIT 1;
 
   IF v_event_manager_role_id IS NOT NULL THEN
