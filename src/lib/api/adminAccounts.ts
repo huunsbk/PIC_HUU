@@ -42,7 +42,7 @@ async function readError(response: Response) {
 
 function shouldUseSupabaseFunction() {
   const hostname = window.location.hostname;
-  return hostname === 'huunsbk.github.io' || hostname.endsWith('.vercel.app');
+  return hostname === 'huunsbk.github.io';
 }
 
 function logEndpoint(functionName: string) {
