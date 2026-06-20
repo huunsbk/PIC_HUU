@@ -121,7 +121,15 @@ Local verification:
   - `PUT /api/admin/accounts/:id`: handler reached, no code-level `405`
   - `DELETE /api/admin/accounts/:id`: handler reached, no code-level `405`
 
+Production route probe after deploy `595a22e` on `https://giai-dau-pickleball.vercel.app`:
+
+- `OPTIONS /api/admin/accounts/00000000-0000-0000-0000-000000000000`: `204`
+- `PUT /api/admin/accounts/00000000-0000-0000-0000-000000000000`: `401` JSON auth error, not `405`
+- `DELETE /api/admin/accounts/00000000-0000-0000-0000-000000000000`: `401` JSON auth error, not `405`
+- `POST /api/admin/accounts`: `401` JSON auth error, route reaches API handler
+- `POST /api/admin/accounts/reset`: `401` JSON auth error, route reaches API handler
+
 Production authenticated UI test:
 
 - Pending in this environment because no reusable SUPER_ADMIN browser session/token is available to the agent.
-- After deploy, expected non-authenticated API probes can confirm route deployment no longer returns 405.
+- Non-authenticated API probes confirm route deployment no longer returns static `405`.
