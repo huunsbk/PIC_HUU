@@ -71,6 +71,8 @@ export function calculateGroupStandings(
   settings: TournamentSettings
 ): GroupStanding[] {
   const standings: Record<string, GroupStanding> = {};
+  const winPoint = Number.isFinite(Number(settings?.winPoint)) ? Number(settings.winPoint) : 2;
+  const lossPoint = Number.isFinite(Number(settings?.lossPoint)) ? Number(settings.lossPoint) : 1;
 
   // Khởi tạo bảng xếp hạng ban đầu
   teamIds.forEach((tId) => {
@@ -125,16 +127,16 @@ export function calculateGroupStandings(
 
     if (winnerId === teamAId) {
       standings[teamAId].matchesWon += 1;
-      standings[teamAId].points += settings.winPoint;
+      standings[teamAId].points += winPoint;
 
       standings[teamBId].matchesLost += 1;
-      standings[teamBId].points += settings.lossPoint;
+      standings[teamBId].points += lossPoint;
     } else if (winnerId === teamBId) {
       standings[teamBId].matchesWon += 1;
-      standings[teamBId].points += settings.winPoint;
+      standings[teamBId].points += winPoint;
 
       standings[teamAId].matchesLost += 1;
-      standings[teamAId].points += settings.lossPoint;
+      standings[teamAId].points += lossPoint;
     }
   });
 
@@ -207,6 +209,8 @@ export function calculateBestThirdPlaces(
   groupNamesMap: Record<string, string>
 ): ThirdPlaceStanding[] {
   const thirdPlaceCandidates: ThirdPlaceStanding[] = [];
+  const winPoint = Number.isFinite(Number(settings?.winPoint)) ? Number(settings.winPoint) : 2;
+  const lossPoint = Number.isFinite(Number(settings?.lossPoint)) ? Number(settings.lossPoint) : 1;
 
   // Xác định số lượng đội tối thiểu ở các bảng đấu
   let minTeamsInGroup = 999;
@@ -268,10 +272,10 @@ export function calculateBestThirdPlaces(
 
           if (penaltyMatch.winnerId === tId) {
             adjustedMatchesWon -= 1;
-            adjustedPoints -= settings.winPoint;
+            adjustedPoints -= winPoint;
           } else {
             adjustedMatchesLost -= 1;
-            adjustedPoints -= settings.lossPoint;
+            adjustedPoints -= lossPoint;
           }
         }
       }
