@@ -63,7 +63,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const accountData = typeof profileStr === 'string' ? JSON.parse(profileStr) : profileStr;
     
     // Check if expected attributes exist
-    if (!(accountData.account_id && accountData.tenant_id && accountData.role && accountData.permissions)) {
+    const hasPermissionPayload = Array.isArray(accountData.permissions)
+      || Array.isArray(accountData.role_permissions)
+      || Array.isArray(accountData.account_permissions);
+    if (!(accountData.account_id && accountData.tenant_id && accountData.role && hasPermissionPayload)) {
        console.warn('[Auth] Login profile is missing expected attributes.');
     }
 
