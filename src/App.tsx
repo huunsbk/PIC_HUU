@@ -63,6 +63,7 @@ function AdminWorkspace() {
   const setWorkspaceContext = useTournamentStore((state) => state.setWorkspaceContext);
   const activeTenantId = useTournamentStore(state => state.activeTenantId);
   const activeTournamentId = useTournamentStore(state => state.activeTournamentId);
+  const userRole = useTournamentStore(state => state.userRole);
   const initSupabase = useTournamentStore(state => state.initSupabase);
   const setSelectedTab = useTournamentStore(state => state.setSelectedTab);
 
@@ -187,7 +188,7 @@ function AdminWorkspace() {
     return () => {
       isCancelled = true;
     };
-  }, [slug, activeTenantId, activeTournamentId, setWorkspaceContext, initSupabase, setSelectedTab]);
+  }, [slug, activeTenantId, activeTournamentId, userRole, setWorkspaceContext, initSupabase, setSelectedTab]);
 
   return <TournamentShell />;
 }
@@ -198,6 +199,7 @@ function PublicTournament() {
   const setWorkspaceContext = useTournamentStore((state) => state.setWorkspaceContext);
   const activeTenantId = useTournamentStore(state => state.activeTenantId);
   const activeTournamentId = useTournamentStore(state => state.activeTournamentId);
+  const userRole = useTournamentStore(state => state.userRole);
   const initSupabase = useTournamentStore(state => state.initSupabase);
   const setSelectedTab = useTournamentStore(state => state.setSelectedTab);
 
@@ -260,7 +262,7 @@ function PublicTournament() {
     return () => {
       isCancelled = true;
     };
-  }, [slug, activeTenantId, activeTournamentId, setWorkspaceContext, initSupabase, setSelectedTab]);
+  }, [slug, activeTenantId, activeTournamentId, userRole, setWorkspaceContext, initSupabase, setSelectedTab]);
 
   return <TournamentShell />;
 }
