@@ -336,6 +336,13 @@ export const useTournamentStore = create<AppState>()(
         isLoadingSupabase: false,
         setAuthStatus: async (role, username, tenantId, enterpriseUser) => {
           console.log('[Auth Setup] Bắt đầu thiết lập Auth.');
+          const isWorkspaceRoute = isRouteWorkspacePath();
+          const currentState = get();
+          const selectedTabAfterAuth = (role === 'EVENT_ADMIN' || (enterpriseUser?.permissions?.includes('enter_scores') && !enterpriseUser?.permissions?.includes('*')))
+            ? 'scoreEntry'
+            : isWorkspaceRoute
+              ? currentState.selectedTab
+              : 'dashboard';
           const normalizedEnterpriseUser = enterpriseUser ? {
             ...enterpriseUser,
             role: enterpriseUser.role || role || enterpriseUser.role_name || 'guest',
@@ -347,11 +354,11 @@ export const useTournamentStore = create<AppState>()(
             userRole: role || 'guest',
             currentUser: username,
             currentEnterpriseUser: normalizedEnterpriseUser,
-            activeTenantId: tenantId,
-            activeTenantName: normalizedEnterpriseUser?.tenant?.name || null,
+            activeTenantId: isWorkspaceRoute ? currentState.activeTenantId : tenantId,
+            activeTenantName: isWorkspaceRoute ? currentState.activeTenantName : normalizedEnterpriseUser?.tenant?.name || null,
             permissions: normalizedEnterpriseUser?.permissions || [],
             isAdmin: false /* deprecated */,
-            selectedTab: (role === 'EVENT_ADMIN' || (normalizedEnterpriseUser?.permissions?.includes('enter_scores') && !normalizedEnterpriseUser?.permissions?.includes('*'))) ? 'scoreEntry' : 'dashboard',
+            selectedTab: selectedTabAfterAuth,
             isLoadingSupabase: true
           });
 
