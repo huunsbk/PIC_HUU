@@ -280,6 +280,7 @@ export function useMatchMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matches'] });
+      queryClient.invalidateQueries({ queryKey: ['match-sets'] });
       invalidateDashboardStats();
     }
   });
@@ -291,6 +292,7 @@ export function useMatchMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matches'] });
+      queryClient.invalidateQueries({ queryKey: ['match-sets'] });
       invalidateDashboardStats();
     }
   });

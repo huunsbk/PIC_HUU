@@ -8,8 +8,10 @@ import ExcelJS from 'exceljs';
 import { useTournamentStore } from '../store';
 import { useTeams } from '../hooks/useTeams';
 import { useMatches } from '../hooks/useMatches';
+import { useMatchSets } from '../hooks/useMatchSets';
 import { useGroups } from '../hooks/useGroups';
 import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime } from '../utils/tournamentEngine';
+import { attachMatchSets, getSetScoreText } from '../utils/scoreDisplay';
 import {
   FileSpreadsheet,
   Printer,
@@ -34,12 +36,13 @@ export default function ExportManager() {
   const { data: teamsData = [] } = useTeams();
   const { data: groupsData = [] } = useGroups();
   const { data: matchesData = [] } = useMatches();
+  const { data: matchSetsData = [] } = useMatchSets();
 
   const teams: Record<string, any> = {};
   teamsData.forEach(t => { teams[t.id] = t; });
   const groups: Record<string, any> = {};
   groupsData.forEach(g => { groups[g.id] = g; });
-  const matches = matchesData;
+  const matches = React.useMemo(() => attachMatchSets(matchesData as any[], matchSetsData), [matchesData, matchSetsData]);
 
   const [selectedEventFilter, setSelectedEventFilter] = useState<string>('all');
   const [isExportingExcel, setIsExportingExcel] = useState(false);
@@ -295,7 +298,7 @@ export default function ExportManager() {
               }
             }
 
-            const scText = m.status === 'finished' ? `${m.scoreA} - ${m.scoreB}` : 'Chờ đấu';
+            const scText = m.status === 'finished' ? (getSetScoreText(m).replaceAll('-', ' - ') || `${m.scoreA} - ${m.scoreB}`) : 'Chờ đấu';
             
             let stText = 'Chưa đấu';
             if (m.status === 'finished') {
@@ -731,7 +734,7 @@ export default function ExportManager() {
                                 if (m.groupId === 'knockout') {
                                   rLabel = m.knockoutRoundName || 'Trực tiếp';
                                 }
-                                const scText = m.status === 'finished' ? `${m.scoreA} - ${m.scoreB}` : 'Chờ đấu';
+                                const scText = m.status === 'finished' ? (getSetScoreText(m).replaceAll('-', ' - ') || `${m.scoreA} - ${m.scoreB}`) : 'Chờ đấu';
                                 let stText = 'Chưa đấu';
                                 if (m.status === 'finished') {
                                   stText = m.scoreA! > m.scoreB! ? 'Thắng' : m.scoreB! > m.scoreA! ? 'Thua' : 'Hòa';

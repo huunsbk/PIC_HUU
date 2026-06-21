@@ -10,8 +10,10 @@ import { useEvents } from '../hooks/useEvents';
 import { useTeams } from '../hooks/useTeams';
 import { useGroups } from '../hooks/useGroups';
 import { useMatches } from '../hooks/useMatches';
+import { useMatchSets } from '../hooks/useMatchSets';
 import { supabase } from '../supabaseClient';
 import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
+import { attachMatchSets, getSetScoreText } from '../utils/scoreDisplay';
 import { 
   Monitor, 
   Play, 
@@ -257,7 +259,7 @@ const LiveMatchRow = React.memo(({
         <span className="text-[7.5px] font-bold text-zinc-500 uppercase pb-0.5">{roundLabel}</span>
         {isFinished ? (
           <span className="text-[12px] font-black tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded leading-none shrink-0 border border-emerald-200/50 dark:border-emerald-800 shadow-sm">
-            {m.scoreA} - {m.scoreB}
+            {getSetScoreText(m) || `${m.scoreA} - ${m.scoreB}`}
           </span>
         ) : isPlaying ? (
           <span className="text-[9px] font-bold text-blue-100 bg-blue-600 dark:bg-blue-600 px-1.5 py-1 rounded leading-none shrink-0 border border-blue-700 shadow-sm">
@@ -370,7 +372,8 @@ export default function LiveDashboard() {
   }, [groupsData]);
 
   const { data: matchesData = [] } = useMatches();
-  const matches = matchesData;
+  const { data: matchSetsData = [] } = useMatchSets();
+  const matches = React.useMemo(() => attachMatchSets(matchesData as any[], matchSetsData), [matchesData, matchSetsData]);
 
   const tournament = useTournamentStore(state => state.tournament);
   const activeTenantId = useTournamentStore(state => state.activeTenantId);
@@ -643,7 +646,7 @@ export default function LiveDashboard() {
               }
             }
 
-            const scText = m.status === 'finished' ? `${m.scoreA} - ${m.scoreB}` : 'Chờ đấu';
+            const scText = m.status === 'finished' ? (getSetScoreText(m).replaceAll('-', ' - ') || `${m.scoreA} - ${m.scoreB}`) : 'Chờ đấu';
             
             let stText = 'Chưa đấu';
             if (m.status === 'finished') {

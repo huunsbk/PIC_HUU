@@ -2,6 +2,7 @@ import React from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Match, EventData } from '../types';
 import { getReadableTeamName, getReadableKoMatchName, getBracketDisplayName } from '../utils/tournamentEngine';
+import { getResolvedTeamName, getSeedLabel } from '../utils/scoreDisplay';
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 
 interface LiveBracketProps {
@@ -44,8 +45,11 @@ const MatchNode: React.FC<MatchNodeProps> = ({ match, koMatches, currentEvt, isB
   const [childA, childB] = isBronze ? [null, null] : findFeedingMatches(match, koMatches);
   const hasChildren = childA !== null || childB !== null;
 
-  const teamAName = getBracketDisplayName(match.teamAId || match.placeholderA, currentEvt.groups);
-  const teamBName = getBracketDisplayName(match.teamBId || match.placeholderB, currentEvt.groups);
+  const teams = currentEvt.teams || {};
+  const teamAName = getSeedLabel(match, 'A', getBracketDisplayName(match.teamAId || match.placeholderA, currentEvt.groups));
+  const teamBName = getSeedLabel(match, 'B', getBracketDisplayName(match.teamBId || match.placeholderB, currentEvt.groups));
+  const teamASubtitle = getResolvedTeamName(match, 'A', teams, match.teamAId);
+  const teamBSubtitle = getResolvedTeamName(match, 'B', teams, match.teamBId);
 
   return (
     <div className="flex flex-row items-stretch">
@@ -71,11 +75,17 @@ const MatchNode: React.FC<MatchNodeProps> = ({ match, koMatches, currentEvt, isB
              {match.knockoutRoundName} - {getReadableKoMatchName(match.knockoutMatchId || '')}
           </div>
           <div className="flex justify-between items-center rounded-md px-1.5 py-1 bg-zinc-50 dark:bg-zinc-900">
-             <span className={`text-[11px] font-bold truncate max-w-[120px] ${match.winnerId === match.teamAId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-750 dark:text-zinc-300'}`}>{teamAName}</span>
+             <span className={`text-[11px] font-bold truncate max-w-[120px] ${match.winnerId === match.teamAId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-750 dark:text-zinc-300'}`}>
+              {teamAName}
+              {teamASubtitle && teamASubtitle !== teamAName && <span className="block text-[9px] text-zinc-500 truncate">{teamASubtitle}</span>}
+             </span>
              <span className="font-mono text-[11px] font-black">{match.status === 'finished' ? match.scoreA : '-'}</span>
           </div>
           <div className="flex justify-between items-center rounded-md px-1.5 py-1 bg-zinc-50 dark:bg-zinc-900">
-             <span className={`text-[11px] font-bold truncate max-w-[120px] ${match.winnerId === match.teamBId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-750 dark:text-zinc-300'}`}>{teamBName}</span>
+             <span className={`text-[11px] font-bold truncate max-w-[120px] ${match.winnerId === match.teamBId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-750 dark:text-zinc-300'}`}>
+              {teamBName}
+              {teamBSubtitle && teamBSubtitle !== teamBName && <span className="block text-[9px] text-zinc-500 truncate">{teamBSubtitle}</span>}
+             </span>
              <span className="font-mono text-[11px] font-black">{match.status === 'finished' ? match.scoreB : '-'}</span>
           </div>
         </div>

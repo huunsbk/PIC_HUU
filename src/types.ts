@@ -95,6 +95,10 @@ export interface Match {
   nextMatchSlot?: 'A' | 'B'; // Đội thắng sẽ vào slot A hay slot B trong trận tiếp theo
   placeholderA?: string;
   placeholderB?: string;
+  courtNumber?: number | null;
+  slotNumber?: number | null;
+  displayOrder?: number | null;
+  metadata?: Record<string, unknown> | null;
   tenant_id?: string;
   event_id?: string;
   matchSets?: MatchSet[];

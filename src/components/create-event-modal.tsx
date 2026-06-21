@@ -13,6 +13,7 @@ export default function CreateEventModal({ onClose }: { onClose: () => void }) {
   const [formatType, setFormatType] = useState<EventFormatType>('group_then_knockout');
   const [matchSetMode, setMatchSetMode] = useState<MatchSetMode>('single');
   const [groupCount, setGroupCount] = useState(4);
+  const [courtCount, setCourtCount] = useState(1);
   const [topPerGroup, setTopPerGroup] = useState(2);
   const [bestThirdCount, setBestThirdCount] = useState(0);
   const [excludeBottomResults, setExcludeBottomResults] = useState(false);
@@ -45,6 +46,10 @@ export default function CreateEventModal({ onClose }: { onClose: () => void }) {
             top_per_group: topPerGroup,
             best_third_count: bestThirdCount,
             exclude_bottom_results: excludeBottomResults,
+            schedule_config: {
+              court_count: courtCount,
+              scheduling_mode: 'round_robin_balanced',
+            },
             bestThirds: {
               enabled: bestThirdCount > 0,
               count: bestThirdCount,
@@ -131,6 +136,10 @@ export default function CreateEventModal({ onClose }: { onClose: () => void }) {
             <div>
               <label className="block text-xs font-bold text-zinc-500 mb-1 uppercase">Số bảng</label>
               <input type="number" min={1} max={32} value={groupCount} onChange={e => setGroupCount(Math.min(32, Math.max(1, Number(e.target.value) || 1)))} className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-zinc-500 mb-1 uppercase">Số sân thi đấu</label>
+              <input type="number" min={1} max={32} value={courtCount} onChange={e => setCourtCount(Math.min(32, Math.max(1, Number(e.target.value) || 1)))} className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm" />
             </div>
             <div>
               <label className="block text-xs font-bold text-zinc-500 mb-1 uppercase">Top mỗi bảng</label>

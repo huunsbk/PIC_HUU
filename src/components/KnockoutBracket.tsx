@@ -10,8 +10,10 @@ import { useGroups } from '../hooks/useGroups';
 import { useMatches } from '../hooks/useMatches';
 import { useTournamentRpcMutations } from '../hooks/useTournamentRpcMutations';
 import { isUsableEventId, useEvents } from '../hooks/useEvents';
+import { useMatchSets } from '../hooks/useMatchSets';
 import { Trophy, PlayCircle, HelpCircle, AlertTriangle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { getReadableTeamName, getReadableKoMatchName, calculateGroupStandings, calculateBestThirdPlaces, getBracketDisplayName } from '../utils/tournamentEngine';
+import { attachMatchSets, getResolvedTeamName, getSeedLabel } from '../utils/scoreDisplay';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 export default function KnockoutBracket() {
@@ -30,6 +32,7 @@ export default function KnockoutBracket() {
   const { data: teamsData = [] } = useTeams();
   const { data: groupsData = [] } = useGroups();
   const { data: matchesData = [] } = useMatches();
+  const { data: matchSetsData = [] } = useMatchSets();
   const { data: eventsData = [] } = useEvents();
   const selectedEventId = isUsableEventId(currentEventId) && eventsData.some((event) => event.id === currentEventId)
     ? currentEventId
@@ -52,7 +55,7 @@ export default function KnockoutBracket() {
     return record;
   }, [groupsData]);
 
-  const matches = matchesData;
+  const matches = React.useMemo(() => attachMatchSets(matchesData as any[], matchSetsData), [matchesData, matchSetsData]);
 
   const canManage = hasPermission("manage_matches");
 
@@ -218,6 +221,19 @@ export default function KnockoutBracket() {
     return getBracketDisplayName(slotKey, groups);
   };
 
+  const getKoParticipantLines = (m: any, slot: 'A' | 'B') => {
+    const teamId = slot === 'A' ? m.teamAId : m.teamBId;
+    const placeholder = slot === 'A' ? m.placeholderA : m.placeholderB;
+    if (teamId === '') return { primary: '[TRỐNG]', secondary: '' };
+
+    const fallback = teamId ? resolveSlotName(teamId) : (placeholder || 'Chờ...');
+    const primary = getSeedLabel(m, slot, placeholder || fallback);
+    const resolvedName = getResolvedTeamName(m, slot, teams, teamId);
+    const secondary = resolvedName && resolvedName !== primary ? resolvedName : '';
+
+    return { primary: primary || fallback, secondary };
+  };
+
   const findSlotKeyForPlaceholder = (placeholder: string): string | null => {
     if (!placeholder) return null;
     const cleanPlaceholder = placeholder.trim().toLowerCase();
@@ -302,6 +318,9 @@ export default function KnockoutBracket() {
         source: candidate.source || 'admin',
         source_group_id: candidate.group_id,
         group_rank: candidate.group_rank,
+        seed_label: candidate.seed_label,
+        seed_source: candidate.seed_source,
+        resolved_team_id: candidate.team_id,
       }));
       const result = await confirm_knockout_teams_v1.mutateAsync({
         eventId: selectedEventId,
@@ -1058,30 +1077,38 @@ export default function KnockoutBracket() {
                                           </button>
                                         )}
                                       </div>
-                                    ) : (
-                                      <span 
-                                        className={`font-black text-xs sm:text-sm truncate block max-w-[190px] sm:max-w-[230px] ${
-                                          isFinished && m.winnerId === m.teamAId 
-                                            ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
-                                            : m.teamAId === '' ? 'text-red-500 dark:text-red-400 italic' : 'text-zinc-800 dark:text-zinc-200'
+                                    ) : (() => {
+                                      const lines = getKoParticipantLines(m, 'A');
+                                      return (
+                                        <div
+                                          className={`max-w-[190px] sm:max-w-[230px] ${
+                                            m.teamAId === '' ? 'text-red-500 dark:text-red-400 italic' : 'text-zinc-800 dark:text-zinc-200'
+                                          }`}
+                                          title={`${lines.primary}${lines.secondary ? ` - ${lines.secondary}` : ''}`}
+                                        >
+                                          <span className={`font-black text-xs sm:text-sm truncate block ${isFinished && m.winnerId === m.teamAId ? 'text-blue-600 dark:text-blue-400 underline decoration-2' : ''}`}>
+                                            {lines.primary}
+                                          </span>
+                                          {lines.secondary && <span className="block truncate text-[10px] font-bold text-zinc-500 dark:text-zinc-400">{lines.secondary}</span>}
+                                        </div>
+                                      );
+                                    })()
+                                  ) : (() => {
+                                    const lines = getKoParticipantLines(m, 'A');
+                                    return (
+                                      <div
+                                        className={`max-w-[190px] sm:max-w-[230px] ${
+                                          m.teamAId === '' ? 'text-red-500 dark:text-red-400 italic' : 'text-zinc-800 dark:text-zinc-200'
                                         }`}
-                                        title={m.teamAId === '' ? '[TRỐNG]' : (m.teamAId ? resolveSlotName(m.teamAId) : (m.placeholderA || 'Chờ...'))}
+                                        title={`${lines.primary}${lines.secondary ? ` - ${lines.secondary}` : ''}`}
                                       >
-                                        {m.teamAId === '' ? '[TRỐNG]' : (m.teamAId ? resolveSlotName(m.teamAId) : (m.placeholderA || 'Chờ...'))}
-                                      </span>
-                                    )
-                                  ) : (
-                                    <span 
-                                      className={`font-black text-xs sm:text-sm truncate block max-w-[190px] sm:max-w-[230px] ${
-                                        isFinished && m.winnerId === m.teamAId 
-                                          ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
-                                          : m.teamAId === '' ? 'text-red-500 dark:text-red-400 italic' : 'text-zinc-800 dark:text-zinc-200'
-                                      }`}
-                                      title={m.teamAId === '' ? '[TRỐNG]' : (m.teamAId ? resolveSlotName(m.teamAId) : (m.placeholderA || 'Chờ...'))}
-                                    >
-                                      {m.teamAId === '' ? '[TRỐNG]' : (m.teamAId ? resolveSlotName(m.teamAId) : (m.placeholderA || 'Chờ...'))}
-                                    </span>
-                                  )}
+                                        <span className={`font-black text-xs sm:text-sm truncate block ${isFinished && m.winnerId === m.teamAId ? 'text-blue-600 dark:text-blue-400 underline decoration-2' : ''}`}>
+                                          {lines.primary}
+                                        </span>
+                                        {lines.secondary && <span className="block truncate text-[10px] font-bold text-zinc-500 dark:text-zinc-400">{lines.secondary}</span>}
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                                 
                                 <input
@@ -1143,30 +1170,38 @@ export default function KnockoutBracket() {
                                           </button>
                                         )}
                                       </div>
-                                    ) : (
-                                      <span 
-                                        className={`font-black text-xs sm:text-sm truncate block max-w-[190px] sm:max-w-[230px] ${
-                                          isFinished && m.winnerId === m.teamBId 
-                                            ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
-                                            : m.teamBId === '' ? 'text-red-500 dark:text-red-400 italic' : 'text-zinc-800 dark:text-zinc-200'
+                                    ) : (() => {
+                                      const lines = getKoParticipantLines(m, 'B');
+                                      return (
+                                        <div
+                                          className={`max-w-[190px] sm:max-w-[230px] ${
+                                            m.teamBId === '' ? 'text-red-500 dark:text-red-400 italic' : 'text-zinc-800 dark:text-zinc-200'
+                                          }`}
+                                          title={`${lines.primary}${lines.secondary ? ` - ${lines.secondary}` : ''}`}
+                                        >
+                                          <span className={`font-black text-xs sm:text-sm truncate block ${isFinished && m.winnerId === m.teamBId ? 'text-blue-600 dark:text-blue-400 underline decoration-2' : ''}`}>
+                                            {lines.primary}
+                                          </span>
+                                          {lines.secondary && <span className="block truncate text-[10px] font-bold text-zinc-500 dark:text-zinc-400">{lines.secondary}</span>}
+                                        </div>
+                                      );
+                                    })()
+                                  ) : (() => {
+                                    const lines = getKoParticipantLines(m, 'B');
+                                    return (
+                                      <div
+                                        className={`max-w-[190px] sm:max-w-[230px] ${
+                                          m.teamBId === '' ? 'text-red-500 dark:text-red-400 italic' : 'text-zinc-800 dark:text-zinc-200'
                                         }`}
-                                        title={m.teamBId === '' ? '[TRỐNG]' : (m.teamBId ? resolveSlotName(m.teamBId) : (m.placeholderB || 'Chờ...'))}
+                                        title={`${lines.primary}${lines.secondary ? ` - ${lines.secondary}` : ''}`}
                                       >
-                                        {m.teamBId === '' ? '[TRỐNG]' : (m.teamBId ? resolveSlotName(m.teamBId) : (m.placeholderB || 'Chờ...'))}
-                                      </span>
-                                    )
-                                  ) : (
-                                    <span 
-                                      className={`font-black text-xs sm:text-sm truncate block max-w-[190px] sm:max-w-[230px] ${
-                                        isFinished && m.winnerId === m.teamBId 
-                                          ? 'text-blue-600 dark:text-blue-400 underline decoration-2' 
-                                          : m.teamBId === '' ? 'text-red-500 dark:text-red-400 italic' : 'text-zinc-800 dark:text-zinc-200'
-                                      }`}
-                                      title={m.teamBId === '' ? '[TRỐNG]' : (m.teamBId ? resolveSlotName(m.teamBId) : (m.placeholderB || 'Chờ...'))}
-                                    >
-                                      {m.teamBId === '' ? '[TRỐNG]' : (m.teamBId ? resolveSlotName(m.teamBId) : (m.placeholderB || 'Chờ...'))}
-                                    </span>
-                                  )}
+                                        <span className={`font-black text-xs sm:text-sm truncate block ${isFinished && m.winnerId === m.teamBId ? 'text-blue-600 dark:text-blue-400 underline decoration-2' : ''}`}>
+                                          {lines.primary}
+                                        </span>
+                                        {lines.secondary && <span className="block truncate text-[10px] font-bold text-zinc-500 dark:text-zinc-400">{lines.secondary}</span>}
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
 
                                 <input

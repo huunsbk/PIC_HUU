@@ -22,10 +22,11 @@ export function useGroups() {
         .is('deleted_at', null);
       const teamsQuery = supabase
         .from('teams')
-        .select('id, group_id')
+        .select('id, group_id, name')
         .eq('event_id', selectedEventId)
         .eq('tenant_id', activeTenantId)
-        .is('deleted_at', null);
+        .is('deleted_at', null)
+        .order('name', { ascending: true });
 
       const [{ data, error }, { data: teamRows, error: teamsError }] = await Promise.all([
         query,
@@ -42,10 +43,16 @@ export function useGroups() {
         teamIdsByGroup.set(team.group_id, teamIds);
       });
       
-      return (data || []).map((group) => ({
-        ...group,
-        teamIds: teamIdsByGroup.get(group.id) || (Array.isArray(group.team_ids) ? group.team_ids : []),
-      }));
+      return (data || []).map((group) => {
+        const queriedTeamIds = teamIdsByGroup.get(group.id) || [];
+        const configuredOrder = Array.isArray(group.team_ids) ? group.team_ids.filter((id: string) => queriedTeamIds.includes(id)) : [];
+        const missingFromConfiguredOrder = queriedTeamIds.filter((id) => !configuredOrder.includes(id));
+
+        return {
+          ...group,
+          teamIds: [...configuredOrder, ...missingFromConfiguredOrder],
+        };
+      });
     },
     enabled: !!activeTenantId && activeTenantId !== 'default' && !!selectedEventId,
   });

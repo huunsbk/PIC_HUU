@@ -8,15 +8,18 @@ import { useTournamentStore } from '../store';
 import { useTeams } from '../hooks/useTeams';
 import { useGroups } from '../hooks/useGroups';
 import { useMatches } from '../hooks/useMatches';
+import { useMatchSets } from '../hooks/useMatchSets';
 import { supabase } from '../supabaseClient';
 import { calculateGroupStandings, calculateBestThirdPlaces } from '../utils/tournamentEngine';
+import { attachMatchSets } from '../utils/scoreDisplay';
 import { BarChart3, Star, Download, Printer, ShieldAlert, Award } from 'lucide-react';
 
 export default function Standings() {
   const { data: matchesData = [] } = useMatches();
+  const { data: matchSetsData = [] } = useMatchSets();
   const { data: teamsData = [] } = useTeams();
   const { data: groupsData = [] } = useGroups();
-  const matches = matchesData;
+  const matches = React.useMemo(() => attachMatchSets(matchesData as any[], matchSetsData), [matchesData, matchSetsData]);
   const teams = React.useMemo(() => {
     const record: Record<string, any> = {};
     teamsData.forEach(t => { record[t.id] = t; });
