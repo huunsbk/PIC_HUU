@@ -5,11 +5,11 @@
 
 import React, { useState } from 'react';
 import ExcelJS from 'exceljs';
+import { useQuery } from '@tanstack/react-query';
 import { useTournamentStore } from '../store';
-import { useTeams } from '../hooks/useTeams';
-import { useMatches } from '../hooks/useMatches';
-import { useMatchSets } from '../hooks/useMatchSets';
-import { useGroups } from '../hooks/useGroups';
+import { useEvents } from '../hooks/useEvents';
+import { supabase } from '../supabaseClient';
+import type { MatchSet } from '../types';
 import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime } from '../utils/tournamentEngine';
 import { attachMatchSets, getSetScoreText } from '../utils/scoreDisplay';
 import {
@@ -26,23 +26,141 @@ import {
 } from 'lucide-react';
 
 export default function ExportManager() {
+  const { data: eventsData = [] } = useEvents();
   const {
     tournament,
-    events,
     addLog,
-    currentEventId
+    activeTenantId
   } = useTournamentStore();
 
-  const { data: teamsData = [] } = useTeams();
-  const { data: groupsData = [] } = useGroups();
-  const { data: matchesData = [] } = useMatches();
-  const { data: matchSetsData = [] } = useMatchSets();
+  const eventIds = React.useMemo(() => eventsData.map((event: any) => event.id), [eventsData]);
 
-  const teams: Record<string, any> = {};
-  teamsData.forEach(t => { teams[t.id] = t; });
-  const groups: Record<string, any> = {};
-  groupsData.forEach(g => { groups[g.id] = g; });
-  const matches = React.useMemo(() => attachMatchSets(matchesData as any[], matchSetsData), [matchesData, matchSetsData]);
+  const {
+    data: exportData = { teams: [], groups: [], matches: [], matchSets: [] },
+    isLoading: exportDataLoading,
+  } = useQuery({
+    queryKey: ['export-manager-data', activeTenantId, eventIds],
+    queryFn: async () => {
+      const [teamsResult, groupsResult, matchesResult, matchSetsResult] = await Promise.all([
+        supabase
+          .from('teams')
+          .select('id, name, group_id, seed, event_id')
+          .eq('tenant_id', activeTenantId)
+          .in('event_id', eventIds)
+          .is('deleted_at', null)
+          .order('name', { ascending: true }),
+        supabase
+          .from('groups')
+          .select('id, name, team_ids, event_id')
+          .eq('tenant_id', activeTenantId)
+          .in('event_id', eventIds)
+          .is('deleted_at', null)
+          .order('name', { ascending: true }),
+        supabase
+          .from('matches')
+          .select('id, group_id, team_a_id, team_b_id, placeholder_a, placeholder_b, score_a, score_b, winner_id, status, round, knockout_round_name, knockout_match_id, next_match_id, next_match_slot, court_number, slot_number, display_order, metadata, event_id')
+          .eq('tenant_id', activeTenantId)
+          .in('event_id', eventIds)
+          .is('deleted_at', null)
+          .order('event_id', { ascending: true })
+          .order('display_order', { ascending: true, nullsFirst: false })
+          .order('round', { ascending: true })
+          .order('slot_number', { ascending: true, nullsFirst: false })
+          .order('court_number', { ascending: true, nullsFirst: false }),
+        supabase
+          .from('match_sets')
+          .select('id, match_id, tenant_id, event_id, set_number, score_a, score_b, winner_id, status, created_at, updated_at, deleted_at')
+          .eq('tenant_id', activeTenantId)
+          .in('event_id', eventIds)
+          .is('deleted_at', null)
+          .order('set_number', { ascending: true }),
+      ]);
+
+      if (teamsResult.error) throw teamsResult.error;
+      if (groupsResult.error) throw groupsResult.error;
+      if (matchesResult.error) throw matchesResult.error;
+      if (matchSetsResult.error) throw matchSetsResult.error;
+
+      return {
+        teams: teamsResult.data || [],
+        groups: groupsResult.data || [],
+        matches: matchesResult.data || [],
+        matchSets: (matchSetsResult.data || []) as MatchSet[],
+      };
+    },
+    enabled: !!activeTenantId && activeTenantId !== 'default' && eventIds.length > 0,
+  });
+
+  const events = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    const teamsByEvent: Record<string, Record<string, any>> = {};
+    const groupsByEvent: Record<string, Record<string, any>> = {};
+    const matchesByEvent: Record<string, any[]> = {};
+    const teamIdsByGroup = new Map<string, string[]>();
+
+    exportData.teams.forEach((team: any) => {
+      if (!teamsByEvent[team.event_id]) teamsByEvent[team.event_id] = {};
+      teamsByEvent[team.event_id][team.id] = {
+        ...team,
+        groupId: team.group_id || null,
+      };
+
+      if (!team.group_id) return;
+      const ids = teamIdsByGroup.get(team.group_id) || [];
+      ids.push(team.id);
+      teamIdsByGroup.set(team.group_id, ids);
+    });
+
+    exportData.groups.forEach((group: any) => {
+      const queriedTeamIds = teamIdsByGroup.get(group.id) || [];
+      const configuredOrder = Array.isArray(group.team_ids)
+        ? group.team_ids.map(String).filter((id: string) => queriedTeamIds.includes(id))
+        : [];
+      const missingFromConfiguredOrder = queriedTeamIds.filter((id) => !configuredOrder.includes(id));
+
+      if (!groupsByEvent[group.event_id]) groupsByEvent[group.event_id] = {};
+      groupsByEvent[group.event_id][group.id] = {
+        ...group,
+        teamIds: [...configuredOrder, ...missingFromConfiguredOrder],
+      };
+    });
+
+    const matchesWithSets = attachMatchSets(exportData.matches as any[], exportData.matchSets);
+    matchesWithSets.forEach((match: any) => {
+      if (!matchesByEvent[match.event_id]) matchesByEvent[match.event_id] = [];
+      matchesByEvent[match.event_id].push({
+        ...match,
+        groupId: match.group_id || 'knockout',
+        teamAId: match.team_a_id,
+        teamBId: match.team_b_id,
+        placeholderA: match.placeholder_a,
+        placeholderB: match.placeholder_b,
+        scoreA: match.score_a,
+        scoreB: match.score_b,
+        winnerId: match.winner_id,
+        knockoutRoundName: match.knockout_round_name,
+        knockoutMatchId: match.knockout_match_id,
+        nextMatchId: match.next_match_id,
+        nextMatchSlot: match.next_match_slot,
+        courtNumber: match.court_number,
+        slotNumber: match.slot_number,
+        displayOrder: match.display_order,
+        metadata: match.metadata,
+      });
+    });
+
+    eventsData.forEach((event: any) => {
+      record[event.id] = {
+        ...event,
+        settings: event.settings || tournament.settings,
+        teams: teamsByEvent[event.id] || {},
+        groups: groupsByEvent[event.id] || {},
+        matches: matchesByEvent[event.id] || [],
+      };
+    });
+
+    return record;
+  }, [eventsData, exportData, tournament.settings]);
 
   const [selectedEventFilter, setSelectedEventFilter] = useState<string>('all');
   const [isExportingExcel, setIsExportingExcel] = useState(false);
@@ -51,17 +169,17 @@ export default function ExportManager() {
 
   const eventList = Object.values(events || {});
 
-  // Hàm tính Standing cho một Event bất kỳ (hiện chỉ hoạt động cho current event)
+  // Hàm tính Standing cho một Event bất kỳ từ dữ liệu export đã gom theo event
   const getEventStandings = (evt: typeof events[string]) => {
     const stdRecord: Record<string, ReturnType<typeof calculateGroupStandings>> = {};
-    const groupList = groupsData;
+    const groupList = Object.values(evt.groups || {});
     groupList.forEach((g) => {
-      const groupMatches = matches.filter((m) => m.groupId === g.id);
+      const groupMatches = (evt.matches || []).filter((m: any) => m.groupId === g.id);
       stdRecord[g.id] = calculateGroupStandings(
         g.id, 
         g.teamIds, 
         groupMatches, 
-        teams, 
+        evt.teams || {},
         evt.settings
       );
     });
@@ -493,11 +611,11 @@ export default function ExportManager() {
               <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 mt-4">
                 <button
                   onClick={handleExportLiveExcel}
-                  disabled={isExportingExcel}
+                  disabled={isExportingExcel || exportDataLoading}
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all uppercase tracking-wider disabled:opacity-50 select-none hover:scale-[1.01]"
                 >
                   <FileSpreadsheet size={15} />
-                  <span>{isExportingExcel ? 'Đang xuất file Excel...' : 'Tải xuống File Excel'}</span>
+                  <span>{isExportingExcel ? 'Đang xuất file Excel...' : exportDataLoading ? 'Đang tải dữ liệu...' : 'Tải xuống File Excel'}</span>
                 </button>
               </div>
             </div>
@@ -632,7 +750,11 @@ export default function ExportManager() {
           }
 
           if (eventsToRender.length === 0) {
-            return <p className="text-xs text-zinc-400 py-10 text-center">Không có dữ liệu hiển thị xem trước.</p>;
+            return (
+              <p className="text-xs text-zinc-400 py-10 text-center">
+                {exportDataLoading ? 'Đang tải dữ liệu hiển thị xem trước...' : 'Không có dữ liệu hiển thị xem trước.'}
+              </p>
+            );
           }
 
           return (
