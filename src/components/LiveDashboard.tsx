@@ -5,15 +5,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import ExcelJS from 'exceljs';
+import { useQuery } from '@tanstack/react-query';
 import { useTournamentStore } from '../store';
 import { useEvents } from '../hooks/useEvents';
-import { useTeams } from '../hooks/useTeams';
-import { useGroups } from '../hooks/useGroups';
-import { useMatches } from '../hooks/useMatches';
-import { useMatchSets } from '../hooks/useMatchSets';
 import { supabase } from '../supabaseClient';
 import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
 import { attachMatchSets, getSetScoreText } from '../utils/scoreDisplay';
+import type { MatchSet } from '../types';
 import { 
   Monitor, 
   Play, 
@@ -351,34 +349,137 @@ FullscreenButton.displayName = 'FullscreenButton';
 
 export default function LiveDashboard() {
   const { data: eventsData = [] } = useEvents();
-  const events = React.useMemo(() => {
-    const record: Record<string, any> = {};
-    eventsData.forEach(e => { record[e.id] = e; });
-    return record;
-  }, [eventsData]);
-
-  const { data: teamsData = [] } = useTeams();
-  const teams = React.useMemo(() => {
-    const record: Record<string, any> = {};
-    teamsData.forEach(t => { record[t.id] = t; });
-    return record;
-  }, [teamsData]);
-
-  const { data: groupsData = [] } = useGroups();
-  const groups = React.useMemo(() => {
-    const record: Record<string, any> = {};
-    groupsData.forEach(g => { record[g.id] = g; });
-    return record;
-  }, [groupsData]);
-
-  const { data: matchesData = [] } = useMatches();
-  const { data: matchSetsData = [] } = useMatchSets();
-  const matches = React.useMemo(() => attachMatchSets(matchesData as any[], matchSetsData), [matchesData, matchSetsData]);
-
   const tournament = useTournamentStore(state => state.tournament);
   const activeTenantId = useTournamentStore(state => state.activeTenantId);
   const canManage = useTournamentStore(state => state.hasPermission("manage_matches"));
   const addLog = useTournamentStore(state => state.addLog);
+  const eventIds = React.useMemo(() => eventsData.map((event: any) => event.id), [eventsData]);
+
+  const {
+    data: liveData = { teams: [], groups: [], matches: [], matchSets: [] },
+    isLoading: liveDataLoading,
+  } = useQuery({
+    queryKey: ['live-dashboard-data', activeTenantId, eventIds],
+    queryFn: async () => {
+      const [teamsResult, groupsResult, matchesResult, matchSetsResult] = await Promise.all([
+        supabase
+          .from('teams')
+          .select('id, name, group_id, seed, event_id')
+          .eq('tenant_id', activeTenantId)
+          .in('event_id', eventIds)
+          .is('deleted_at', null)
+          .order('name', { ascending: true }),
+        supabase
+          .from('groups')
+          .select('id, name, team_ids, event_id')
+          .eq('tenant_id', activeTenantId)
+          .in('event_id', eventIds)
+          .is('deleted_at', null)
+          .order('name', { ascending: true }),
+        supabase
+          .from('matches')
+          .select('id, group_id, team_a_id, team_b_id, placeholder_a, placeholder_b, score_a, score_b, winner_id, status, round, knockout_round_name, knockout_match_id, next_match_id, next_match_slot, court_number, slot_number, display_order, metadata, event_id')
+          .eq('tenant_id', activeTenantId)
+          .in('event_id', eventIds)
+          .is('deleted_at', null)
+          .order('event_id', { ascending: true })
+          .order('display_order', { ascending: true, nullsFirst: false })
+          .order('round', { ascending: true })
+          .order('slot_number', { ascending: true, nullsFirst: false })
+          .order('court_number', { ascending: true, nullsFirst: false }),
+        supabase
+          .from('match_sets')
+          .select('id, match_id, tenant_id, event_id, set_number, score_a, score_b, winner_id, status, created_at, updated_at, deleted_at')
+          .eq('tenant_id', activeTenantId)
+          .in('event_id', eventIds)
+          .is('deleted_at', null)
+          .order('set_number', { ascending: true }),
+      ]);
+
+      if (teamsResult.error) throw teamsResult.error;
+      if (groupsResult.error) throw groupsResult.error;
+      if (matchesResult.error) throw matchesResult.error;
+      if (matchSetsResult.error) throw matchSetsResult.error;
+
+      return {
+        teams: teamsResult.data || [],
+        groups: groupsResult.data || [],
+        matches: matchesResult.data || [],
+        matchSets: (matchSetsResult.data || []) as MatchSet[],
+      };
+    },
+    enabled: !!activeTenantId && activeTenantId !== 'default' && eventIds.length > 0,
+  });
+
+  const events = React.useMemo(() => {
+    const record: Record<string, any> = {};
+    const teamsByEvent: Record<string, Record<string, any>> = {};
+    const groupsByEvent: Record<string, Record<string, any>> = {};
+    const matchesByEvent: Record<string, any[]> = {};
+    const teamIdsByGroup = new Map<string, string[]>();
+
+    liveData.teams.forEach((team: any) => {
+      if (!teamsByEvent[team.event_id]) teamsByEvent[team.event_id] = {};
+      teamsByEvent[team.event_id][team.id] = {
+        ...team,
+        groupId: team.group_id || null,
+      };
+
+      if (!team.group_id) return;
+      const ids = teamIdsByGroup.get(team.group_id) || [];
+      ids.push(team.id);
+      teamIdsByGroup.set(team.group_id, ids);
+    });
+
+    liveData.groups.forEach((group: any) => {
+      const queriedTeamIds = teamIdsByGroup.get(group.id) || [];
+      const configuredOrder = Array.isArray(group.team_ids)
+        ? group.team_ids.filter((id: string) => queriedTeamIds.includes(id))
+        : [];
+      const missingFromConfiguredOrder = queriedTeamIds.filter((id) => !configuredOrder.includes(id));
+
+      if (!groupsByEvent[group.event_id]) groupsByEvent[group.event_id] = {};
+      groupsByEvent[group.event_id][group.id] = {
+        ...group,
+        teamIds: [...configuredOrder, ...missingFromConfiguredOrder],
+      };
+    });
+
+    const matchesWithSets = attachMatchSets(liveData.matches as any[], liveData.matchSets);
+    matchesWithSets.forEach((match: any) => {
+      if (!matchesByEvent[match.event_id]) matchesByEvent[match.event_id] = [];
+      matchesByEvent[match.event_id].push({
+        ...match,
+        groupId: match.group_id,
+        teamAId: match.team_a_id,
+        teamBId: match.team_b_id,
+        placeholderA: match.placeholder_a,
+        placeholderB: match.placeholder_b,
+        scoreA: match.score_a,
+        scoreB: match.score_b,
+        winnerId: match.winner_id,
+        knockoutRoundName: match.knockout_round_name,
+        knockoutMatchId: match.knockout_match_id,
+        nextMatchId: match.next_match_id,
+        nextMatchSlot: match.next_match_slot,
+        courtNumber: match.court_number,
+        slotNumber: match.slot_number,
+        displayOrder: match.display_order,
+        metadata: match.metadata,
+      });
+    });
+
+    eventsData.forEach((event: any) => {
+      record[event.id] = {
+        ...event,
+        teams: teamsByEvent[event.id] || {},
+        groups: groupsByEvent[event.id] || {},
+        matches: matchesByEvent[event.id] || [],
+      };
+    });
+
+    return record;
+  }, [eventsData, liveData]);
 
   const [selectedEventFilter, setSelectedEventFilter] = useState<string>('all');
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -701,6 +802,11 @@ export default function LiveDashboard() {
   };
 
   const eventList = React.useMemo(() => Object.values(events || {}), [events]);
+  const isEventEmpty = React.useCallback((evt: any) => (
+    Object.keys(evt.teams || {}).length === 0
+    && Object.keys(evt.groups || {}).length === 0
+    && (evt.matches || []).length === 0
+  ), []);
 
   // Pre-calculate standings for all events to avoid recounting on every 1-second clock tick
   const standingsByEvent = React.useMemo(() => {
@@ -774,7 +880,11 @@ export default function LiveDashboard() {
       </div>
 
       {/* HIỂN THỊ TẨT CẢ NỘI DUNG (Sticked Grid View) */}
-      {selectedEventFilter === 'all' ? (
+      {liveDataLoading ? (
+        <div className="py-16 text-center text-sm font-bold text-zinc-500">
+          Đang tải dữ liệu Bảng trình chiếu TV...
+        </div>
+      ) : selectedEventFilter === 'all' ? (
         <div className="space-y-8" id="tv-all-events-view">
           {eventList.map((evt) => {
             const stdByGrp = getEventStandings(evt);
@@ -806,6 +916,12 @@ export default function LiveDashboard() {
                     <span className="bg-zinc-100 dark:bg-zinc-950 px-2.5 py-1 rounded-lg">Trận: <strong className="text-zinc-850 dark:text-zinc-200">{evtMatches.length}</strong></span>
                   </div>
                 </div>
+
+                {isEventEmpty(evt) ? (
+                  <div className="rounded-2xl border border-dashed border-zinc-250 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/30 py-10 text-center text-sm font-bold text-zinc-500">
+                    Chưa có dữ liệu cho nội dung này
+                  </div>
+                ) : null}
 
                 {/* Grid 3 phần chính cho nội dung */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -909,6 +1025,11 @@ export default function LiveDashboard() {
 
             return (
               <>
+                {isEventEmpty(currentEvt) ? (
+                  <div className="rounded-2xl border border-dashed border-zinc-250 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/30 py-10 text-center text-sm font-bold text-zinc-500">
+                    Chưa có dữ liệu cho nội dung này
+                  </div>
+                ) : null}
                 <style>{`
                   #bracket-fullscreen-${currentEvt.id}:fullscreen {
                     width: 100vw !important;
