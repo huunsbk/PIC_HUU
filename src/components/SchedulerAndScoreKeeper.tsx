@@ -13,6 +13,7 @@ import { useMatchMutations } from '../hooks/useDataMutations';
 import { useEvents } from '../hooks/useEvents';
 import { useMatchSets } from '../hooks/useMatchSets';
 import { calculateGroupStandings, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
+import { attachMatchSets, getMatchResultLabel, getSetScoreText, getSingleSetScoreValue } from '../utils/scoreDisplay';
 import { 
   Printer, 
   RefreshCw, 
@@ -54,7 +55,7 @@ export default function SchedulerAndScoreKeeper() {
     return record;
   }, [groupsData]);
 
-  const matches = matchesData;
+  const matches = React.useMemo(() => attachMatchSets(matchesData as any[], matchSetsData), [matchesData, matchSetsData]);
 
   const events = React.useMemo(() => {
     const record: Record<string, any> = {};
@@ -99,13 +100,14 @@ export default function SchedulerAndScoreKeeper() {
     const scoresMap: Record<string, { scoreA: string; scoreB: string }> = {};
     
     groupMatches.forEach((m) => {
+      const singleSetScore = getSingleSetScoreValue(m, matchSetsData);
       scoresMap[m.id] = {
-        scoreA: m.scoreA !== null ? String(m.scoreA) : '',
-        scoreB: m.scoreB !== null ? String(m.scoreB) : '',
+        scoreA: singleSetScore.a,
+        scoreB: singleSetScore.b,
       };
     });
     setLocalScores(scoresMap);
-  }, [activeGroupId, matches]); // Sync when active table changes or background matches update
+  }, [activeGroupId, matches, matchSetsData]); // Sync when active table changes or background matches update
 
   const handleScoreInputChange = async (matchId: string, team: 'A' | 'B', value: string) => {
     // Keep value clean: only digits or empty string
@@ -203,14 +205,6 @@ export default function SchedulerAndScoreKeeper() {
       [1, 2, 3].forEach((setNumber) => delete next[getSetKey(matchId, setNumber)]);
       return next;
     });
-  };
-
-  const getMatchResultLabel = (match: any, teamAName: string, teamBName: string) => {
-    if (match.status !== 'finished' || match.scoreA === null || match.scoreB === null) {
-      return 'Chưa có kết quả trận';
-    }
-    const winnerName = match.winnerId === match.teamAId ? teamAName : match.winnerId === match.teamBId ? teamBName : 'Đội thắng';
-    return `${winnerName} thắng ${match.scoreA}-${match.scoreB}`;
   };
 
   // Perform whole group regeneration via Store Action
@@ -380,7 +374,8 @@ export default function SchedulerAndScoreKeeper() {
 
           const scoreA = m.scoreA !== null ? m.scoreA : '-';
           const scoreB = m.scoreB !== null ? m.scoreB : '-';
-          const scoreText = m.status === 'finished' ? `${scoreA} - ${scoreB}` : 'Chưa đấu';
+          const setScoreText = getSetScoreText(m, matchSetsData).replaceAll('-', ' - ');
+          const scoreText = m.status === 'finished' ? (setScoreText || `${scoreA} - ${scoreB}`) : 'Chưa đấu';
 
           let statusText = 'Lên lịch';
           if (m.status === 'finished') {

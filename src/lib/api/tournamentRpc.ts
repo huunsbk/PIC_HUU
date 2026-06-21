@@ -32,6 +32,8 @@ export interface KnockoutCandidate {
   set_diff?: number;
   point_diff?: number;
   source?: string;
+  seed_label?: string;
+  seed_source?: JsonRecord;
   suggested_seed?: number;
 }
 
@@ -41,6 +43,9 @@ export interface ConfirmKnockoutTeamInput {
   source?: string;
   source_group_id?: string;
   group_rank?: number;
+  seed_label?: string;
+  seed_source?: JsonRecord;
+  resolved_team_id?: string;
 }
 
 export interface EventConfigInput {

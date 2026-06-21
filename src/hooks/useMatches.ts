@@ -16,10 +16,14 @@ export function useMatches() {
     queryFn: async () => {
       const query = supabase
         .from('matches')
-        .select('id, group_id, team_a_id, team_b_id, placeholder_a, placeholder_b, score_a, score_b, winner_id, status, round, knockout_round_name, knockout_match_id, next_match_id, next_match_slot')
+        .select('id, group_id, team_a_id, team_b_id, placeholder_a, placeholder_b, score_a, score_b, winner_id, status, round, knockout_round_name, knockout_match_id, next_match_id, next_match_slot, court_number, slot_number, display_order, metadata')
         .eq('event_id', selectedEventId)
         .eq('tenant_id', activeTenantId)
-        .is('deleted_at', null);
+        .is('deleted_at', null)
+        .order('display_order', { ascending: true, nullsFirst: false })
+        .order('round', { ascending: true })
+        .order('slot_number', { ascending: true, nullsFirst: false })
+        .order('court_number', { ascending: true, nullsFirst: false });
 
       const { data, error } = await query;
       if (error) throw error;
@@ -38,6 +42,10 @@ export function useMatches() {
         knockoutMatchId: match.knockout_match_id,
         nextMatchId: match.next_match_id,
         nextMatchSlot: match.next_match_slot,
+        courtNumber: match.court_number,
+        slotNumber: match.slot_number,
+        displayOrder: match.display_order,
+        metadata: match.metadata,
       }));
     },
     enabled: !!activeTenantId && activeTenantId !== 'default' && !!selectedEventId,

@@ -8,6 +8,7 @@ import { useGroups } from '../hooks/useGroups';
 import { useMatchSets } from '../hooks/useMatchSets';
 import { useMatchMutations } from '../hooks/useDataMutations';
 import { balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
+import { attachMatchSets, getMatchResultLabel, getPrimarySetScoreText, getSingleSetScoreValue } from '../utils/scoreDisplay';
 
 export default function ScoreEntry() {
   const { currentEventId, setCurrentEvent, userRole, currentUser } = useTournamentStore();
@@ -38,7 +39,7 @@ export default function ScoreEntry() {
     return record;
   }, [groupsData]);
 
-  const matches = matchesData;
+  const matches = React.useMemo(() => attachMatchSets(matchesData as any[], matchSetsData), [matchesData, matchSetsData]);
 
   const [localScores, setLocalScores] = useState<Record<string, { a: string, b: string }>>({});
   const [localSetScores, setLocalSetScores] = useState<Record<string, { a: string, b: string }>>({});
@@ -202,14 +203,6 @@ export default function ScoreEntry() {
     setActiveMatchIds(prev => prev.filter(id => id !== matchId));
   };
 
-  const getMatchResultLabel = (match: any, teamA: string, teamB: string) => {
-    if (match.status !== 'finished' || match.scoreA === null || match.scoreB === null) {
-      return 'Chưa có kết quả trận';
-    }
-    const winnerName = match.winnerId === match.teamAId ? teamA : match.winnerId === match.teamBId ? teamB : 'Đội thắng';
-    return `${winnerName} thắng ${match.scoreA}-${match.scoreB}`;
-  };
-
   return (
     <div className="space-y-6">
       {errorMsg && (
@@ -268,6 +261,7 @@ export default function ScoreEntry() {
                     let wrapperClass = "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800";
                     
                     if (isFinished) {
+                        const setScoreLabel = getPrimarySetScoreText(m, matchSetsData);
                         wrapperClass = "bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800";
                         btnJsx = (
                            <button
@@ -276,7 +270,7 @@ export default function ScoreEntry() {
                              className="text-[10px] font-black tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-1 rounded leading-none border border-emerald-200/50 dark:border-emerald-800 shadow-sm mt-1 shrink-0 text-center disabled:opacity-50"
                              title="Xem kết quả hoặc reset trước khi sửa"
                            >
-                              {m.scoreA}-{m.scoreB}
+                              {setScoreLabel || `${m.scoreA}-${m.scoreB}`}
                            </button>
                         );
                     } else if (isPlaying) {
@@ -358,7 +352,7 @@ export default function ScoreEntry() {
                            else roundLabel = rName ? rName.toUpperCase() : `VÒNG KO ${m.round}`;
                        }
 
-                       const scores = localScores[m.id] || { a: '', b: '' };
+                       const scores = localScores[m.id] || getSingleSetScoreValue(m, matchSetsData);
                        const set1 = getSetScoreValue(m.id, 1);
                        const set2 = getSetScoreValue(m.id, 2);
                        const set3 = getSetScoreValue(m.id, 3);

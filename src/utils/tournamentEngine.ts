@@ -97,33 +97,43 @@ export function calculateGroupStandings(
     if (m.status !== 'finished' || m.scoreA === null || m.scoreB === null) return;
     const { teamAId, teamBId, scoreA, scoreB, winnerId } = m;
 
-    if (!standings[teamAId] || !standings[teamBId]) return;
+    if (!teamAId || !teamBId || !standings[teamAId] || !standings[teamBId]) return;
+
+    const finishedSets = (m.matchSets || [])
+      .filter((setRow) => setRow.deleted_at === null || setRow.deleted_at === undefined)
+      .filter((setRow) => setRow.score_a !== null && setRow.score_a !== undefined && setRow.score_b !== null && setRow.score_b !== undefined);
+    const pointScoreA = finishedSets.length > 0
+      ? finishedSets.reduce((sum, setRow) => sum + Number(setRow.score_a || 0), 0)
+      : scoreA;
+    const pointScoreB = finishedSets.length > 0
+      ? finishedSets.reduce((sum, setRow) => sum + Number(setRow.score_b || 0), 0)
+      : scoreB;
 
     // Cập nhật đội A
     standings[teamAId].matchesPlayed += 1;
-    standings[teamAId].pointsWon += scoreA;
-    standings[teamAId].pointsLost += scoreB;
+    standings[teamAId].pointsWon += pointScoreA;
+    standings[teamAId].pointsLost += pointScoreB;
+    standings[teamAId].setsWon += scoreA;
+    standings[teamAId].setsLost += scoreB;
 
     // Cập nhật đội B
     standings[teamBId].matchesPlayed += 1;
-    standings[teamBId].pointsWon += scoreB;
-    standings[teamBId].pointsLost += scoreA;
+    standings[teamBId].pointsWon += pointScoreB;
+    standings[teamBId].pointsLost += pointScoreA;
+    standings[teamBId].setsWon += scoreB;
+    standings[teamBId].setsLost += scoreA;
 
     if (winnerId === teamAId) {
       standings[teamAId].matchesWon += 1;
-      standings[teamAId].setsWon += 1;
       standings[teamAId].points += settings.winPoint;
 
       standings[teamBId].matchesLost += 1;
-      standings[teamBId].setsLost += 1;
       standings[teamBId].points += settings.lossPoint;
     } else if (winnerId === teamBId) {
       standings[teamBId].matchesWon += 1;
-      standings[teamBId].setsWon += 1;
       standings[teamBId].points += settings.winPoint;
 
       standings[teamAId].matchesLost += 1;
-      standings[teamAId].setsLost += 1;
       standings[teamAId].points += settings.lossPoint;
     }
   });
