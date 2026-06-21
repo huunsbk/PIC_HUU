@@ -5,7 +5,7 @@ Status: Draft, production verification not completed yet.
 ## Git
 
 - Fix branch: `fix/generate-schedule-jsonb-team-order`
-- Code commit SHA: pending
+- Code commit SHA: `d589641`
 - PR link: pending
 - Merge commit on `main`: pending
 
