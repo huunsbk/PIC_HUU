@@ -11,7 +11,7 @@ import { useMatches } from '../hooks/useMatches';
 import { useTournamentRpcMutations } from '../hooks/useTournamentRpcMutations';
 import { isUsableEventId, useEvents } from '../hooks/useEvents';
 import { useMatchSets } from '../hooks/useMatchSets';
-import { Trophy, PlayCircle, HelpCircle, AlertTriangle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { Trophy, PlayCircle, HelpCircle, AlertTriangle, ZoomIn, ZoomOut, Maximize, Trash2 } from 'lucide-react';
 import { getReadableTeamName, getReadableKoMatchName, calculateGroupStandings, calculateBestThirdPlaces, getBracketDisplayName } from '../utils/tournamentEngine';
 import { attachMatchSets, getResolvedTeamName, getSeedLabel } from '../utils/scoreDisplay';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
@@ -793,6 +793,16 @@ export default function KnockoutBracket() {
                 id="btn-generate-knockout"
               >
                 <PlayCircle size={16} /> Tạo bracket RPC
+              </button>
+            )}
+
+            {!isEditMode && koMatches.length > 0 && (
+              <button
+                onClick={() => setShowClearConfirmModal(true)}
+                className="px-5 py-3 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl text-xs transition-all flex items-center gap-2 shadow-md uppercase tracking-wider cursor-pointer"
+                id="btn-clear-knockout"
+              >
+                <Trash2 size={16} /> Xóa sơ đồ
               </button>
             )}
 
