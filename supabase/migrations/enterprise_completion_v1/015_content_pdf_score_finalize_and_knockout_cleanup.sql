@@ -6,6 +6,97 @@ SET status = 'playing'
 WHERE status = 'in_progress'
   AND deleted_at IS NULL;
 
+UPDATE public.event_knockout_selections eks
+SET seed_label = COALESCE(
+      NULLIF(eks.seed_label, ''),
+      public.p12_knockout_seed_label_v1(
+        eks.source,
+        (
+          SELECT g.name
+          FROM public.groups g
+          WHERE g.id = eks.source_group_id
+            AND g.event_id = eks.event_id
+            AND g.tenant_id = eks.tenant_id
+            AND g.deleted_at IS NULL
+          LIMIT 1
+        ),
+        eks.group_rank,
+        eks.seed
+      )
+    ),
+    seed_source = CASE
+      WHEN COALESCE(eks.seed_source, '{}'::jsonb) = '{}'::jsonb THEN jsonb_build_object(
+        'source_type', COALESCE(eks.source, 'admin'),
+        'group_id', eks.source_group_id,
+        'rank', eks.group_rank,
+        'third_best_index', CASE WHEN eks.source = 'best_third' THEN eks.seed ELSE NULL END
+      )
+      ELSE eks.seed_source
+    END,
+    resolved_team_id = COALESCE(eks.resolved_team_id, eks.team_id),
+    updated_at = now()
+WHERE eks.deleted_at IS NULL
+  AND (
+    eks.seed_label IS NULL
+    OR eks.seed_label = ''
+    OR eks.resolved_team_id IS NULL
+    OR COALESCE(eks.seed_source, '{}'::jsonb) = '{}'::jsonb
+  );
+
+UPDATE public.matches m
+SET placeholder_a = COALESCE(NULLIF(eks.seed_label, ''), m.placeholder_a),
+    metadata = jsonb_set(
+      jsonb_set(
+        jsonb_set(
+          COALESCE(m.metadata, '{}'::jsonb),
+          '{seed_label_a}',
+          to_jsonb(COALESCE(NULLIF(eks.seed_label, ''), m.placeholder_a, 'Seed')),
+          true
+        ),
+        '{seed_source_a}',
+        COALESCE(eks.seed_source, '{}'::jsonb),
+        true
+      ),
+      '{resolved_team_id_a}',
+      to_jsonb(COALESCE(eks.resolved_team_id, eks.team_id)),
+      true
+    )
+FROM public.event_knockout_selections eks
+WHERE m.group_id = 'knockout'
+  AND m.round = 1
+  AND m.deleted_at IS NULL
+  AND eks.deleted_at IS NULL
+  AND m.event_id = eks.event_id
+  AND m.tenant_id = eks.tenant_id
+  AND m.team_a_id = COALESCE(eks.resolved_team_id, eks.team_id);
+
+UPDATE public.matches m
+SET placeholder_b = COALESCE(NULLIF(eks.seed_label, ''), m.placeholder_b),
+    metadata = jsonb_set(
+      jsonb_set(
+        jsonb_set(
+          COALESCE(m.metadata, '{}'::jsonb),
+          '{seed_label_b}',
+          to_jsonb(COALESCE(NULLIF(eks.seed_label, ''), m.placeholder_b, 'Seed')),
+          true
+        ),
+        '{seed_source_b}',
+        COALESCE(eks.seed_source, '{}'::jsonb),
+        true
+      ),
+      '{resolved_team_id_b}',
+      to_jsonb(COALESCE(eks.resolved_team_id, eks.team_id)),
+      true
+    )
+FROM public.event_knockout_selections eks
+WHERE m.group_id = 'knockout'
+  AND m.round = 1
+  AND m.deleted_at IS NULL
+  AND eks.deleted_at IS NULL
+  AND m.event_id = eks.event_id
+  AND m.tenant_id = eks.tenant_id
+  AND m.team_b_id = COALESCE(eks.resolved_team_id, eks.team_id);
+
 CREATE OR REPLACE FUNCTION public.update_match_set_score_v1(
   p_match_id text,
   p_set_number integer,
