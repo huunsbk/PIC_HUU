@@ -10,8 +10,8 @@ DAT BAN GIAO PRODUCTION
 
 - Production URL: https://giai-dau-pickleball.vercel.app/
 - Verified direct workspace route: https://giai-dau-pickleball.vercel.app/admin/workspace/thang-oanh
-- Verified deployment URL: https://giai-dau-pickleball-lg2zq7zoa-huunsbks-projects.vercel.app
-- Application commit verified before report-only updates: `bf54d23`
+- Verified deployment URL: https://giai-dau-pickleball-8hrltwaal-huunsbks-projects.vercel.app
+- Application commit verified: `bc30bf9`
 - Supabase project URL: https://ykckqcykxfhpfqptckxk.supabase.co
 
 ## Completion Checklist
@@ -20,6 +20,7 @@ DAT BAN GIAO PRODUCTION
 | --- | --- |
 | Production URL runs correctly | PASS |
 | Direct workspace route renders without 404/blank screen | PASS |
+| Public workspace context does not retain stale tournament/tenant state | PASS |
 | Header shows logged-in name, role, and tournament | PASS |
 | Tournament management groups tournaments by tenant name | PASS |
 | Dashboard host organization is locked to current tenant | PASS |

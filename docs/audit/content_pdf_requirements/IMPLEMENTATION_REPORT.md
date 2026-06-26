@@ -20,6 +20,7 @@ Implemented the business changes requested from `nội dung sửa.pdf` and deplo
 | Event management layout | Reworked table/tree view with Vietnamese columns: `STT`, `Đơn vị quản lý`, `Giải đấu`, `Nội dung thi đấu`, `Chức năng`. |
 | Header identity context | Header displays logged-in name, role, and tournament. |
 | Tenant/tournament context usability | Tournament management groups by tenant name; dashboard host organization field locks to the tenant opened by URL. |
+| Public route context stability | `get_workspace_context_v1` now supports guest context and store no longer keeps stale tournament names when route context changes. |
 
 ## Changed Files
 
@@ -48,6 +49,7 @@ Implemented the business changes requested from `nội dung sửa.pdf` and deplo
 - `014_content_pdf_group_order_and_setdiff.sql`
 - `015_content_pdf_score_finalize_and_knockout_cleanup.sql`
 - `016_content_pdf_knockout_rank_labels.sql`
+- `017_public_workspace_context.sql`
 
 Key RPC/functions:
 
@@ -58,6 +60,7 @@ Key RPC/functions:
 - `prepare_knockout_candidates_v1`
 - `clear_knockout_bracket_v1`
 - `p12_knockout_seed_label_v1`
+- `get_workspace_context_v1`
 
 ## Verification
 

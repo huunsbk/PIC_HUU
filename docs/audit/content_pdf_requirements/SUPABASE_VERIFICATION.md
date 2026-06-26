@@ -7,6 +7,7 @@ Date: 2026-06-26
 - `supabase/migrations/enterprise_completion_v1/014_content_pdf_group_order_and_setdiff.sql`
 - `supabase/migrations/enterprise_completion_v1/015_content_pdf_score_finalize_and_knockout_cleanup.sql`
 - `supabase/migrations/enterprise_completion_v1/016_content_pdf_knockout_rank_labels.sql`
+- `supabase/migrations/enterprise_completion_v1/017_public_workspace_context.sql`
 
 ## RPC Signature Verification
 
@@ -42,6 +43,15 @@ No active `in_progress` rows remain.
 - `Hạng 2 bảng D`
 
 The UI keeps these rank-slot labels as the primary bracket line and shows resolved team names as secondary text.
+
+## Workspace Context Verification
+
+`get_workspace_context_v1` now returns public route context for anon/guest without exposing account permissions:
+
+- `thang-oanh`: `CLB Thắng Oanh` / `Giải Pickleball Thắng Oanh 2026`
+- `coc-dan`: `Cốc Đán` / latest active tournament context
+
+Authenticated calls still include the scoped role and permission payload.
 
 ## Safety
 

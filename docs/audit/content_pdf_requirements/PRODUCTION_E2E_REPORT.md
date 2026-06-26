@@ -5,8 +5,8 @@ Date: 2026-06-26
 ## Target
 
 - Production URL: https://giai-dau-pickleball.vercel.app/
-- Vercel deployment URL verified: https://giai-dau-pickleball-lg2zq7zoa-huunsbks-projects.vercel.app
-- Application commit verified: `bf54d23`
+- Vercel deployment URL verified: https://giai-dau-pickleball-8hrltwaal-huunsbks-projects.vercel.app
+- Application commit verified: `bc30bf9`
 - Supabase project URL: https://ykckqcykxfhpfqptckxk.supabase.co
 
 ## Build / Static Checks
@@ -25,6 +25,7 @@ Date: 2026-06-26
 | --- | --- |
 | Root/workspace app renders | PASS |
 | Direct route `/admin/workspace/thang-oanh` | PASS |
+| Guest/public workspace context after switching routes | PASS: shows `CLB Thắng Oanh`, not stale `pic_cocdan` |
 | Assets use `/assets/...`, not `/PIC_HUU/assets/...` on Vercel | PASS |
 | Console blocking errors | PASS, none observed |
 | ReferenceError / Navigate / chunk-load errors | PASS, none observed |
