@@ -4,27 +4,31 @@ Date: 2026-06-26
 
 Passwords are intentionally omitted.
 
-## Accounts To Test
+## Production Smoke Result
 
-| Account | Role | Status |
-| --- | --- | --- |
-| Admin | SUPER_ADMIN | Pending production E2E |
-| cocdan | TENANT_ADMIN | Pending production E2E |
-| eventcocdan | EVENT_ADMIN | Pending production E2E |
-| evencocdan2 | EVENT_ADMIN | Pending production E2E |
-| aa | REFEREE | Pending production E2E |
-| trongtaicocdan | REFEREE | Pending production E2E |
-| tt | REFEREE | Pending production E2E |
+| Account | Role | Route | Result |
+| --- | --- | --- | --- |
+| Admin | SUPER_ADMIN | `/admin/workspace/thang-oanh` | PASS |
+| cocdan | TENANT_ADMIN | `/admin/workspace/coc-dan` | PASS |
+| eventcocdan | EVENT_ADMIN | `/admin/workspace/pic-cocdan` | PASS |
+| evencocdan2 | EVENT_ADMIN | `/admin/workspace/hoc-sinh` | PASS |
+| aa | REFEREE | `/admin/workspace/pic-cocdan` | PASS |
+| trongtaicocdan | REFEREE | `/admin/workspace/pic-cocdan` | PASS |
+| tt | REFEREE | `/admin/workspace/pic-cocdan` | PASS |
 
-## Permission Expectations
+## Observed Permissions
 
-- SUPER_ADMIN: all management menus and operations.
-- TENANT_ADMIN: tenant-scoped tournament/event/account operations.
-- EVENT_ADMIN: event-scoped team/group/match/score operations where granted.
-- REFEREE: score entry only for granted events.
+- SUPER_ADMIN: full menu visible, including tenant, tournament, event, account, logs, KO, scoring, export.
+- TENANT_ADMIN: tenant-scoped management menus visible; `Quản lý đơn vị` hidden.
+- EVENT_ADMIN: event operations visible; account and tenant management hidden.
+- REFEREE: narrowed menu visible, centered on score entry, standings, and TV dashboard.
 
-## Result
+## Console / Network
 
-CHUA DAT BAN GIAO PRODUCTION
+- No blocking production console errors were observed during role smoke.
+- No `ReferenceError`, `Navigate is not defined`, `Chunk load failed`, or app crash was observed.
 
-Role E2E must be completed on the production deployment after main deploy.
+## Safety
+
+- No password is stored in this report.
+- No destructive account, bracket, score, or tournament operation was executed during role smoke.

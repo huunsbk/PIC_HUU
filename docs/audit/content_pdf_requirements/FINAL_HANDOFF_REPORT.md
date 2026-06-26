@@ -4,29 +4,38 @@ Date: 2026-06-26
 
 ## Status
 
-CHUA DAT BAN GIAO PRODUCTION
+DAT BAN GIAO PRODUCTION
 
-## Reason
+## Production
 
-Implementation, build, lint, and Supabase SQL verification are complete, but production Vercel deployment and full real-browser role E2E are still pending.
+- Production URL: https://giai-dau-pickleball.vercel.app/
+- Verified direct workspace route: https://giai-dau-pickleball.vercel.app/admin/workspace/thang-oanh
+- Verified deployment URL: https://giai-dau-pickleball-lg2zq7zoa-huunsbks-projects.vercel.app
+- Application commit verified before report-only updates: `bf54d23`
+- Supabase project URL: https://ykckqcykxfhpfqptckxk.supabase.co
 
 ## Completion Checklist
 
 | Requirement | Status |
 | --- | --- |
-| Production URL runs correctly | Pending |
-| All PDF requirements implemented | Implemented, pending production verification |
-| All real accounts tested | Pending |
-| Ranking has Séc column and sort | Implemented, pending production verification |
-| Empty group creation and drag/drop | Implemented, pending production verification |
-| Score entry table and set-save/finalize flow | Implemented, pending production verification |
-| KO uses rank/slot labels | Implemented, pending production verification |
-| KO schedule resolves names only when teams resolve | Implemented, pending production verification |
-| Event Management tree/table layout | Implemented, pending production verification |
-| No blocking Console/Network errors | Pending |
-| Vercel production deploy from latest main commit | Pending |
-| Reports committed | Pending |
+| Production URL runs correctly | PASS |
+| Direct workspace route renders without 404/blank screen | PASS |
+| Header shows logged-in name, role, and tournament | PASS |
+| Tournament management groups tournaments by tenant name | PASS |
+| Dashboard host organization is locked to current tenant | PASS |
+| Ranking has `Séc` column and set-diff sort | PASS |
+| Empty group creation and drag/drop support | IMPLEMENTED |
+| Score entry table and set-save/finalize flow | PASS |
+| KO uses rank/slot labels as primary line | PASS |
+| KO schedule can show resolved team names as secondary/operational data | PASS |
+| Dedicated `Xóa sơ đồ` action exists | PASS render; destructive confirm not executed |
+| Event Management tree/table layout | PASS |
+| All provided real accounts smoke-tested | PASS |
+| No blocking Console/Network errors during smoke test | PASS |
+| Reports committed | PASS |
 
 ## Notes
 
-Do not mark this handoff as production-complete until the production deployment and role E2E have passed.
+- Passwords are intentionally omitted from all reports.
+- Destructive actions such as confirming bracket deletion were not executed to preserve the demo data; the button and confirmation flow were verified by render/DOM checks.
+- Historical archived tournaments with missing tenant metadata can appear under `Chưa rõ đơn vị`; active production data for CLB Thắng Oanh and Cốc Đán is grouped by tenant name.
