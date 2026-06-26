@@ -1322,15 +1322,15 @@ export const useTournamentStore = create<AppState>()(
           const bestThirds = calculateBestThirdPlaces(standingsByGroup, matches, settings, groupNamesMap);
 
           // 3. Chuẩn bị danh sách đội đi tiếp dựa trên Rank kết quả vòng bảng
-          // Ta tạo placeholders đại diện mang nhãn ví dụ "Nhất Bảng A", "Nhì Bảng B", v.v.
+          // Ta tạo placeholders đại diện mang nhãn ví dụ "Hạng 1 Bảng A", "Hạng 2 Bảng B", v.v.
           // Nhưng nếu vòng bảng đã xong và sắp xếp hoàn chỉnh, ta đổ thẳng tên đội thật vào các placeholders này!
           const advList: { label: string; placeholder: string; sourceRank?: number; sourceGroupId?: string }[] = [];
 
           // Dưới đây là sơ đồ cơ bản lấy đội đi tiếp cho bracket 8 đội:
-          // Trận 1: Nhất Bảng A vs Nhì Bảng B (hoặc Đội hạng 3 tốt nhất)
-          // Trận 2: Nhất Bảng C vs Nhì Bảng D
-          // Trận 3: Nhất Bảng B vs Nhì Bảng A
-          // Trận 4: Nhất Bảng D vs Nhì Bảng C (hoặc hoán vị hạt giống)
+          // Trận 1: Hạng 1 Bảng A vs Hạng 2 Bảng B (hoặc đội hạng 3 xuất sắc)
+          // Trận 2: Hạng 1 Bảng C vs Hạng 2 Bảng D
+          // Trận 3: Hạng 1 Bảng B vs Hạng 2 Bảng A
+          // Trận 4: Hạng 1 Bảng D vs Hạng 2 Bảng C (hoặc hoán vị hạt giống)
           
           // Tạo một danh sách các slots cho vòng loại trực tiếp
           // Chúng ta sẽ gán các đội thật trong Group Standings nếu có
@@ -1350,10 +1350,8 @@ export const useTournamentStore = create<AppState>()(
                 }
               }
 
-              // Nếu chưa thi đấu xong hoặc không tìm thấy đội, hiển thị Nhất/Nhì/Ba [Tên Bảng] theo đúng yêu cầu
-              const rankWords: Record<number, string> = { 1: 'Nhất', 2: 'Nhì', 3: 'Ba' };
-              const prefix = rankWords[rank] || `Hạng ${rank}`;
-              return `${prefix} ${matchedGroup.name}`;
+              // Nếu chưa thi đấu xong hoặc không tìm thấy đội, giữ nhãn hạng/suất theo đúng yêu cầu.
+              return `Hạng ${rank} ${matchedGroup.name}`;
             }
             return backupName;
           };
@@ -1368,8 +1366,7 @@ export const useTournamentStore = create<AppState>()(
                 return teamsMap[cand.teamId]?.name || cand.teamName;
               }
             }
-            // Hiển thị "Ba Xuất Sắc" nếu chưa có kết quả vòng bảng
-            return `Ba ${rank <= 2 ? 'bảng' : ''} xuất sắc ${rank}`;
+            return `Hạng 3 xuất sắc ${rank}`;
           };
 
           const slotsData: string[] = [];
@@ -1393,10 +1390,10 @@ export const useTournamentStore = create<AppState>()(
             if (size === 4) {
               // 4 ĐỘI
               slotsData.push(
-                getRealTeamOrPlaceholder('Bảng A', 1, 'Nhất Bảng A'),
-                getRealTeamOrPlaceholder('Bảng B', 2, 'Nhì Bảng B'),
-                getRealTeamOrPlaceholder('Bảng B', 1, 'Nhất Bảng B'),
-                getRealTeamOrPlaceholder('Bảng A', 2, 'Nhì Bảng A')
+                getRealTeamOrPlaceholder('Bảng A', 1, 'Hạng 1 Bảng A'),
+                getRealTeamOrPlaceholder('Bảng B', 2, 'Hạng 2 Bảng B'),
+                getRealTeamOrPlaceholder('Bảng B', 1, 'Hạng 1 Bảng B'),
+                getRealTeamOrPlaceholder('Bảng A', 2, 'Hạng 2 Bảng A')
               );
 
               slotsData.forEach((placeholder, idx) => {
@@ -1409,17 +1406,17 @@ export const useTournamentStore = create<AppState>()(
             } else if (size === 8) {
               // Cân bằng cho 2-4 bảng đấu rộng rãi
               slotsData.push(
-                getRealTeamOrPlaceholder('Bảng A', 1, 'Nhất Bảng A'),
+                getRealTeamOrPlaceholder('Bảng A', 1, 'Hạng 1 Bảng A'),
                 getThirdPlaceOrPlaceholder(2, 'Hạng 3 Xuất sắc 2'),
                 
-                getRealTeamOrPlaceholder('Bảng C', 1, 'Nhất Bảng C'),
-                getRealTeamOrPlaceholder('Bảng B', 2, 'Nhì Bảng B'),
+                getRealTeamOrPlaceholder('Bảng C', 1, 'Hạng 1 Bảng C'),
+                getRealTeamOrPlaceholder('Bảng B', 2, 'Hạng 2 Bảng B'),
 
-                getRealTeamOrPlaceholder('Bảng B', 1, 'Nhất Bảng B'),
+                getRealTeamOrPlaceholder('Bảng B', 1, 'Hạng 1 Bảng B'),
                 getThirdPlaceOrPlaceholder(1, 'Hạng 3 Xuất sắc 1'),
 
-                getRealTeamOrPlaceholder('Bảng D', 1, 'Nhất Bảng D') || getRealTeamOrPlaceholder('Bảng A', 2, 'Nhì Bảng A'),
-                getRealTeamOrPlaceholder('Bảng C', 2, 'Nhì Bảng C') || getRealTeamOrPlaceholder('Bảng B', 2, 'Nhì Bảng B')
+                getRealTeamOrPlaceholder('Bảng D', 1, 'Hạng 1 Bảng D') || getRealTeamOrPlaceholder('Bảng A', 2, 'Hạng 2 Bảng A'),
+                getRealTeamOrPlaceholder('Bảng C', 2, 'Hạng 2 Bảng C') || getRealTeamOrPlaceholder('Bảng B', 2, 'Hạng 2 Bảng B')
               );
 
               slotsData.forEach((placeholder, idx) => {
@@ -1431,7 +1428,7 @@ export const useTournamentStore = create<AppState>()(
 
             } else if (size === 16 || size === 32) {
               // Thuật toán chuẩn cho 16 ĐỘI (8 bảng) và 32 ĐỘI (16 bảng) 
-              // Giải quyết bài toán Nhất A vs Nhì I (32 đội), Nhất A vs Nhì E (16 đội)
+              // Giải quyết bài toán Hạng 1 A vs Hạng 2 I (32 đội), Hạng 1 A vs Hạng 2 E (16 đội)
               const groupsList = Object.values(groupsMap);
               const numGroups = size / 2; // 8 cho 16 đội, 16 cho 32 đội
               const half = numGroups / 2;
@@ -1450,8 +1447,8 @@ export const useTournamentStore = create<AppState>()(
                 const groupNameA = gA ? gA.name : String.fromCharCode(65 + idxA);
                 const groupNameB = gB ? gB.name : String.fromCharCode(65 + idxB);
 
-                const defaultNameA = `Nhất ${groupNameA}`;
-                const defaultNameB = `Nhì ${groupNameB}`;
+                const defaultNameA = `Hạng 1 ${groupNameA}`;
+                const defaultNameB = `Hạng 2 ${groupNameB}`;
 
                 const placeholderA = gA 
                   ? getRealTeamOrPlaceholder(gA.name, 1, defaultNameA) 

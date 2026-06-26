@@ -1102,9 +1102,9 @@ export default function Dashboard() {
                 onChange={(e) => setAdvCount(Number(e.target.value))}
                 className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-xs cursor-pointer"
               >
-                <option value={1}>1 Đội (Chỉ lấy Nhất bảng tiến vào)</option>
-                <option value={2}>2 Đội (Lấy cả Nhất và Nhì bảng)</option>
-                <option value={3}>3 Đội (Nhất, Nhì và so thứ 3 tốt nhất)</option>
+                <option value={1}>1 Đội (Chỉ lấy Hạng 1 bảng tiến vào)</option>
+                <option value={2}>2 Đội (Lấy Hạng 1 và Hạng 2 bảng)</option>
+                <option value={3}>3 Đội (Hạng 1, Hạng 2 và so Hạng 3 xuất sắc)</option>
               </select>
             </div>
 

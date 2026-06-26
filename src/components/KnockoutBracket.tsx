@@ -124,11 +124,11 @@ export default function KnockoutBracket() {
   const calculatedBestThirds = calculateBestThirdPlaces(stdsOnlyMap as any, matches, tournament.settings, groupNamesMap);
 
   const sortedGroups = Object.values(groups).sort((a,b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
-  const firstPlaceSlots = sortedGroups.map(g => ({ key: `__1st_${g.id}`, label: `Nhất Bảng ${g.name.replace(/^Bảng\s+/i, '')}` }));
-  const secondPlaceSlots = sortedGroups.map(g => ({ key: `__2nd_${g.id}`, label: `Nhì Bảng ${g.name.replace(/^Bảng\s+/i, '')}` }));
+  const firstPlaceSlots = sortedGroups.map(g => ({ key: `__1st_${g.id}`, label: `Hạng 1 Bảng ${g.name.replace(/^Bảng\s+/i, '')}` }));
+  const secondPlaceSlots = sortedGroups.map(g => ({ key: `__2nd_${g.id}`, label: `Hạng 2 Bảng ${g.name.replace(/^Bảng\s+/i, '')}` }));
   
   const currentNumBestThirds = isEditMode ? draftNumBestThirds : numBestThirds;
-  const thirdPlaceSlots = Array.from({length: currentNumBestThirds}).map((_, i) => ({ key: `__3rd_${i+1}`, label: `Ba XS ${i+1}` }));
+  const thirdPlaceSlots = Array.from({length: currentNumBestThirds}).map((_, i) => ({ key: `__3rd_${i+1}`, label: `Hạng 3 xuất sắc ${i+1}` }));
 
   const finishedGroupTeamNames: string[] = [];
   Object.values(groups).forEach(g => {
@@ -249,6 +249,7 @@ export default function KnockoutBracket() {
       s => s.label.trim().toLowerCase() === cleanPlaceholder || 
            s.label.toLowerCase().replace('xs', 'xuất sắc') === cleanPlaceholder ||
            cleanPlaceholder.includes('hạng 3 xuất sắc ' + s.key.replace('__3rd_', '')) ||
+           cleanPlaceholder.includes('hạng ba xuất sắc ' + s.key.replace('__3rd_', '')) ||
            cleanPlaceholder.includes('ba bảng xuất sắc ' + s.key.replace('__3rd_', '')) ||
            cleanPlaceholder.includes('ba xs ' + s.key.replace('__3rd_', ''))
     );
@@ -259,22 +260,28 @@ export default function KnockoutBracket() {
       const gNameClean = g.name.replace(/^Bảng\s+/i, '').trim().toLowerCase();
       
       const possible1stLabels = [
+        `hạng 1 bảng ${gNameClean}`,
+        `hạng 1 ${gNameClean}`,
+        `hạng 1 bảng ${g.name.toLowerCase()}`,
         `nhất bảng ${gNameClean}`,
         `nhất ${gNameClean}`,
         `1st ${gNameClean}`,
         `nhất bảng ${g.name.toLowerCase()}`
       ];
-      if (possible1stLabels.includes(cleanPlaceholder) || cleanPlaceholder.includes(`nhất bảng ${gNameClean}`)) {
+      if (possible1stLabels.includes(cleanPlaceholder) || cleanPlaceholder.includes(`hạng 1 bảng ${gNameClean}`) || cleanPlaceholder.includes(`nhất bảng ${gNameClean}`)) {
         return `__1st_${g.id}`;
       }
       
       const possible2ndLabels = [
+        `hạng 2 bảng ${gNameClean}`,
+        `hạng 2 ${gNameClean}`,
+        `hạng 2 bảng ${g.name.toLowerCase()}`,
         `nhì bảng ${gNameClean}`,
         `nhì ${gNameClean}`,
         `2nd ${gNameClean}`,
         `nhì bảng ${g.name.toLowerCase()}`
       ];
-      if (possible2ndLabels.includes(cleanPlaceholder) || cleanPlaceholder.includes(`nhì bảng ${gNameClean}`)) {
+      if (possible2ndLabels.includes(cleanPlaceholder) || cleanPlaceholder.includes(`hạng 2 bảng ${gNameClean}`) || cleanPlaceholder.includes(`nhì bảng ${gNameClean}`)) {
         return `__2nd_${g.id}`;
       }
     }
@@ -876,9 +883,9 @@ export default function KnockoutBracket() {
 
               {/* Lists */}
               <div className="flex-1 space-y-6">
-                {/* Nhất Bảng */}
+                {/* Hạng 1 Bảng */}
                 <div className="space-y-3">
-                  <div className="text-[11px] font-black uppercase text-amber-600 bg-amber-50 dark:bg-amber-950/40 text-center py-2.5 rounded-lg border border-amber-200 dark:border-amber-900/50 shadow-sm">Nhóm Nhất Bảng</div>
+                  <div className="text-[11px] font-black uppercase text-amber-600 bg-amber-50 dark:bg-amber-950/40 text-center py-2.5 rounded-lg border border-amber-200 dark:border-amber-900/50 shadow-sm">Nhóm Hạng 1 Bảng</div>
                   <div className="flex flex-col gap-2">
                     {firstPlaceSlots.filter(s => !isSlotUsed(s.key, s.label)).map((slot) => (
                       <div 
@@ -894,9 +901,9 @@ export default function KnockoutBracket() {
                   </div>
                 </div>
                 
-                {/* Nhì Bảng */}
+                {/* Hạng 2 Bảng */}
                 <div className="space-y-3">
-                  <div className="text-[11px] font-black uppercase text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 text-center py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm">Nhóm Nhì Bảng</div>
+                  <div className="text-[11px] font-black uppercase text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 text-center py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm">Nhóm Hạng 2 Bảng</div>
                   <div className="flex flex-col gap-2">
                     {secondPlaceSlots.filter(s => !isSlotUsed(s.key, s.label)).map((slot) => (
                       <div 
@@ -912,9 +919,9 @@ export default function KnockoutBracket() {
                   </div>
                 </div>
 
-                {/* Ba Xuất Sắc */}
+                {/* Hạng 3 Xuất Sắc */}
                 <div className="space-y-3">
-                  <div className="text-[11px] font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-center py-2.5 rounded-lg border border-emerald-200 dark:border-emerald-900/50 shadow-sm">Nhóm Ba Xuất Sắc</div>
+                  <div className="text-[11px] font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-center py-2.5 rounded-lg border border-emerald-200 dark:border-emerald-900/50 shadow-sm">Nhóm Hạng 3 Xuất Sắc</div>
                   <div className="flex flex-col gap-2">
                     {thirdPlaceSlots.filter(s => !isSlotUsed(s.key, s.label)).map((slot) => (
                       <div 

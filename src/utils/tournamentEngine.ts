@@ -421,8 +421,8 @@ export function generateKnockoutMatchesSchema(
       groupId: 'knockout',
       teamAId: null,
       teamBId: null,
-      placeholderA: advancingTeams[0] ? advancingTeams[0].placeholder : 'Nhất Bảng A',
-      placeholderB: advancingTeams[1] ? advancingTeams[1].placeholder : 'Nhì Bảng B',
+      placeholderA: advancingTeams[0] ? advancingTeams[0].placeholder : 'Hạng 1 Bảng A',
+      placeholderB: advancingTeams[1] ? advancingTeams[1].placeholder : 'Hạng 2 Bảng B',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -439,8 +439,8 @@ export function generateKnockoutMatchesSchema(
       groupId: 'knockout',
       teamAId: null,
       teamBId: null,
-      placeholderA: advancingTeams[2] ? advancingTeams[2].placeholder : 'Nhất Bảng B',
-      placeholderB: advancingTeams[3] ? advancingTeams[3].placeholder : 'Nhì Bảng A',
+      placeholderA: advancingTeams[2] ? advancingTeams[2].placeholder : 'Hạng 1 Bảng B',
+      placeholderB: advancingTeams[3] ? advancingTeams[3].placeholder : 'Hạng 2 Bảng A',
       scoreA: null,
       scoreB: null,
       winnerId: null,
@@ -934,7 +934,7 @@ function findGroupIdByLetter(letter: string, groups: Record<string, any>): strin
 
 /**
  * Trả về tên suất thi đấu định dạng đẹp mắt dành riêng cho Sơ đồ nhánh.
- * LUÔN LUÔN hiện thị nhãn suất đấu (ví dụ "Nhất bảng A", "Hạng ba xuất sắc 1") 
+ * LUÔN LUÔN hiển thị nhãn suất đấu (ví dụ "Hạng 1 bảng A", "Hạng 3 xuất sắc 1")
  * theo yêu cầu nghiêm ngặt của BTC, kể cả khi các đội thật đã được xác định.
  */
 export function getBracketDisplayName(slotKey: string | null | undefined, groups?: Record<string, any>): string {
@@ -947,18 +947,27 @@ export function getBracketDisplayName(slotKey: string | null | undefined, groups
 
   if (normalized.startsWith('1ST_')) {
     const letter = normalized.replace('1ST_', '');
-    return `Nhất bảng ${letter}`;
+    return `Hạng 1 bảng ${letter}`;
   }
   if (normalized.startsWith('2ND_')) {
     const letter = normalized.replace('2ND_', '');
-    return `Nhì bảng ${letter}`;
+    return `Hạng 2 bảng ${letter}`;
   }
   if (normalized.startsWith('BEST_3RD_')) {
     const rank = normalized.replace('BEST_3RD_', '');
-    return `Hạng ba xuất sắc ${rank}`;
+    return `Hạng 3 xuất sắc ${rank}`;
   }
 
   const upper = normalized.toUpperCase();
+
+  const legacyFirst = normalized.match(/^nhất\s+(?:bảng\s+)?(.+)$/i);
+  if (legacyFirst) return `Hạng 1 bảng ${legacyFirst[1].trim()}`;
+
+  const legacySecond = normalized.match(/^nhì\s+(?:bảng\s+)?(.+)$/i);
+  if (legacySecond) return `Hạng 2 bảng ${legacySecond[1].trim()}`;
+
+  const legacyThird = normalized.match(/^(?:ba\s+(?:bảng\s+)?xuất\s+sắc|ba\s+xs|hạng\s+ba\s+xuất\s+sắc)\s*(\d*)$/i);
+  if (legacyThird) return `Hạng 3 xuất sắc ${legacyThird[1] || ''}`.trim();
 
   // Chuyển đổi mã kỹ thuật của các trận/vòng trước thành mô tả thuần Việt
   if (upper === 'W-QF1' || upper === 'W_QF1' || upper === 'THẮNG TỨ KẾT 1') return 'Thắng Tứ Kết 1';
@@ -1056,7 +1065,7 @@ export function getMatchDisplayName(
     return resolvedRealTeam;
   }
 
-  // 5. Nếu không phân giải được đội thực, hiển thị nhãn suất đấu dạng rút gọn đẹp mắt (VD "Nhất bảng A")
+  // 5. Nếu không phân giải được đội thực, hiển thị nhãn suất đấu dạng rút gọn đẹp mắt (VD "Hạng 1 bảng A")
   return getBracketDisplayName(keyToCheck, groups);
 }
 
@@ -1135,12 +1144,20 @@ function resolveSlotToRealTeam(
     return teams[prevMatchNode.winnerId]?.name || prevMatchNode.winnerId;
   }
 
-  // Hoặc fallback kiểm định nếu clean khớp với nhãn tiếng Việt thô (VD "Nhất bảng A")
+  // Hoặc fallback kiểm định nếu clean khớp với nhãn tiếng Việt thô (VD "Hạng 1 bảng A")
   const clean = normalized.toLowerCase();
   for (const g of Object.values(groups)) {
     const gNameClean = g.name.replace(/^Bảng\s+/i, '').trim().toLowerCase();
-    const isFirstLabel = clean === `nhất bảng ${gNameClean}` || clean === `nhất ${gNameClean}`;
-    const isSecondLabel = clean === `nhì bảng ${gNameClean}` || clean === `nhì ${gNameClean}`;
+    const isFirstLabel =
+      clean === `hạng 1 bảng ${gNameClean}` ||
+      clean === `hạng 1 ${gNameClean}` ||
+      clean === `nhất bảng ${gNameClean}` ||
+      clean === `nhất ${gNameClean}`;
+    const isSecondLabel =
+      clean === `hạng 2 bảng ${gNameClean}` ||
+      clean === `hạng 2 ${gNameClean}` ||
+      clean === `nhì bảng ${gNameClean}` ||
+      clean === `nhì ${gNameClean}`;
 
     if (isFirstLabel || isSecondLabel) {
       const gMatches = matches.filter((m) => m.groupId === g.id);
@@ -1174,62 +1191,62 @@ export function getReadableTeamName(teamName: string, groups?: Record<string, an
   if (clean.startsWith('__1st_')) {
     const gid = clean.replace('__1st_', '').replace(/__$/, '');
     if (groups && groups[gid]) {
-      return `Nhất ${groups[gid].name}`;
+      return `Hạng 1 ${groups[gid].name}`;
     }
     if (groups) {
       const found = Object.values(groups).find(
         (g: any) => g.id === gid || g.id === gid.replace(/__e$/, '') || g.id.startsWith(gid + '-') || gid.startsWith(g.id + '-')
       );
-      if (found) return `Nhất ${found.name}`;
+      if (found) return `Hạng 1 ${found.name}`;
     }
     // Parse dự phòng số thứ tự group
     const numMatch = gid.match(/group-(\d+)/i) || gid.match(/-(\d+)/);
     if (numMatch) {
       const idx = parseInt(numMatch[1], 10);
       const letter = String.fromCharCode(64 + idx);
-      return `Nhất Bảng ${letter}`;
+      return `Hạng 1 Bảng ${letter}`;
     }
-    return `Nhất ${gid.replace('group-', 'Bảng ').toUpperCase()}`;
+    return `Hạng 1 ${gid.replace('group-', 'Bảng ').toUpperCase()}`;
   }
 
   if (clean.startsWith('__2nd_')) {
     const gid = clean.replace('__2nd_', '').replace(/__$/, '');
     if (groups && groups[gid]) {
-      return `Nhì ${groups[gid].name}`;
+      return `Hạng 2 ${groups[gid].name}`;
     }
     if (groups) {
       const found = Object.values(groups).find(
         (g: any) => g.id === gid || g.id === gid.replace(/__e$/, '') || g.id.startsWith(gid + '-') || gid.startsWith(g.id + '-')
       );
-      if (found) return `Nhì ${found.name}`;
+      if (found) return `Hạng 2 ${found.name}`;
     }
     const numMatch = gid.match(/group-(\d+)/i) || gid.match(/-(\d+)/);
     if (numMatch) {
       const idx = parseInt(numMatch[1], 10);
       const letter = String.fromCharCode(64 + idx);
-      return `Nhì Bảng ${letter}`;
+      return `Hạng 2 Bảng ${letter}`;
     }
-    return `Nhì ${gid.replace('group-', 'Bảng ').toUpperCase()}`;
+    return `Hạng 2 ${gid.replace('group-', 'Bảng ').toUpperCase()}`;
   }
 
   if (clean.startsWith('__3rd_')) {
     const gid = clean.replace('__3rd_', '').replace(/__$/, '');
     if (groups && groups[gid]) {
-      return `Ba ${groups[gid].name}`;
+      return `Hạng 3 ${groups[gid].name}`;
     }
     if (groups) {
       const found = Object.values(groups).find(
         (g: any) => g.id === gid || g.id === gid.replace(/__e$/, '') || g.id.startsWith(gid + '-') || gid.startsWith(g.id + '-')
       );
-      if (found) return `Ba ${found.name}`;
+      if (found) return `Hạng 3 ${found.name}`;
     }
     const numMatch = gid.match(/group-(\d+)/i) || gid.match(/-(\d+)/);
     if (numMatch) {
       const idx = parseInt(numMatch[1], 10);
       const letter = String.fromCharCode(64 + idx);
-      return `Ba Bảng ${letter}`;
+      return `Hạng 3 Bảng ${letter}`;
     }
-    return `Ba XS ${gid}`;
+    return `Hạng 3 xuất sắc ${gid}`;
   }
 
   const nameUpper = clean.toUpperCase().trim();
@@ -1286,7 +1303,7 @@ export function getReadableTeamName(teamName: string, groups?: Record<string, an
      return `L Bán Kết (Trận ${num})`;
   }
 
-  // Handle placeholders like Nhất Bảng A, Nhì Bảng B
+  // Handle placeholders like Hạng 1 Bảng A, Hạng 2 Bảng B and legacy rank labels.
   if (nameUpper.startsWith('NHẤT BẢNG ')) {
       return clean;
   }

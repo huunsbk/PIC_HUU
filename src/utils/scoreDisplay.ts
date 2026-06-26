@@ -66,7 +66,22 @@ export function getMatchResultLabel(match: Partial<Match>, teamA: string, teamB:
 export function getSeedLabel(match: Partial<Match>, slot: 'A' | 'B', fallback: string) {
   const metadata = (match.metadata || {}) as Record<string, any>;
   const key = slot === 'A' ? 'seed_label_a' : 'seed_label_b';
-  return String(metadata[key] || fallback || 'Chưa xác định');
+  return normalizeSeedLabel(String(metadata[key] || fallback || 'Chưa xác định'));
+}
+
+function normalizeSeedLabel(label: string) {
+  const clean = label.trim();
+
+  const first = clean.match(/^nhất\s+(?:bảng\s+)?(.+)$/i);
+  if (first) return `Hạng 1 bảng ${first[1].trim()}`;
+
+  const second = clean.match(/^nhì\s+(?:bảng\s+)?(.+)$/i);
+  if (second) return `Hạng 2 bảng ${second[1].trim()}`;
+
+  const third = clean.match(/^(?:ba\s+(?:bảng\s+)?xuất\s+sắc|ba\s+xs|hạng\s+ba\s+xuất\s+sắc)\s*(\d*)$/i);
+  if (third) return `Hạng 3 xuất sắc ${third[1] || ''}`.trim();
+
+  return clean;
 }
 
 export function getResolvedTeamName(match: Partial<Match>, slot: 'A' | 'B', teams: Record<string, TeamLike>, fallbackId?: string | null) {

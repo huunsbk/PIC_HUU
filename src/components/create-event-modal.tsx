@@ -146,7 +146,7 @@ export default function CreateEventModal({ onClose }: { onClose: () => void }) {
               <input type="number" min={0} max={8} value={topPerGroup} onChange={e => setTopPerGroup(Math.max(0, Number(e.target.value) || 0))} className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-zinc-500 mb-1 uppercase">Hạng ba xuất sắc</label>
+              <label className="block text-xs font-bold text-zinc-500 mb-1 uppercase">Hạng 3 xuất sắc</label>
               <input type="number" min={0} max={16} value={bestThirdCount} onChange={e => setBestThirdCount(Math.max(0, Number(e.target.value) || 0))} className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm" />
             </div>
             <label className="flex items-center gap-2 text-xs font-bold text-zinc-600 dark:text-zinc-300 pt-6">
