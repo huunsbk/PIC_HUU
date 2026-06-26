@@ -166,7 +166,7 @@ export function useGroupMutations() {
     return selectedEventId;
   };
 
-  type GroupingMode = 'balanced' | 'seed' | 'random';
+  type GroupingMode = 'balanced' | 'seed' | 'random' | 'empty';
 
   const setupGroupsContract = async (numGroups: number, mode: GroupingMode = 'balanced') => {
     const eventId = requireTenantContext();
@@ -203,7 +203,7 @@ export function useGroupMutations() {
 
   const setupGroups = useMutation({
      mutationFn: async (numGroups: number) => {
-        return setupGroupsContract(numGroups, 'balanced');
+        return setupGroupsContract(numGroups, 'empty');
      },
      onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['groups'] });
@@ -227,13 +227,10 @@ export function useGroupMutations() {
   });
 
   const moveTeamToGroup = useMutation({
-    mutationFn: async ({ teamId, toGroupId }: { teamId: string, toGroupId: string | null }) => {
+    mutationFn: async ({ teamId, toGroupId, beforeTeamId, force }: { teamId: string, toGroupId: string | null, beforeTeamId?: string | null, force?: boolean }) => {
       requireTenantContext();
       const dbGroupId = toGroupId === 'unassigned' ? null : toGroupId;
-      if (!dbGroupId) {
-        throw new Error('RPC assign_team_to_group_v2 yêu cầu group_id hợp lệ. Dùng dissolve_groups_v4 để đưa tất cả đội về trạng thái chưa chia bảng.');
-      }
-      return tournamentRpc.assignTeamToGroup(teamId, dbGroupId);
+      return tournamentRpc.assignTeamToGroup(teamId, dbGroupId, beforeTeamId, !!force);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] });
@@ -348,5 +345,17 @@ export function useMatchMutations() {
     }
   });
 
-  return { updateMatchScore, updateMatchSetScore, resetMatchScore, generateForGroup, generateAllSchedules, updateMatchStatus };
+  const finalizeMatchScore = useMutation({
+    mutationFn: async (matchId: string) => {
+      requireBusinessContext();
+      return tournamentRpc.finalizeMatchScore(matchId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
+      queryClient.invalidateQueries({ queryKey: ['match-sets'] });
+      invalidateDashboardStats();
+    }
+  });
+
+  return { updateMatchScore, updateMatchSetScore, finalizeMatchScore, resetMatchScore, generateForGroup, generateAllSchedules, updateMatchStatus };
 }

@@ -63,7 +63,7 @@ export default function SchedulerAndScoreKeeper() {
     return record;
   }, [eventsData]);
 
-  const { updateMatchScore, updateMatchSetScore, resetMatchScore, generateForGroup, generateAllSchedules } = useMatchMutations();
+  const { updateMatchScore, updateMatchSetScore, finalizeMatchScore, resetMatchScore, generateForGroup, generateAllSchedules } = useMatchMutations();
   const currentEvent = currentEventId ? events[currentEventId] : null;
   const matchSetMode = currentEvent?.scoring_config?.matchSetMode || 'single';
   const isBestOf3 = matchSetMode === 'best_of_3';
@@ -194,6 +194,15 @@ export default function SchedulerAndScoreKeeper() {
       setScoreError(null);
     } catch (err) {
       setScoreError(err instanceof Error ? err.message : `Không lưu được điểm séc ${setNumber}.`);
+    }
+  };
+
+  const handleFinalizeMatchScore = async (matchId: string) => {
+    try {
+      await finalizeMatchScore.mutateAsync(matchId);
+      setScoreError(null);
+    } catch (err) {
+      setScoreError(err instanceof Error ? err.message : 'Không chốt được kết quả trận.');
     }
   };
 
@@ -618,7 +627,7 @@ export default function SchedulerAndScoreKeeper() {
                           const scoreBVal = localScores[match.id]?.scoreB ?? '';
 
                           const isFinished = match.status === 'finished';
-                          const isTwoZeroFinished = isFinished && ((match.scoreA === 2 && match.scoreB === 0) || (match.scoreA === 0 && match.scoreB === 2));
+                          const isTwoZeroSetLead = ((match.scoreA === 2 && match.scoreB === 0) || (match.scoreA === 0 && match.scoreB === 2));
                           const resultLabel = getMatchResultLabel(match, displayedTeamAName, displayedTeamBName);
 
                           return (
@@ -690,7 +699,7 @@ export default function SchedulerAndScoreKeeper() {
                                       <div className="text-center text-[9px] font-black uppercase tracking-widest text-zinc-400">Điểm từng séc</div>
                                       {([1, 2, 3] as const).map((setNumber) => {
                                         const setScore = getSetScoreValue(match.id, setNumber);
-                                        const isSetLocked = isFinished || (setNumber === 3 && isTwoZeroFinished);
+                                        const isSetLocked = isFinished || (setNumber === 3 && isTwoZeroSetLead);
                                         return (
                                           <div key={setNumber} className="flex items-center justify-center gap-1.5">
                                             <span className="w-8 text-[9px] font-black text-zinc-500">Séc {setNumber}</span>
@@ -725,6 +734,16 @@ export default function SchedulerAndScoreKeeper() {
                                         );
                                       })}
                                       <div className="text-center text-[9px] font-black text-emerald-700 dark:text-emerald-400">Kết quả trận: {resultLabel}</div>
+                                      {!isFinished && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleFinalizeMatchScore(match.id)}
+                                          disabled={!canManage || finalizeMatchScore.isPending}
+                                          className="mx-auto block px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[9px] font-black disabled:opacity-50"
+                                        >
+                                          Chốt trận
+                                        </button>
+                                      )}
                                       {isFinished && (
                                         <button
                                           type="button"
@@ -794,6 +813,7 @@ export default function SchedulerAndScoreKeeper() {
                       <th className="py-3 px-2.5 text-center font-bold">Trận</th>
                       <th className="py-3 px-2.5 text-center text-emerald-600 dark:text-emerald-450 font-bold">T</th>
                       <th className="py-3 px-2.5 text-center text-red-500 font-bold">B</th>
+                      <th className="py-3 px-2.5 text-center text-zinc-500 font-bold">Séc</th>
                       <th className="py-3 px-2.5 text-center text-zinc-500 font-bold">H/S</th>
                       <th className="py-3 px-3 text-center text-blue-600 dark:text-blue-400 font-bold">Điểm</th>
                     </tr>
@@ -850,6 +870,10 @@ export default function SchedulerAndScoreKeeper() {
                             {s.matchesLost}
                           </td>
 
+                          <td className="py-3.5 px-2.5 text-center text-zinc-500 dark:text-zinc-400 font-mono font-medium">
+                            {s.setDiff === 0 ? '0' : s.setDiff > 0 ? `+${s.setDiff}` : s.setDiff}
+                          </td>
+
                           {/* Point Difference (slash / slash deuce or slash symbol) */}
                           <td className="py-3.5 px-2.5 text-center text-zinc-500 dark:text-zinc-400 font-mono font-medium">
                             {s.pointDiff === 0 ? 'Ø' : s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff}
@@ -865,7 +889,7 @@ export default function SchedulerAndScoreKeeper() {
 
                     {standings.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="py-12 text-center text-zinc-400 dark:text-zinc-600 font-medium font-sans">
+                        <td colSpan={8} className="py-12 text-center text-zinc-400 dark:text-zinc-600 font-medium font-sans">
                           Chưa có kết quả xếp hạng.
                         </td>
                       </tr>

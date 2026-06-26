@@ -43,7 +43,7 @@ export const RankingConfigSchema = z.object({
   pointsLoss: z.number().int().min(0).default(1),
   pointsDraw: z.number().int().min(0).optional(),
   tieBreakers: z.array(z.enum(['points', 'setDiff', 'pointDiff', 'pointsWon', 'headToHead', 'manual']))
-    .default(['points', 'pointDiff', 'pointsWon', 'headToHead']),
+    .default(['points', 'setDiff', 'pointDiff', 'headToHead']),
   bestThirds: z.object({
     enabled: z.boolean().default(false),
     count: z.number().int().min(0).default(0),

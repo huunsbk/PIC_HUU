@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { useTournamentStore } from '../store';
 import { useTeams } from '../hooks/useTeams';
 import { useGroups } from '../hooks/useGroups';
+import { useMatches } from '../hooks/useMatches';
 import { useGroupMutations } from '../hooks/useDataMutations';
 import { Layers, Shuffle, Sparkles, AlertTriangle, Trash2, HelpCircle, AlertCircle } from 'lucide-react';
 
@@ -17,6 +18,7 @@ export default function GroupManager() {
 
   const { data: teamsData = [], isLoading: isLoadingTeams } = useTeams();
   const { data: groupsData = [], isLoading: isLoadingGroups } = useGroups();
+  const { data: matchesData = [] } = useMatches();
   const { clearAllGroups, setupGroups, autoGroupTeams, moveTeamToGroup } = useGroupMutations();
 
   const teams: Record<string, any> = {};
@@ -38,12 +40,38 @@ export default function GroupManager() {
   const teamList = Object.values(teams);
   const groupList = Object.values(groups);
   const unassignedTeams = teamList.filter((t) => t.groupId === null);
+  const hasSchedule = matchesData.length > 0;
+  const hasEnteredScores = matchesData.some((match: any) => (
+    match.status === 'finished' ||
+    match.scoreA !== null ||
+    match.scoreB !== null
+  ));
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification({ type: 'success', message: null }), 4500);
   };
 
+  const confirmGroupImpact = (message: string) => {
+    if (!hasSchedule && !hasEnteredScores) return true;
+    const detail = hasEnteredScores
+      ? `${message}\n\nBảng hiện đã có lịch/điểm đã nhập. Bạn có chắc muốn tiếp tục không?`
+      : `${message}\n\nBảng hiện đã có lịch thi đấu. Bạn có chắc muốn tiếp tục không?`;
+    return window.confirm(detail);
+  };
+
+  const requestMoveTeam = (teamId: string, toGroupId: string | null, beforeTeamId?: string | null) => {
+    const force = hasSchedule;
+    if (force && !confirmGroupImpact('Thay đổi bảng thủ công sẽ xóa mềm lịch vòng bảng hiện tại để tránh lệch dữ liệu.')) return;
+    moveTeamToGroup.mutate({
+      teamId,
+      toGroupId,
+      beforeTeamId: beforeTeamId || null,
+      force,
+    });
+  };
+
   const handleCreateGroupsEmpty = async () => {
+    if (!confirmGroupImpact('Tạo bảng trống sẽ xóa lịch vòng bảng hiện tại để tất cả đội quay về khu vực chờ.')) return;
     try {
       const result = await setupGroups.mutateAsync(numGroups);
       showNotification('success', `Đã tạo ${result?.num_groups || numGroups} bảng đấu trống.`);
@@ -54,6 +82,7 @@ export default function GroupManager() {
   };
 
   const handleAutoGroup = async (method: 'random' | 'seed') => {
+    if (!confirmGroupImpact('Tự động chia bảng sẽ xóa lịch vòng bảng hiện tại và tạo lại phân bổ đội.')) return;
     if (teamList.length === 0) {
       try {
         alert('Vui lòng đăng ký đội bóng trước khi thực hiện chia bảng để tránh bảng đấu trống.');
@@ -85,14 +114,11 @@ export default function GroupManager() {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e: React.DragEvent, targetGroupId: string | null) => {
+  const handleDrop = (e: React.DragEvent, targetGroupId: string | null, beforeTeamId?: string | null) => {
     e.preventDefault();
     const teamId = e.dataTransfer.getData('text/plain') || draggedTeamId;
     if (teamId) {
-      moveTeamToGroup.mutate({
-        teamId,
-        toGroupId: targetGroupId,
-      });
+      requestMoveTeam(teamId, targetGroupId, beforeTeamId);
     }
     setDraggedTeamId(null);
   };
@@ -222,7 +248,7 @@ export default function GroupManager() {
         <div className="flex items-start gap-2.5 p-3 bg-amber-50 dark:bg-amber-955/20 border border-amber-200/50 dark:border-amber-900/40 rounded-lg text-yellow-850 dark:text-yellow-400">
           <AlertCircle size={15} className="shrink-0 mt-0.5 text-amber-500" />
           <p className="text-[11px] leading-relaxed font-semibold">
-            LƯU Ý ĐỒNG BỘ: Việc phân chia bảng, đổi hạt giống hoặc kéo thả chuyển bảng sẽ tự động xóa sạch lịch thi đấu và điểm số cũ của bảng đấu đó để bốc thăm và xếp lịch thi đấu vòng mới.
+            LƯU Ý ĐỒNG BỘ: Tạo bảng trống sẽ giữ toàn bộ đội ở khu vực chờ để bạn kéo thả thủ công. Nếu giải đã có lịch hoặc điểm, hệ thống sẽ yêu cầu xác nhận trước khi thao tác làm ảnh hưởng lịch thi đấu.
           </p>
         </div>
       </div>
@@ -272,10 +298,7 @@ export default function GroupManager() {
                     onChange={(e) => {
                       const val = e.target.value;
                       if (val) {
-                        moveTeamToGroup.mutate({
-                          teamId: team.id,
-                          toGroupId: val,
-                        });
+                        requestMoveTeam(team.id, val);
                       }
                     }}
                     value=""
@@ -334,6 +357,8 @@ export default function GroupManager() {
                             key={team.id}
                             draggable={canManage}
                             onDragStart={(e) => handleDragStart(e, team.id)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, group.id, team.id)}
                             className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-850 rounded-xl hover:border-blue-500 dark:hover:border-blue-500 transition-all flex items-center justify-between pointer-events-auto cursor-grab"
                           >
                             <div className="truncate pr-2">
@@ -349,10 +374,7 @@ export default function GroupManager() {
                             <select
                               onChange={(e) => {
                                 const val = e.target.value;
-                                moveTeamToGroup.mutate({
-                                  teamId: team.id,
-                                  toGroupId: val === "unassigned" ? null : val,
-                                });
+                                requestMoveTeam(team.id, val === "unassigned" ? null : val);
                               }}
                               value={group.id}
                               disabled={!canManage}

@@ -116,6 +116,10 @@ const ERROR_TRANSLATIONS: Array<[RegExp, string]> = [
   [/p_group_count must be between 1 and 32/i, 'Số bảng phải nằm trong khoảng từ 1 đến 32.'],
   [/Schedule already generated/i, 'Lịch đã được sinh. Vui lòng tạo lại lịch trước khi chuyển đội giữa bảng.'],
   [/Active knockout bracket already exists/i, 'Sơ đồ knockout đang tồn tại. Không thể tạo trùng bracket.'],
+  [/GROUP_STAGE_INCOMPLETE/i, 'Vòng bảng chưa hoàn tất. Chỉ có thể xác nhận đội vào vòng trong khi mọi trận vòng bảng đã chốt kết quả.'],
+  [/Match is not ready to finalize/i, 'Trận chưa đủ điều kiện chốt. Vui lòng lưu đủ séc thắng theo cấu hình trước.'],
+  [/No saved set score found/i, 'Chưa có điểm séc nào được lưu cho trận này.'],
+  [/Match participants are not resolved/i, 'Trận chưa đủ hai đội thi đấu. Vui lòng kiểm tra lại sơ đồ hoặc lịch đấu.'],
   [/No confirmed knockout teams found/i, 'Chưa có danh sách đội knockout đã xác nhận.'],
   [/p_bracket_size must be one of 4, 8, 16, 32/i, 'Quy mô bracket chỉ hỗ trợ 4, 8, 16 hoặc 32 đội.'],
   [/Selected team count .* exceeds bracket size/i, 'Số đội được chọn lớn hơn quy mô bracket.'],
@@ -254,7 +258,7 @@ export const tournamentRpc = {
     });
   },
 
-  setupGroups(eventId: string, groupCount: number, mode: 'balanced' | 'random' | 'seed' = 'balanced') {
+  setupGroups(eventId: string, groupCount: number, mode: 'balanced' | 'random' | 'seed' | 'empty' = 'balanced') {
     return callRpc<TournamentRpcResult & { group_count?: number; num_groups?: number; assigned_teams?: number }>('setup_groups_v4', {
       p_event_id: eventId,
       p_group_count: groupCount,
@@ -262,10 +266,12 @@ export const tournamentRpc = {
     });
   },
 
-  assignTeamToGroup(teamId: string, groupId: string) {
+  assignTeamToGroup(teamId: string, groupId: string | null, beforeTeamId?: string | null, force = false) {
     return callRpc<TournamentRpcResult & { requires_regenerate?: boolean }>('assign_team_to_group_v2', {
       p_team_id: teamId,
       p_group_id: groupId,
+      p_before_team_id: beforeTeamId ?? null,
+      p_force: force,
     });
   },
 
@@ -295,6 +301,12 @@ export const tournamentRpc = {
       p_set_number: setNumber,
       p_score_a: scoreA,
       p_score_b: scoreB,
+    });
+  },
+
+  finalizeMatchScore(matchId: string) {
+    return callRpc<TournamentRpcResult & { match_id?: string; status?: string; winner_id?: string | null; score_a?: number; score_b?: number }>('finalize_match_score_v1', {
+      p_match_id: matchId,
     });
   },
 
@@ -334,6 +346,12 @@ export const tournamentRpc = {
 
   generateKnockoutBracket(eventId: string) {
     return callRpc<TournamentRpcResult & { created_matches?: number }>('generate_knockout_bracket_v1', {
+      p_event_id: eventId,
+    });
+  },
+
+  clearKnockoutBracket(eventId: string) {
+    return callRpc<TournamentRpcResult & { deleted_matches?: number; deleted_match_sets?: number }>('clear_knockout_bracket_v1', {
       p_event_id: eventId,
     });
   },

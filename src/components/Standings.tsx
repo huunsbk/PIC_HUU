@@ -89,19 +89,19 @@ export default function Standings() {
 
     groupList.forEach((g) => {
       csv += `--- BẢNG XẾP HẠNG: ${g.name.toUpperCase()} ---\n`;
-      csv += 'Hạng,Đội tuyển,Hạt giống,Trận,Thắng,Thua,Điểm BXH,Trận Won/Lost,Điểm Séc,Hiệu số\n';
+      csv += 'Hạng,Đội tuyển,Hạt giống,Trận,Thắng,Thua,Điểm BXH,Séc,Điểm ghi/nhận,Hiệu số\n';
       const standings = standingsByGroup[g.id] || [];
       standings.forEach((s) => {
-        csv += `${s.rank},${s.teamName},${s.seed !== 'none' ? 'Hạt giống ' + s.seed : 'Không'},${s.matchesPlayed},${s.matchesWon},${s.matchesLost},${s.points},${s.setsWon}/${s.setsLost},${s.pointsWon}/${s.pointsLost},${s.pointDiff >= 0 ? '+' : ''}${s.pointDiff}\n`;
+        csv += `${s.rank},${s.teamName},${s.seed !== 'none' ? 'Hạt giống ' + s.seed : 'Không'},${s.matchesPlayed},${s.matchesWon},${s.matchesLost},${s.points},${s.setDiff >= 0 ? '+' : ''}${s.setDiff},${s.pointsWon}/${s.pointsLost},${s.pointDiff >= 0 ? '+' : ''}${s.pointDiff}\n`;
       });
       csv += '\n';
     });
 
     if (settings.advanceCount === 3 && bestThirdPlaces.length > 0) {
       csv += `--- SO SÁNH ĐỘI HẠNG 3 XUẤT SẮC (LUẬT UEFA) ---\n`;
-      csv += 'Hạng,Đội tuyển,Từ Bảng,Trận (Có đ.chỉnh),Thắng,Thua,Điểm,Điểm Séc,Hiệu số,Luật UEFA áp dụng\n';
+      csv += 'Hạng,Đội tuyển,Từ Bảng,Trận (Có đ.chỉnh),Thắng,Thua,Điểm,Séc,Điểm ghi/nhận,Hiệu số,Luật UEFA áp dụng\n';
       bestThirdPlaces.forEach((s) => {
-        csv += `${s.rank},${s.teamName},${s.groupName},${s.matchesPlayed},${s.matchesWon},${s.matchesLost},${s.points},${s.pointsWon}/${s.pointsLost},${s.pointDiff >= 0 ? '+' : ''}${s.pointDiff},${s.isUefaAdjusted ? 'Đã trừ trận đội bét bảng' : 'Bằng số đội - Giữ nguyên'}\n`;
+        csv += `${s.rank},${s.teamName},${s.groupName},${s.matchesPlayed},${s.matchesWon},${s.matchesLost},${s.points},${s.setDiff >= 0 ? '+' : ''}${s.setDiff},${s.pointsWon}/${s.pointsLost},${s.pointDiff >= 0 ? '+' : ''}${s.pointDiff},${s.isUefaAdjusted ? 'Đã trừ trận đội bét bảng' : 'Bằng số đội - Giữ nguyên'}\n`;
       });
       csv += '\n';
     }
@@ -129,7 +129,7 @@ export default function Standings() {
             <BarChart3 size={18} className="text-blue-500" />
             Biểu Đồ Xếp Hạng & Biểu Điểm Thi Đấu
           </h3>
-          <p className="text-xs text-zinc-405">Xếp hạng được tính toán thời gian thực theo thứ tự ưu tiên: Điểm số &gt; Hiệu số &gt; Đối đầu &gt; Tổng điểm các séc.</p>
+          <p className="text-xs text-zinc-405">Xếp hạng được tính toán thời gian thực theo thứ tự ưu tiên: Điểm số &gt; Hiệu số séc &gt; Hiệu số điểm &gt; Đối đầu.</p>
         </div>
 
         <div className="flex gap-3">
@@ -219,7 +219,8 @@ export default function Standings() {
                         <th className="py-3 px-2 text-center text-emerald-600 dark:text-emerald-450">T</th>
                         <th className="py-3 px-2 text-center text-red-600">B</th>
                         <th className="py-3 px-2 text-center font-bold text-zinc-850 dark:text-zinc-100">Điểm</th>
-                        <th className="py-3 px-3 text-center">Điểm Séc</th>
+                        <th className="py-3 px-3 text-center">Séc</th>
+                        <th className="py-3 px-3 text-center">Điểm ghi</th>
                         <th className="py-3 px-3 text-center">Hiệu số</th>
                       </tr>
                     </thead>
@@ -288,6 +289,12 @@ export default function Standings() {
                               {s.points}
                             </td>
 
+                            <td className="py-3.5 px-3 text-center">
+                              <span className={`font-mono font-bold ${s.setDiff > 0 ? 'text-emerald-600' : s.setDiff < 0 ? 'text-red-500' : 'text-zinc-400'}`}>
+                                {s.setDiff > 0 ? `+${s.setDiff}` : s.setDiff}
+                              </span>
+                            </td>
+
                             <td className="py-3.5 px-3 text-center text-zinc-400 font-mono">
                               {s.pointsWon} : {s.pointsLost}
                             </td>
@@ -336,6 +343,7 @@ export default function Standings() {
                   <th className="py-3 px-2 text-center">B</th>
                   <th className="py-3 px-2 text-center font-extrabold text-zinc-800 dark:text-zinc-100">Điểm</th>
                   <th className="py-3 px-3 text-center">Ghi:Nhận</th>
+                  <th className="py-3 px-3 text-center">Séc</th>
                   <th className="py-3 px-3 text-center">Hiệu số</th>
                   <th className="py-3 px-4 text-center">Trạng thái UEFA</th>
                 </tr>
@@ -373,6 +381,7 @@ export default function Standings() {
                       <td className="py-3 px-2 text-center text-red-600 font-semibold">{cand.matchesLost}</td>
                       <td className="py-3 px-2 text-center font-extrabold text-[13px] text-zinc-900 dark:text-zinc-100">{cand.points}</td>
                       <td className="py-3 px-3 text-center text-zinc-400 font-mono">{cand.pointsWon}:{cand.pointsLost}</td>
+                      <td className={`py-3 px-3 text-center font-mono font-bold ${cand.setDiff > 0 ? 'text-emerald-600' : cand.setDiff < 0 ? 'text-red-500' : 'text-zinc-400'}`}>{cand.setDiff >= 0 ? `+${cand.setDiff}` : cand.setDiff}</td>
                       <td className="py-3 px-3 text-center font-mono font-bold text-emerald-600">{cand.pointDiff >= 0 ? `+${cand.pointDiff}` : cand.pointDiff}</td>
                       
                       <td className="py-3 px-4 text-center">

@@ -289,7 +289,7 @@ export default function ExportManager() {
             curRowIdx++;
 
             // Headers của standings bảng
-            const stdHeaders = ['Thứ hạng', 'Tên Đội tuyển / Vận động viên', 'Trận đã đấu', 'Điểm số'];
+            const stdHeaders = ['Thứ hạng', 'Tên Đội tuyển / Vận động viên', 'Trận đã đấu', 'Điểm số', 'Séc', 'Hiệu số'];
             const headerRow = worksheet.addRow([...stdHeaders]);
             worksheet.getRow(curRowIdx).height = 26;
 
@@ -316,7 +316,9 @@ export default function ExportManager() {
                 rankIndex + 1,
                 s.teamName || 'Không rõ',
                 s.matchesPlayed || 0,
-                `${s.points || 0}đ`
+                `${s.points || 0}đ`,
+                s.setDiff > 0 ? `+${s.setDiff}` : s.setDiff || 0,
+                s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff || 0,
               ]);
               worksheet.getRow(curRowIdx).height = 25;
 
