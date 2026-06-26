@@ -447,10 +447,13 @@ export const useTournamentStore = create<AppState>()(
           const currentTournament = currentState.tournament;
           const hasTournamentContext = Object.prototype.hasOwnProperty.call(context, 'tournamentId');
           const nextTournamentId = hasTournamentContext ? context.tournamentId || null : currentState.activeTournamentId || null;
+          const nextTournamentName = nextTournamentId
+            ? context.tournamentName || (nextTournamentId === currentTournament.id ? currentTournament.name : 'Chưa chọn giải')
+            : 'Chưa có giải';
           const nextTournament = {
             ...currentTournament,
             id: nextTournamentId || '',
-            name: nextTournamentId ? context.tournamentName || currentTournament.name : 'Chưa có giải',
+            name: nextTournamentName,
           };
 
           const isSameContext =
