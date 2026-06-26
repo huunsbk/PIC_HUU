@@ -161,20 +161,24 @@ export default function EventManagementPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-[980px] w-full text-left text-xs">
+            <table className="min-w-[1080px] w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-zinc-200 bg-zinc-50 text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950">
-                  <th className="px-4 py-3">Tenant</th>
-                  <th className="px-4 py-3">Tournament</th>
-                  <th className="px-4 py-3">Event</th>
+                  <th className="px-4 py-3">STT</th>
+                  <th className="px-4 py-3">Đơn vị quản lý / Tenant Admin</th>
+                  <th className="px-4 py-3">Giải đấu / Event Admin</th>
+                  <th className="px-4 py-3">Nội dung thi đấu</th>
                   <th className="px-4 py-3">Trạng thái</th>
-                  <th className="px-4 py-3">Referee / Event Admin</th>
-                  <th className="px-4 py-3 text-right">Điều khiển</th>
+                  <th className="px-4 py-3">Trọng tài / Event Admin</th>
+                  <th className="px-4 py-3 text-right">Chức năng</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredEvents.map((event: any) => (
+                {filteredEvents.map((event: any, index: number) => (
                   <tr key={event.id} className="border-b border-zinc-100 hover:bg-zinc-50/70 dark:border-zinc-850 dark:hover:bg-zinc-950/60">
+                    <td className="px-4 py-4 font-black text-zinc-500 dark:text-zinc-400">
+                      {index + 1}
+                    </td>
                     <td className="px-4 py-4 font-bold text-zinc-700 dark:text-zinc-200">
                       {activeTenantName || currentEnterpriseUser?.tenant?.name || activeTenantId}
                     </td>
