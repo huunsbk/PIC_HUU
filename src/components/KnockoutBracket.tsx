@@ -20,7 +20,6 @@ export default function KnockoutBracket() {
   const {
     tournament,
     generateKnockoutBracket,
-    clearKnockout,
     updateKnockoutScore,
     updateKnockoutParticipant,
     propagateKnockoutResets,
@@ -41,6 +40,7 @@ export default function KnockoutBracket() {
     prepare_knockout_candidates_v1,
     confirm_knockout_teams_v1,
     generate_knockout_bracket_v1,
+    clear_knockout_bracket_v1,
   } = useTournamentRpcMutations();
 
   const teams = React.useMemo(() => {
@@ -573,9 +573,17 @@ export default function KnockoutBracket() {
     setDraftMatches([]);
   };
 
-  const handleClearBracketConfirm = () => {
-    clearKnockout();
-    setShowClearConfirmModal(false);
+  const handleClearBracketConfirm = async () => {
+    if (!selectedEventId) return;
+    try {
+      const result = await clear_knockout_bracket_v1.mutateAsync(selectedEventId);
+      setSuccessMessage(`Đã xóa sơ đồ knockout (${result.deleted_matches || 0} trận).`);
+      setTimeout(() => setSuccessMessage(null), 3500);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Không xóa được sơ đồ knockout.');
+    } finally {
+      setShowClearConfirmModal(false);
+    }
   };
 
   // Local state for numeric inputs to avoid lags/cursor jumps and handle incomplete edits gracefully
@@ -1263,10 +1271,11 @@ export default function KnockoutBracket() {
               
               <button
                 onClick={handleClearBracketConfirm}
+                disabled={clear_knockout_bracket_v1.isPending}
                 className="px-6 py-2.5 text-xs font-bold text-white bg-red-650 hover:bg-red-600 rounded-xl shadow-md cursor-pointer uppercase tracking-wider"
                 id="btn-confirm-clear-bracket"
               >
-                Xóa sơ đồ nhánh cũ
+                {clear_knockout_bracket_v1.isPending ? 'Đang xóa...' : 'Xóa sơ đồ nhánh cũ'}
               </button>
             </div>
 

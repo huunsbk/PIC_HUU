@@ -162,6 +162,7 @@ const StandingGroupCard = React.memo(({
               <th className="py-1.5 px-0 text-center w-6 sm:w-8">Trận</th>
               <th className="py-1.5 px-0 text-center text-emerald-600 w-4 sm:w-6">T</th>
               <th className="py-1.5 px-0 text-center text-red-500 w-4 sm:w-6">B</th>
+              <th className="py-1.5 px-0 text-center text-zinc-500 w-6 sm:w-8">Séc</th>
               <th className="py-1.5 px-0 text-center text-zinc-500 w-6 sm:w-8">H/S</th>
               <th className="py-1.5 px-0.5 text-center text-blue-600 w-8 sm:w-10">Điểm</th>
             </tr>
@@ -186,6 +187,7 @@ const StandingGroupCard = React.memo(({
                   <td className="py-1.5 px-0 text-center text-zinc-600 dark:text-zinc-400 font-medium">{s.matchesPlayed}</td>
                   <td className="py-1.5 px-0 text-center text-emerald-600 font-bold">{s.matchesWon}</td>
                   <td className="py-1.5 px-0 text-center text-red-500 font-bold">{s.matchesLost}</td>
+                  <td className="py-1.5 px-0 text-center text-zinc-500 font-medium tracking-tighter">{s.setDiff > 0 ? `+${s.setDiff}` : s.setDiff}</td>
                   <td className="py-1.5 px-0 text-center text-zinc-500 font-medium tracking-tighter">{s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff === 0 ? 'Ø' : s.pointDiff}</td>
                   <td className="py-1.5 px-0.5 text-center font-extrabold text-blue-600 text-[11px] sm:text-[13px]">{s.points}</td>
                 </tr>
@@ -619,7 +621,7 @@ export default function LiveDashboard() {
             curRowIdx++;
 
             // Headers của standings bảng
-            const stdHeaders = ['Thứ hạng', 'Tên Đội tuyển / Vận động viên', 'Trận đã đấu', 'Điểm số'];
+            const stdHeaders = ['Thứ hạng', 'Tên Đội tuyển / Vận động viên', 'Trận đã đấu', 'Điểm số', 'Séc', 'Hiệu số'];
             const headerRow = worksheet.addRow([...stdHeaders]);
             worksheet.getRow(curRowIdx).height = 26;
 
@@ -646,7 +648,9 @@ export default function LiveDashboard() {
                 rankIndex + 1,
                 s.teamName || 'Không rõ',
                 s.matchesPlayed || 0,
-                `${s.points || 0}đ`
+                `${s.points || 0}đ`,
+                s.setDiff > 0 ? `+${s.setDiff}` : s.setDiff || 0,
+                s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff || 0,
               ]);
               worksheet.getRow(curRowIdx).height = 25;
 

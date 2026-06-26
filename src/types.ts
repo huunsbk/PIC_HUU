@@ -136,6 +136,7 @@ export interface GroupStanding {
   points: number;       // Tổng điểm tích lũy theo luật thắng/thua
   setsWon: number;      // Số séc thắng (bằng matchesWon trong thể thức 1 séc)
   setsLost: number;     // Số séc thua
+  setDiff: number;      // Hiệu số séc thắng - séc thua
   pointsWon: number;    // Tổng số điểm ghi
   pointsLost: number;   // Tổng số điểm bị ghi
   pointDiff: number;    // Hiệu số điểm ghi/bị ghi (pointsWon - pointsLost)
@@ -152,6 +153,9 @@ export interface ThirdPlaceStanding {
   matchesWon: number;
   matchesLost: number;
   points: number;
+  setsWon: number;
+  setsLost: number;
+  setDiff: number;
   pointsWon: number;
   pointsLost: number;
   pointDiff: number;

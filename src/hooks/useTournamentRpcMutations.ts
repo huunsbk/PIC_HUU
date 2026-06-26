@@ -9,7 +9,7 @@ import { useTournamentStore } from '../store';
 import type { SeedType } from '../types';
 import { isUsableEventId, useEvents } from './useEvents';
 
-type GroupMode = 'balanced' | 'random' | 'seed';
+type GroupMode = 'balanced' | 'random' | 'seed' | 'empty';
 
 const SELECT_TENANT_MESSAGE = 'Vui lòng chọn hoặc tạo đơn vị trước.';
 const SELECT_TOURNAMENT_MESSAGE = 'Vui lòng chọn hoặc tạo giải đấu trước.';
@@ -101,7 +101,8 @@ export function useTournamentRpcMutations() {
   });
 
   const assignTeamToGroup = useMutation({
-    mutationFn: ({ teamId, groupId }: { teamId: string; groupId: string }) => tournamentRpc.assignTeamToGroup(teamId, groupId),
+    mutationFn: ({ teamId, groupId, beforeTeamId, force }: { teamId: string; groupId: string | null; beforeTeamId?: string | null; force?: boolean }) =>
+      tournamentRpc.assignTeamToGroup(teamId, groupId, beforeTeamId, !!force),
     onSuccess: invalidateEventScope,
   });
 
@@ -129,6 +130,15 @@ export function useTournamentRpcMutations() {
       {
         requireEventId(selectedEventId);
         return tournamentRpc.updateMatchSetScore(matchId, setNumber, scoreA, scoreB);
+      },
+    onSuccess: invalidateEventScope,
+  });
+
+  const finalizeMatchScore = useMutation({
+    mutationFn: ({ matchId }: { matchId: string }) =>
+      {
+        requireEventId(selectedEventId);
+        return tournamentRpc.finalizeMatchScore(matchId);
       },
     onSuccess: invalidateEventScope,
   });
@@ -176,6 +186,11 @@ export function useTournamentRpcMutations() {
     onSuccess: invalidateEventScope,
   });
 
+  const clearKnockoutBracket = useMutation({
+    mutationFn: (eventId: string | null = requireEventId(selectedEventId)) => tournamentRpc.clearKnockoutBracket(requireEventId(eventId)),
+    onSuccess: invalidateEventScope,
+  });
+
   return {
     update_event_config_v1: updateEventConfig,
     create_team_v1: createTeam,
@@ -188,9 +203,11 @@ export function useTournamentRpcMutations() {
     generate_schedule_v1: generateSchedule,
     update_match_score_v1: updateMatchScore,
     update_match_set_score_v1: updateMatchSetScore,
+    finalize_match_score_v1: finalizeMatchScore,
     reset_match_score_v1: resetMatchScore,
     prepare_knockout_candidates_v1: prepareKnockoutCandidates,
     confirm_knockout_teams_v1: confirmKnockoutTeams,
     generate_knockout_bracket_v1: generateKnockoutBracket,
+    clear_knockout_bracket_v1: clearKnockoutBracket,
   };
 }

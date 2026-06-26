@@ -58,10 +58,52 @@ export function generateRoundRobinMatches(
   return matches;
 }
 
+function getFinishedSetRows(match: Match) {
+  return (match.matchSets || [])
+    .filter((setRow) => setRow.deleted_at === null || setRow.deleted_at === undefined)
+    .filter((setRow) => setRow.score_a !== null && setRow.score_a !== undefined && setRow.score_b !== null && setRow.score_b !== undefined)
+    .map((setRow) => ({
+      scoreA: Number(setRow.score_a || 0),
+      scoreB: Number(setRow.score_b || 0),
+    }));
+}
+
+function getMatchScoreBreakdown(match: Match) {
+  const finishedSets = getFinishedSetRows(match);
+
+  if (finishedSets.length > 0) {
+    return finishedSets.reduce(
+      (acc, setRow) => {
+        acc.pointsA += setRow.scoreA;
+        acc.pointsB += setRow.scoreB;
+        if (setRow.scoreA > setRow.scoreB) acc.setsA += 1;
+        if (setRow.scoreB > setRow.scoreA) acc.setsB += 1;
+        return acc;
+      },
+      { pointsA: 0, pointsB: 0, setsA: 0, setsB: 0 },
+    );
+  }
+
+  const scoreA = Number(match.scoreA || 0);
+  const scoreB = Number(match.scoreB || 0);
+  const looksLikeAggregateSets = scoreA <= 3 && scoreB <= 3 && scoreA + scoreB <= 3;
+
+  if (looksLikeAggregateSets) {
+    return { pointsA: scoreA, pointsB: scoreB, setsA: scoreA, setsB: scoreB };
+  }
+
+  return {
+    pointsA: scoreA,
+    pointsB: scoreB,
+    setsA: match.winnerId === match.teamAId ? 1 : 0,
+    setsB: match.winnerId === match.teamBId ? 1 : 0,
+  };
+}
+
 /**
  * Tính toán bảng xếp hạng cho mỗi bảng đấu dựa trên kết quả trận đấu.
  * Áp dụng Quy tắc sắp xếp theo yêu cầu của BTC:
- * Điểm số > Hiệu số điểm (Point Diff) > Đối đầu trực tiếp > Tổng điểm các séc.
+ * Điểm số > Hiệu số séc > Hiệu số điểm > Đối đầu trực tiếp.
  */
 export function calculateGroupStandings(
   groupId: string,
@@ -87,6 +129,7 @@ export function calculateGroupStandings(
       points: 0,
       setsWon: 0,
       setsLost: 0,
+      setDiff: 0,
       pointsWon: 0,
       pointsLost: 0,
       pointDiff: 0,
@@ -97,33 +140,25 @@ export function calculateGroupStandings(
   // Điền thông số từ các trận đấu đã kết thúc
   groupMatches.forEach((m) => {
     if (m.status !== 'finished' || m.scoreA === null || m.scoreB === null) return;
-    const { teamAId, teamBId, scoreA, scoreB, winnerId } = m;
+    const { teamAId, teamBId, winnerId } = m;
 
     if (!teamAId || !teamBId || !standings[teamAId] || !standings[teamBId]) return;
 
-    const finishedSets = (m.matchSets || [])
-      .filter((setRow) => setRow.deleted_at === null || setRow.deleted_at === undefined)
-      .filter((setRow) => setRow.score_a !== null && setRow.score_a !== undefined && setRow.score_b !== null && setRow.score_b !== undefined);
-    const pointScoreA = finishedSets.length > 0
-      ? finishedSets.reduce((sum, setRow) => sum + Number(setRow.score_a || 0), 0)
-      : scoreA;
-    const pointScoreB = finishedSets.length > 0
-      ? finishedSets.reduce((sum, setRow) => sum + Number(setRow.score_b || 0), 0)
-      : scoreB;
+    const breakdown = getMatchScoreBreakdown(m);
 
     // Cập nhật đội A
     standings[teamAId].matchesPlayed += 1;
-    standings[teamAId].pointsWon += pointScoreA;
-    standings[teamAId].pointsLost += pointScoreB;
-    standings[teamAId].setsWon += scoreA;
-    standings[teamAId].setsLost += scoreB;
+    standings[teamAId].pointsWon += breakdown.pointsA;
+    standings[teamAId].pointsLost += breakdown.pointsB;
+    standings[teamAId].setsWon += breakdown.setsA;
+    standings[teamAId].setsLost += breakdown.setsB;
 
     // Cập nhật đội B
     standings[teamBId].matchesPlayed += 1;
-    standings[teamBId].pointsWon += pointScoreB;
-    standings[teamBId].pointsLost += pointScoreA;
-    standings[teamBId].setsWon += scoreB;
-    standings[teamBId].setsLost += scoreA;
+    standings[teamBId].pointsWon += breakdown.pointsB;
+    standings[teamBId].pointsLost += breakdown.pointsA;
+    standings[teamBId].setsWon += breakdown.setsB;
+    standings[teamBId].setsLost += breakdown.setsA;
 
     if (winnerId === teamAId) {
       standings[teamAId].matchesWon += 1;
@@ -142,23 +177,29 @@ export function calculateGroupStandings(
 
   // Tính hiệu số
   const resultList = Object.values(standings).map((st) => {
+    st.setDiff = st.setsWon - st.setsLost;
     st.pointDiff = st.pointsWon - st.pointsLost;
     return st;
   });
 
-  // Thuật toán sắp xếp theo yêu cầu: Điểm > Hiệu số > Đối đầu > Tổng điểm ghi được
+  // Thuật toán sắp xếp theo yêu cầu: Điểm > Hiệu số séc > Hiệu số điểm > Đối đầu
   resultList.sort((a, b) => {
     // 1. So sánh Điểm (Points)
     if (b.points !== a.points) {
       return b.points - a.points;
     }
 
-    // 2. So sánh Hiệu số điểm ghi được/bị ghi (Point Diff)
+    // 2. So sánh Hiệu số séc thắng/thua
+    if (b.setDiff !== a.setDiff) {
+      return b.setDiff - a.setDiff;
+    }
+
+    // 3. So sánh Hiệu số điểm ghi được/bị ghi (Point Diff)
     if (b.pointDiff !== a.pointDiff) {
       return b.pointDiff - a.pointDiff;
     }
 
-    // 3. So sánh Đối đầu trực tiếp (Head-to-head)
+    // 4. So sánh Đối đầu trực tiếp (Head-to-head)
     const matchBetween = groupMatches.find(
       (m) =>
         m.status === 'finished' &&
@@ -170,12 +211,12 @@ export function calculateGroupStandings(
       if (matchBetween.winnerId === b.teamId) return 1;
     }
 
-    // 4. So sánh Tổng điểm ghi được (Points Won)
+    // 5. So sánh Tổng điểm ghi được (Points Won)
     if (b.pointsWon !== a.pointsWon) {
       return b.pointsWon - a.pointsWon;
     }
 
-    // 5. Nếu bằng nhau hoàn toàn, ưu tiên Đội có hạt giống cao hơn hoặc ngẫu nhiên
+    // 6. Nếu bằng nhau hoàn toàn, ưu tiên Đội có hạt giống cao hơn hoặc ngẫu nhiên
     return getSeedPriority(a.seed) - getSeedPriority(b.seed);
   });
 
@@ -244,6 +285,8 @@ export function calculateBestThirdPlaces(
     let adjustedMatchesWon = thirdTeamStanding.matchesWon;
     let adjustedMatchesLost = thirdTeamStanding.matchesLost;
     let adjustedPoints = thirdTeamStanding.points;
+    let adjustedSetsWon = thirdTeamStanding.setsWon;
+    let adjustedSetsLost = thirdTeamStanding.setsLost;
     let adjustedPointsWon = thirdTeamStanding.pointsWon;
     let adjustedPointsLost = thirdTeamStanding.pointsLost;
 
@@ -264,11 +307,16 @@ export function calculateBestThirdPlaces(
           // Trừ đi thông số của trận đấu này
           adjustedMatchesPlayed -= 1;
           const isHome = penaltyMatch.teamAId === tId;
-          const scoreUs = isHome ? penaltyMatch.scoreA : penaltyMatch.scoreB;
-          const scoreThem = isHome ? penaltyMatch.scoreB : penaltyMatch.scoreA;
+          const breakdown = getMatchScoreBreakdown(penaltyMatch);
+          const scoreUs = isHome ? breakdown.pointsA : breakdown.pointsB;
+          const scoreThem = isHome ? breakdown.pointsB : breakdown.pointsA;
+          const setsUs = isHome ? breakdown.setsA : breakdown.setsB;
+          const setsThem = isHome ? breakdown.setsB : breakdown.setsA;
 
           adjustedPointsWon -= scoreUs;
           adjustedPointsLost -= scoreThem;
+          adjustedSetsWon -= setsUs;
+          adjustedSetsLost -= setsThem;
 
           if (penaltyMatch.winnerId === tId) {
             adjustedMatchesWon -= 1;
@@ -290,6 +338,9 @@ export function calculateBestThirdPlaces(
       matchesWon: adjustedMatchesWon,
       matchesLost: adjustedMatchesLost,
       points: adjustedPoints,
+      setsWon: adjustedSetsWon,
+      setsLost: adjustedSetsLost,
+      setDiff: adjustedSetsWon - adjustedSetsLost,
       pointsWon: adjustedPointsWon,
       pointsLost: adjustedPointsLost,
       pointDiff: adjustedPointsWon - adjustedPointsLost,
@@ -299,9 +350,10 @@ export function calculateBestThirdPlaces(
     });
   });
 
-  // So sánh các đội hạng 3 theo thứ tự: Điểm -> Hiệu số -> Điểm ghi -> Hạt giống
+  // So sánh các đội hạng 3 theo thứ tự: Điểm -> Hiệu số séc -> Hiệu số điểm -> Điểm ghi
   thirdPlaceCandidates.sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
+    if (b.setDiff !== a.setDiff) return b.setDiff - a.setDiff;
     if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
     if (b.pointsWon !== a.pointsWon) return b.pointsWon - a.pointsWon;
     return b.teamName.localeCompare(a.teamName); // Tên bảng / chữ cái nếu tất cả đều bằng nhau
