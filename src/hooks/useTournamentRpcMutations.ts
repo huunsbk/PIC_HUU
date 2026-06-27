@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   tournamentRpc,
   type EventConfigInput,
+  type ManualKnockoutSlotInput,
   type TeamImportRow,
 } from '../lib/api/tournamentRpc';
 import { useTournamentStore } from '../store';
@@ -150,8 +151,16 @@ export function useTournamentRpcMutations() {
     onSuccess: invalidateEventScope,
   });
 
-  const generateKnockoutBracket = useMutation({
-    mutationFn: (eventId: string | null = requireEventId(selectedEventId)) => tournamentRpc.generateKnockoutBracket(requireEventId(eventId)),
+  const saveManualKnockoutBracket = useMutation({
+    mutationFn: ({
+      eventId = selectedEventId,
+      bracketSize,
+      slots,
+    }: {
+      eventId?: string | null;
+      bracketSize: 4 | 8 | 16 | 32;
+      slots: ManualKnockoutSlotInput[];
+    }) => tournamentRpc.saveManualKnockoutBracket(requireEventId(eventId), bracketSize, slots),
     onSuccess: invalidateEventScope,
   });
 
@@ -174,7 +183,7 @@ export function useTournamentRpcMutations() {
     update_match_set_score_v1: updateMatchSetScore,
     finalize_match_score_v1: finalizeMatchScore,
     reset_match_score_v1: resetMatchScore,
-    generate_knockout_bracket_v1: generateKnockoutBracket,
+    save_manual_knockout_bracket_v1: saveManualKnockoutBracket,
     clear_knockout_bracket_v1: clearKnockoutBracket,
   };
 }

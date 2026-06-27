@@ -30,6 +30,12 @@ export interface EventConfigInput {
   rankingConfig: RankingConfig;
 }
 
+export interface ManualKnockoutSlotInput {
+  match_index: number;
+  placeholder_a: string;
+  placeholder_b: string;
+}
+
 export interface EventConfigResult extends TournamentRpcResult {
   sport_id?: string;
   format_type?: EventFormatType;
@@ -289,9 +295,11 @@ export const tournamentRpc = {
     });
   },
 
-  generateKnockoutBracket(eventId: string) {
-    return callRpc<TournamentRpcResult & { created_matches?: number }>('generate_knockout_bracket_v1', {
+  saveManualKnockoutBracket(eventId: string, bracketSize: 4 | 8 | 16 | 32, slots: ManualKnockoutSlotInput[]) {
+    return callRpc<TournamentRpcResult & { created_matches?: number; bracket_size?: number; slot_count?: number }>('save_manual_knockout_bracket_v1', {
       p_event_id: eventId,
+      p_bracket_size: bracketSize,
+      p_slots: slots,
     });
   },
 
