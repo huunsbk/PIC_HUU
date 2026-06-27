@@ -53,7 +53,7 @@ export default function ScoreEntry() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const eventMatches = useMemo(() => balanceMatchesRestTime(matches || []), [matches]);
-  const activeMatch = activeMatchId ? eventMatches.find((match) => match.id === activeMatchId) || null : null;
+  const playingMatches = useMemo(() => eventMatches.filter((match) => match.status === 'playing'), [eventMatches]);
 
   useEffect(() => {
     if (activeMatchId && !eventMatches.some((match) => match.id === activeMatchId)) {
@@ -157,7 +157,7 @@ export default function ScoreEntry() {
   const saveSetScore = async (matchId: string, setNumber: 1 | 2 | 3) => {
     const scores = getSetScoreValue(matchId, setNumber);
     if (scores.a === '' || scores.b === '') {
-      triggerError(`Vui lòng nhập đủ điểm cho séc ${setNumber}.`);
+      triggerError(maxSetCount === 1 ? 'Vui lòng nhập đủ điểm.' : `Vui lòng nhập đủ điểm cho séc ${setNumber}.`);
       return;
     }
 
@@ -168,9 +168,9 @@ export default function ScoreEntry() {
         scoreA: parseInt(scores.a, 10),
         scoreB: parseInt(scores.b, 10),
       });
-      triggerSuccess(`Đã lưu séc ${setNumber}.`);
+      triggerSuccess(maxSetCount === 1 ? 'Đã lưu điểm.' : `Đã lưu séc ${setNumber}.`);
     } catch (err) {
-      triggerError(err instanceof Error ? err.message : `Không lưu được điểm séc ${setNumber}.`);
+      triggerError(err instanceof Error ? err.message : maxSetCount === 1 ? 'Không lưu được điểm.' : `Không lưu được điểm séc ${setNumber}.`);
     }
   };
 
@@ -210,23 +210,20 @@ export default function ScoreEntry() {
     }
   };
 
-  const handleCloseActiveMatch = async () => {
-    if (!activeMatch) {
-      setActiveMatchId(null);
-      return;
-    }
-
-    if (activeMatch.status === 'playing' && hasSavedSetScores(activeMatch.id)) {
+  const handleCloseMatch = async (match: Match) => {
+    if (match.status === 'playing' && hasSavedSetScores(match.id)) {
       triggerError('Trận đã có điểm séc. Vui lòng reset điểm trước khi thoát về chờ đấu.');
       return;
     }
 
     try {
-      if (activeMatch.status === 'playing') {
-        await updateMatchStatus.mutateAsync({ matchId: activeMatch.id, status: 'pending' });
+      if (match.status === 'playing') {
+        await updateMatchStatus.mutateAsync({ matchId: match.id, status: 'pending' });
         triggerSuccess('Đã đưa trận về chờ đấu.');
       }
-      setActiveMatchId(null);
+      if (activeMatchId === match.id) {
+        setActiveMatchId(null);
+      }
     } catch (err) {
       triggerError(err instanceof Error ? err.message : 'Không đưa được trận về chờ đấu.');
     }
@@ -248,6 +245,45 @@ export default function ScoreEntry() {
       const setScore = getSetScoreValue(match.id, setNumber);
       const thirdSetNotNeeded = setNumber === 3 && (winCounts.a >= 2 || winCounts.b >= 2);
       const disabled = !isPermitted || matchFinished || thirdSetNotNeeded;
+
+      if (maxSetCount === 1) {
+        return (
+          <div key={setNumber} className="grid grid-cols-[minmax(0,1fr)_72px_22px_72px_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-950">
+            <span className="truncate text-sm font-black text-zinc-900 dark:text-zinc-100" title={getTeamName(match, 'A')}>
+              {getTeamName(match, 'A')}
+            </span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={setScore.a}
+              onChange={(event) => handleSetScoreChange(match.id, setNumber, 'a', event.target.value)}
+              disabled={disabled}
+              className="h-9 w-full rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
+            />
+            <span className="text-center text-xs font-black text-zinc-300">-</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={setScore.b}
+              onChange={(event) => handleSetScoreChange(match.id, setNumber, 'b', event.target.value)}
+              disabled={disabled}
+              className="h-9 w-full rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
+            />
+            <span className="truncate text-right text-sm font-black text-zinc-900 dark:text-zinc-100" title={getTeamName(match, 'B')}>
+              {getTeamName(match, 'B')}
+            </span>
+            <button
+              type="button"
+              onClick={() => saveSetScore(match.id, setNumber)}
+              disabled={disabled || updateMatchSetScore.isPending}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400"
+              title="Lưu điểm"
+            >
+              <Save size={15} />
+            </button>
+          </div>
+        );
+      }
 
       return (
         <div key={setNumber} className="grid grid-cols-[70px_1fr_38px_1fr_auto] items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-950">
@@ -282,6 +318,61 @@ export default function ScoreEntry() {
       );
     });
   };
+
+  const renderPlayingMatchPanel = (match: Match) => (
+    <div key={match.id} className="space-y-3 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="flex items-start justify-between gap-3 border-b border-zinc-200 pb-3 dark:border-zinc-800">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">{getGroupLabel(match)}</p>
+            <span className={`rounded-full border px-2 py-1 text-[10px] font-black uppercase ${getStatusClassName(match.status)}`}>
+              {getStatusLabel(match.status)}
+            </span>
+          </div>
+          <h3 className="mt-1 truncate text-base font-black text-zinc-900 dark:text-zinc-100">
+            {getTeamName(match, 'A')} vs {getTeamName(match, 'B')}
+          </h3>
+          <p className="mt-1 text-[11px] font-bold text-zinc-500">{getMatchResultLabel(match, getTeamName(match, 'A'), getTeamName(match, 'B'))}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => handleCloseMatch(match)}
+          disabled={updateMatchStatus.isPending || hasSavedSetScores(match.id)}
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+          title={hasSavedSetScores(match.id) ? 'Reset điểm trước khi thoát trận về chờ đấu' : 'Thoát panel nhập điểm'}
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      {hasSavedSetScores(match.id) && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+          Trận đã có điểm séc. Muốn bấm X để trả về chờ đấu, hãy reset điểm trước.
+        </div>
+      )}
+
+      <div className="space-y-2">{renderSetInputs(match)}</div>
+
+      <div className="flex items-center justify-between gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+        <button
+          type="button"
+          onClick={() => handleResetMatch(match.id)}
+          disabled={resetMatchScore.isPending}
+          className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300"
+        >
+          <RotateCcw size={15} /> Reset
+        </button>
+        <button
+          type="button"
+          onClick={() => handleFinalizeMatch(match.id)}
+          disabled={match.status === 'finished' || finalizeMatchScore.isPending}
+          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Check size={16} /> Chốt trận
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -329,7 +420,7 @@ export default function ScoreEntry() {
               Chưa có lịch thi đấu. Hãy chia bảng và sinh lịch trước.
             </div>
           ) : (
-            <div className="grid max-h-[calc(100vh-260px)] gap-2 overflow-y-auto p-3 lg:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+            <div className="grid max-h-[calc(100vh-260px)] grid-cols-1 gap-2 overflow-y-auto p-3">
               {eventMatches.map((match, index) => {
                 const teamA = getTeamName(match, 'A');
                 const teamB = getTeamName(match, 'B');
@@ -377,31 +468,37 @@ export default function ScoreEntry() {
                       </button>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                      <div className="min-w-0 rounded-lg bg-zinc-50 p-2 dark:bg-zinc-950">
-                        <p className="text-[10px] font-black uppercase text-zinc-400">Team A</p>
-                        <p className="truncate text-sm font-black text-zinc-900 dark:text-zinc-100" title={teamA}>{teamA}</p>
-                      </div>
+                    <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-lg bg-zinc-50 p-2 dark:bg-zinc-950">
+                      <p className="truncate text-sm font-black text-zinc-900 dark:text-zinc-100" title={teamA}>{teamA}</p>
                       <span className="text-[10px] font-black text-zinc-400">VS</span>
-                      <div className="min-w-0 rounded-lg bg-zinc-50 p-2 text-right dark:bg-zinc-950">
-                        <p className="text-[10px] font-black uppercase text-zinc-400">Team B</p>
-                        <p className="truncate text-sm font-black text-zinc-900 dark:text-zinc-100" title={teamB}>{teamB}</p>
-                      </div>
+                      <p className="truncate text-right text-sm font-black text-zinc-900 dark:text-zinc-100" title={teamB}>{teamB}</p>
                     </div>
 
                     <div className="mt-2 grid gap-2">
-                      {setNumbers.map((setNumber) => (
-                        <div key={setNumber} className="grid grid-cols-[56px_1fr_auto_1fr] items-center gap-2 rounded-lg border border-zinc-100 px-2 py-1.5 text-xs dark:border-zinc-800">
-                          <span className="text-[10px] font-black uppercase text-zinc-500">Séc {setNumber}</span>
+                      {maxSetCount === 1 ? (
+                        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg border border-zinc-100 px-2 py-1.5 text-xs dark:border-zinc-800">
                           <span className="rounded bg-blue-50 px-2 py-1 text-center font-mono font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-                            {getSetCell(match, setNumber, 'A') || '-'}
+                            {getSetCell(match, 1, 'A') || '-'}
                           </span>
                           <span className="text-zinc-300">-</span>
                           <span className="rounded bg-blue-50 px-2 py-1 text-center font-mono font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-                            {getSetCell(match, setNumber, 'B') || '-'}
+                            {getSetCell(match, 1, 'B') || '-'}
                           </span>
                         </div>
-                      ))}
+                      ) : (
+                        setNumbers.map((setNumber) => (
+                          <div key={setNumber} className="grid grid-cols-[56px_1fr_auto_1fr] items-center gap-2 rounded-lg border border-zinc-100 px-2 py-1.5 text-xs dark:border-zinc-800">
+                            <span className="text-[10px] font-black uppercase text-zinc-500">Séc {setNumber}</span>
+                            <span className="rounded bg-blue-50 px-2 py-1 text-center font-mono font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                              {getSetCell(match, setNumber, 'A') || '-'}
+                            </span>
+                            <span className="text-zinc-300">-</span>
+                            <span className="rounded bg-blue-50 px-2 py-1 text-center font-mono font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                              {getSetCell(match, setNumber, 'B') || '-'}
+                            </span>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </article>
                 );
@@ -410,81 +507,30 @@ export default function ScoreEntry() {
           )}
         </section>
 
-        <aside className="rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <aside className="rounded-xl border border-zinc-200 bg-zinc-50 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40">
           {!isPermitted ? (
             <div className="flex min-h-[420px] flex-col items-center justify-center p-8 text-center text-zinc-500">
               <Play size={40} className="mb-4 opacity-30" />
               <p className="text-sm font-black uppercase text-zinc-700 dark:text-zinc-300">Không có quyền nhập điểm</p>
               <p className="mt-2 text-xs font-medium">Tài khoản hiện tại chưa được phân công nhập điểm cho nội dung này.</p>
             </div>
-          ) : !activeMatch ? (
+          ) : playingMatches.length === 0 ? (
             <div className="flex min-h-[420px] flex-col items-center justify-center p-8 text-center text-zinc-500">
               <Play size={40} className="mb-4 opacity-30" />
-              <p className="text-sm font-black uppercase text-zinc-700 dark:text-zinc-300">Chọn một trận</p>
+              <p className="text-sm font-black uppercase text-zinc-700 dark:text-zinc-300">Chưa có trận đang đấu</p>
               <p className="mt-2 text-xs font-medium">Bấm Chờ để đưa trận lên panel và chuyển trạng thái đang đấu.</p>
             </div>
           ) : (
-            <div className="space-y-4 p-4">
-              <div className="flex items-start justify-between gap-3 border-b border-zinc-200 pb-4 dark:border-zinc-800">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">{getGroupLabel(activeMatch)}</p>
-                    <span className={`rounded-full border px-2 py-1 text-[10px] font-black uppercase ${getStatusClassName(activeMatch.status)}`}>
-                      {getStatusLabel(activeMatch.status)}
-                    </span>
-                  </div>
-                  <h3 className="mt-1 truncate text-base font-black text-zinc-900 dark:text-zinc-100">
-                    {getTeamName(activeMatch, 'A')} vs {getTeamName(activeMatch, 'B')}
-                  </h3>
-                  <p className="mt-1 text-[11px] font-bold text-zinc-500">{getMatchResultLabel(activeMatch, getTeamName(activeMatch, 'A'), getTeamName(activeMatch, 'B'))}</p>
+            <div className="space-y-3 p-3">
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+                <div>
+                  <p className="text-sm font-black uppercase text-zinc-900 dark:text-zinc-100">Trận đang đấu</p>
+                  <p className="text-[11px] font-bold text-zinc-500">Nhập điểm cho toàn bộ trận đang diễn ra.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleCloseActiveMatch}
-                  disabled={updateMatchStatus.isPending || (activeMatch.status === 'playing' && hasSavedSetScores(activeMatch.id))}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                  title={activeMatch.status === 'playing' && hasSavedSetScores(activeMatch.id) ? 'Reset điểm trước khi thoát trận về chờ đấu' : 'Thoát panel nhập điểm'}
-                >
-                  <X size={18} />
-                </button>
+                <span className="rounded-full bg-blue-600 px-3 py-1 text-[11px] font-black text-white">{playingMatches.length} trận</span>
               </div>
-
-              {activeMatch.status === 'playing' && hasSavedSetScores(activeMatch.id) && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
-                  Trận đã có điểm séc. Muốn bấm X để trả về chờ đấu, hãy reset điểm trước.
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/30">
-                  <p className="text-[10px] font-black uppercase text-blue-600">Team A</p>
-                  <p className="mt-1 truncate text-sm font-black text-zinc-900 dark:text-zinc-100">{getTeamName(activeMatch, 'A')}</p>
-                </div>
-                <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-right dark:border-blue-900 dark:bg-blue-950/30">
-                  <p className="text-[10px] font-black uppercase text-blue-600">Team B</p>
-                  <p className="mt-1 truncate text-sm font-black text-zinc-900 dark:text-zinc-100">{getTeamName(activeMatch, 'B')}</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">{renderSetInputs(activeMatch)}</div>
-
-              <div className="flex items-center justify-between gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => handleResetMatch(activeMatch.id)}
-                  disabled={resetMatchScore.isPending}
-                  className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300"
-                >
-                  <RotateCcw size={15} /> Reset
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFinalizeMatch(activeMatch.id)}
-                  disabled={activeMatch.status === 'finished' || finalizeMatchScore.isPending}
-                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Check size={16} /> Chốt trận
-                </button>
+              <div className="max-h-[calc(100vh-260px)] space-y-3 overflow-y-auto pr-1">
+                {playingMatches.map(renderPlayingMatchPanel)}
               </div>
             </div>
           )}
