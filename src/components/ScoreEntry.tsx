@@ -54,6 +54,14 @@ export default function ScoreEntry() {
 
   const eventMatches = useMemo(() => balanceMatchesRestTime(matches || []), [matches]);
   const playingMatches = useMemo(() => eventMatches.filter((match) => match.status === 'playing'), [eventMatches]);
+  const reviewMatch = useMemo(
+    () => eventMatches.find((match) => match.id === activeMatchId && match.status === 'finished') || null,
+    [activeMatchId, eventMatches],
+  );
+  const panelMatches = useMemo(() => {
+    if (!reviewMatch) return playingMatches;
+    return playingMatches.some((match) => match.id === reviewMatch.id) ? playingMatches : [...playingMatches, reviewMatch];
+  }, [playingMatches, reviewMatch]);
 
   useEffect(() => {
     if (activeMatchId && !eventMatches.some((match) => match.id === activeMatchId)) {
@@ -211,6 +219,13 @@ export default function ScoreEntry() {
   };
 
   const handleCloseMatch = async (match: Match) => {
+    if (match.status === 'finished') {
+      if (activeMatchId === match.id) {
+        setActiveMatchId(null);
+      }
+      return;
+    }
+
     if (match.status === 'playing' && hasSavedSetScores(match.id)) {
       triggerError('Trận đã có điểm séc. Vui lòng reset điểm trước khi thoát về chờ đấu.');
       return;
@@ -319,7 +334,10 @@ export default function ScoreEntry() {
     });
   };
 
-  const renderPlayingMatchPanel = (match: Match) => (
+  const renderPlayingMatchPanel = (match: Match) => {
+    const isReviewingFinished = match.status === 'finished';
+
+    return (
     <div key={match.id} className="space-y-3 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       <div className="flex items-start justify-between gap-3 border-b border-zinc-200 pb-3 dark:border-zinc-800">
         <div className="min-w-0">
@@ -337,19 +355,23 @@ export default function ScoreEntry() {
         <button
           type="button"
           onClick={() => handleCloseMatch(match)}
-          disabled={updateMatchStatus.isPending || hasSavedSetScores(match.id)}
+          disabled={updateMatchStatus.isPending || (!isReviewingFinished && hasSavedSetScores(match.id))}
           className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-          title={hasSavedSetScores(match.id) ? 'Reset điểm trước khi thoát trận về chờ đấu' : 'Thoát panel nhập điểm'}
+          title={!isReviewingFinished && hasSavedSetScores(match.id) ? 'Reset điểm trước khi thoát trận về chờ đấu' : 'Thoát panel nhập điểm'}
         >
           <X size={18} />
         </button>
       </div>
 
-      {hasSavedSetScores(match.id) && (
+      {isReviewingFinished ? (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+          Trận đã chốt. Có thể reset nếu cần nhập lại kết quả.
+        </div>
+      ) : hasSavedSetScores(match.id) ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
           Trận đã có điểm séc. Muốn bấm X để trả về chờ đấu, hãy reset điểm trước.
         </div>
-      )}
+      ) : null}
 
       <div className="space-y-2">{renderSetInputs(match)}</div>
 
@@ -372,7 +394,8 @@ export default function ScoreEntry() {
         </button>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -514,7 +537,7 @@ export default function ScoreEntry() {
               <p className="text-sm font-black uppercase text-zinc-700 dark:text-zinc-300">Không có quyền nhập điểm</p>
               <p className="mt-2 text-xs font-medium">Tài khoản hiện tại chưa được phân công nhập điểm cho nội dung này.</p>
             </div>
-          ) : playingMatches.length === 0 ? (
+          ) : panelMatches.length === 0 ? (
             <div className="flex min-h-[420px] flex-col items-center justify-center p-8 text-center text-zinc-500">
               <Play size={40} className="mb-4 opacity-30" />
               <p className="text-sm font-black uppercase text-zinc-700 dark:text-zinc-300">Chưa có trận đang đấu</p>
@@ -524,13 +547,15 @@ export default function ScoreEntry() {
             <div className="space-y-3 p-3">
               <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
                 <div>
-                  <p className="text-sm font-black uppercase text-zinc-900 dark:text-zinc-100">Trận đang đấu</p>
-                  <p className="text-[11px] font-bold text-zinc-500">Nhập điểm cho toàn bộ trận đang diễn ra.</p>
+                  <p className="text-sm font-black uppercase text-zinc-900 dark:text-zinc-100">
+                    {reviewMatch ? 'Trận đang đấu / xem lại' : 'Trận đang đấu'}
+                  </p>
+                  <p className="text-[11px] font-bold text-zinc-500">Nhập điểm hoặc xem lại kết quả cần sửa.</p>
                 </div>
-                <span className="rounded-full bg-blue-600 px-3 py-1 text-[11px] font-black text-white">{playingMatches.length} trận</span>
+                <span className="rounded-full bg-blue-600 px-3 py-1 text-[11px] font-black text-white">{panelMatches.length} trận</span>
               </div>
               <div className="max-h-[calc(100vh-260px)] space-y-3 overflow-y-auto pr-1">
-                {playingMatches.map(renderPlayingMatchPanel)}
+                {panelMatches.map(renderPlayingMatchPanel)}
               </div>
             </div>
           )}
