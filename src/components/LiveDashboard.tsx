@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTournamentStore } from '../store';
 import { useEvents } from '../hooks/useEvents';
 import { supabase } from '../supabaseClient';
+import { tournamentRpc } from '../lib/api/tournamentRpc';
 import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
 import { attachMatchSets, getSetScoreText } from '../utils/scoreDisplay';
 import type { MatchSet } from '../types';
@@ -349,6 +350,23 @@ const FullscreenButton = React.memo(({ elementId }: { elementId: string }) => {
 });
 FullscreenButton.displayName = 'FullscreenButton';
 
+const sortKnockoutMatches = (matches: any[]) => [...matches].sort((a, b) => {
+  const roundDiff = Number(a.round || 0) - Number(b.round || 0);
+  if (roundDiff !== 0) return roundDiff;
+
+  const aNumber = Number(String(a.knockoutMatchId || '').replace(/\D/g, '') || 0);
+  const bNumber = Number(String(b.knockoutMatchId || '').replace(/\D/g, '') || 0);
+  if (aNumber !== bNumber) return aNumber - bNumber;
+
+  return String(a.knockoutMatchId || a.id).localeCompare(String(b.knockoutMatchId || b.id), undefined, { numeric: true });
+});
+
+const sortEventMatchesForTv = (matches: any[]) => {
+  const groupMatches = matches.filter((m) => m.groupId !== 'knockout');
+  const koMatches = sortKnockoutMatches(matches.filter((m) => m.groupId === 'knockout'));
+  return [...balanceMatchesRestTime(groupMatches), ...koMatches];
+};
+
 export default function LiveDashboard() {
   const { data: eventsData = [] } = useEvents();
   const tournament = useTournamentStore(state => state.tournament);
@@ -363,6 +381,14 @@ export default function LiveDashboard() {
   } = useQuery({
     queryKey: ['live-dashboard-data', activeTenantId, eventIds],
     queryFn: async () => {
+      await Promise.all(eventIds.map(async (eventId: string) => {
+        try {
+          await tournamentRpc.resolveKnockoutSlots(eventId);
+        } catch (error) {
+          console.warn('[Knockout] Could not resolve KO slots before loading TV data:', error);
+        }
+      }));
+
       const [teamsResult, groupsResult, matchesResult, matchSetsResult] = await Promise.all([
         supabase
           .from('teams')
@@ -731,7 +757,7 @@ export default function LiveDashboard() {
           const koMtch = evtMatches.filter((m: any) => m.groupId === 'knockout');
 
           const balancedGroupMatches = balanceMatchesRestTime(groupMtch);
-          const sortedAllList = [...balancedGroupMatches, ...koMtch];
+          const sortedAllList = [...balancedGroupMatches, ...sortKnockoutMatches(koMtch)];
 
           sortedAllList.forEach((m: any, mIdx: number) => {
             const tAName = getMatchDisplayName(m.teamAId, m.placeholderA, evt.teams, evt.groups, evt.matches, evt.settings || {});
@@ -895,7 +921,7 @@ export default function LiveDashboard() {
             
             const evtGroups = Object.values(evt.groups || {});
             const evtMatches = evt.matches || [];
-            const koMatches = evtMatches.filter((m) => m.groupId === 'knockout');
+            const koMatches = sortKnockoutMatches(evtMatches.filter((m) => m.groupId === 'knockout'));
             const pendingMatches = balanceMatchesRestTime(evtMatches.filter((m) => m.status === 'pending'));
             const finishedMatches = evtMatches.filter((m) => m.status === 'finished').slice(-4);
 
@@ -964,7 +990,7 @@ export default function LiveDashboard() {
                         <p className="text-[11px] text-zinc-400 py-6 text-center">Chưa có lịch thi đấu.</p>
                       ) : (
                         <div className="space-y-1">
-                          {balanceMatchesRestTime(evtMatches).map((m, idx) => {
+                          {sortEventMatchesForTv(evtMatches).map((m, idx) => {
                             return (
                               <LiveMatchRow
                                 key={m.id}
@@ -991,7 +1017,7 @@ export default function LiveDashboard() {
                     ) : (
                       <AutoScrollList maxHeight="350px" className="space-y-1.5 pb-2">
                         {Array.from(new Set(koMatches.map((m: any) => m.round))).sort((a: any,b: any)=>a-b).map((round: any) => {
-                          const roundMatches = koMatches.filter((m: any) => m.round === round);
+                          const roundMatches = sortKnockoutMatches(koMatches.filter((m: any) => m.round === round));
                           const roundName = roundMatches[0]?.knockoutRoundName || 'Vòng';
                           return (
                             <KoRoundCard
@@ -1023,7 +1049,7 @@ export default function LiveDashboard() {
             const stdByGrp = getEventStandings(currentEvt);
             const evtGroups = Object.values(currentEvt.groups || {});
             const evtMatches = currentEvt.matches || [];
-            const koMatches = evtMatches.filter((m) => m.groupId === 'knockout');
+            const koMatches = sortKnockoutMatches(evtMatches.filter((m) => m.groupId === 'knockout'));
             const pendingMatches = balanceMatchesRestTime(evtMatches.filter((m) => m.status === 'pending'));
             const finishedMatches = evtMatches.filter((m) => m.status === 'finished').slice(-10);
 

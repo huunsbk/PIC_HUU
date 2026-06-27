@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../supabaseClient';
 import { useTournamentStore } from '../store';
 import { isUsableEventId, useEvents } from './useEvents';
+import { tournamentRpc } from '../lib/api/tournamentRpc';
 
 export function useMatches() {
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
@@ -14,6 +15,14 @@ export function useMatches() {
   return useQuery({
     queryKey: ['matches', selectedEventId],
     queryFn: async () => {
+      if (selectedEventId) {
+        try {
+          await tournamentRpc.resolveKnockoutSlots(selectedEventId);
+        } catch (error) {
+          console.warn('[Knockout] Could not resolve KO slots before loading matches:', error);
+        }
+      }
+
       const query = supabase
         .from('matches')
         .select('id, group_id, team_a_id, team_b_id, placeholder_a, placeholder_b, score_a, score_b, winner_id, status, round, knockout_round_name, knockout_match_id, next_match_id, next_match_slot, court_number, slot_number, display_order, metadata')

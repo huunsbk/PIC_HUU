@@ -295,6 +295,17 @@ export const tournamentRpc = {
     });
   },
 
+  resolveKnockoutSlots(eventId: string) {
+    return callRpc<TournamentRpcResult & {
+      resolved_slots?: number;
+      updated_matches?: number;
+      ordered_matches?: number;
+      all_groups_complete?: boolean;
+    }>('resolve_knockout_slots_v1', {
+      p_event_id: eventId,
+    });
+  },
+
   saveManualKnockoutBracket(eventId: string, bracketSize: 4 | 8 | 16 | 32, slots: ManualKnockoutSlotInput[]) {
     return callRpc<TournamentRpcResult & { created_matches?: number; bracket_size?: number; slot_count?: number }>('save_manual_knockout_bracket_v1', {
       p_event_id: eventId,
