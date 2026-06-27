@@ -11,6 +11,10 @@
       "destination": "/api/admin/account-item?id=:id"
     },
     {
+      "source": "/api/public/tournament/:slug",
+      "destination": "/api/public/tournament-item?slug=:slug"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
