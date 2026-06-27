@@ -99,6 +99,7 @@ const ERROR_TRANSLATIONS: Array<[RegExp, string]> = [
   [/Match is not ready to finalize/i, 'Trận chưa đủ điều kiện chốt. Vui lòng lưu đủ séc thắng theo cấu hình trước.'],
   [/No saved set score found/i, 'Chưa có điểm séc nào được lưu cho trận này.'],
   [/Match participants are not resolved/i, 'Trận chưa đủ hai đội thi đấu. Vui lòng kiểm tra lại sơ đồ hoặc lịch đấu.'],
+  [/Cannot change group-stage score because related knockout matches already have scores or are in progress/i, 'Không thể sửa điểm vòng bảng vì trận knockout liên quan đã có điểm hoặc đang diễn ra.'],
   [/No confirmed knockout teams found/i, 'Chưa có danh sách đội knockout đã xác nhận.'],
   [/p_bracket_size must be one of 4, 8, 16, 32/i, 'Quy mô bracket chỉ hỗ trợ 4, 8, 16 hoặc 32 đội.'],
   [/Selected team count .* exceeds bracket size/i, 'Số đội được chọn lớn hơn quy mô bracket.'],
