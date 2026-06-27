@@ -44,7 +44,9 @@ export default async function handler(req, res) {
       return sendJson(res, status, { error: message });
     }
 
-    res.setHeader('Cache-Control', 'public, s-maxage=5, stale-while-revalidate=20');
+    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    res.setHeader('CDN-Cache-Control', 'public, s-maxage=5, stale-while-revalidate=20');
+    res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=5, stale-while-revalidate=20');
     if (req.method === 'HEAD') return res.status(200).end();
     return sendJson(res, 200, data);
   } catch (error) {
