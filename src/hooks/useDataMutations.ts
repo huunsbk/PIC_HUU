@@ -319,16 +319,14 @@ export function useMatchMutations() {
   const updateMatchStatus = useMutation({
     mutationFn: async ({ matchId, status }: { matchId: string, status: 'pending' | 'playing' | 'finished' }) => {
       requireBusinessContext();
-      if (status === 'pending') {
-        return tournamentRpc.resetMatchScore(matchId);
-      }
-      if (status === 'playing') {
-        return { success: true, match_id: matchId, status: 'playing' };
+      if (status === 'pending' || status === 'playing') {
+        return tournamentRpc.updateMatchStatus(matchId, status);
       }
       throw new Error('Trạng thái finished phải được cập nhật thông qua RPC nhập điểm.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matches'] });
+      queryClient.invalidateQueries({ queryKey: ['match-sets'] });
       invalidateDashboardStats();
     }
   });

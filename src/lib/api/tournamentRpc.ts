@@ -99,6 +99,9 @@ const ERROR_TRANSLATIONS: Array<[RegExp, string]> = [
   [/Match is not ready to finalize/i, 'Trận chưa đủ điều kiện chốt. Vui lòng lưu đủ séc thắng theo cấu hình trước.'],
   [/No saved set score found/i, 'Chưa có điểm séc nào được lưu cho trận này.'],
   [/Match participants are not resolved/i, 'Trận chưa đủ hai đội thi đấu. Vui lòng kiểm tra lại sơ đồ hoặc lịch đấu.'],
+  [/Cannot set match back to pending while saved set scores exist/i, 'Trận đã có điểm séc. Vui lòng reset điểm trước khi đưa trận về chờ đấu.'],
+  [/Finished match status cannot be changed here/i, 'Trận đã chốt kết quả, không thể đổi trạng thái tại đây.'],
+  [/Match status must be pending or playing/i, 'Trạng thái trận không hợp lệ.'],
   [/Cannot change group-stage score because related knockout matches already have scores or are in progress/i, 'Không thể sửa điểm vòng bảng vì trận knockout liên quan đã có điểm hoặc đang diễn ra.'],
   [/No confirmed knockout teams found/i, 'Chưa có danh sách đội knockout đã xác nhận.'],
   [/p_bracket_size must be one of 4, 8, 16, 32/i, 'Quy mô bracket chỉ hỗ trợ 4, 8, 16 hoặc 32 đội.'],
@@ -293,6 +296,13 @@ export const tournamentRpc = {
   resetMatchScore(matchId: string) {
     return callRpc<TournamentRpcResult & { match_id?: string; status?: string }>('reset_match_score_v1', {
       p_match_id: matchId,
+    });
+  },
+
+  updateMatchStatus(matchId: string, status: 'pending' | 'playing') {
+    return callRpc<TournamentRpcResult & { match_id?: string; status?: string }>('update_match_status_v1', {
+      p_match_id: matchId,
+      p_status: status,
     });
   },
 
