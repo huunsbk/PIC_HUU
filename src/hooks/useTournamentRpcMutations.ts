@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   tournamentRpc,
-  type ConfirmKnockoutTeamInput,
   type EventConfigInput,
   type TeamImportRow,
 } from '../lib/api/tournamentRpc';
@@ -151,36 +150,6 @@ export function useTournamentRpcMutations() {
     onSuccess: invalidateEventScope,
   });
 
-  const prepareKnockoutCandidates = useMutation({
-    mutationFn: ({
-      eventId = selectedEventId,
-      topPerGroup = 2,
-      bestThirdCount = 0,
-      excludeBottomResults = false,
-    }: {
-      eventId?: string | null;
-      topPerGroup?: number;
-      bestThirdCount?: number;
-      excludeBottomResults?: boolean;
-    }) => tournamentRpc.prepareKnockoutCandidates(requireEventId(eventId), topPerGroup, bestThirdCount, excludeBottomResults),
-    onSuccess: invalidateEventScope,
-  });
-
-  const confirmKnockoutTeams = useMutation({
-    mutationFn: ({
-      eventId = selectedEventId,
-      teams,
-      bracketSize,
-      overrideReason,
-    }: {
-      eventId?: string | null;
-      teams: ConfirmKnockoutTeamInput[];
-      bracketSize: 4 | 8 | 16 | 32;
-      overrideReason?: string | null;
-    }) => tournamentRpc.confirmKnockoutTeams(requireEventId(eventId), teams, bracketSize, overrideReason),
-    onSuccess: invalidateEventScope,
-  });
-
   const generateKnockoutBracket = useMutation({
     mutationFn: (eventId: string | null = requireEventId(selectedEventId)) => tournamentRpc.generateKnockoutBracket(requireEventId(eventId)),
     onSuccess: invalidateEventScope,
@@ -205,8 +174,6 @@ export function useTournamentRpcMutations() {
     update_match_set_score_v1: updateMatchSetScore,
     finalize_match_score_v1: finalizeMatchScore,
     reset_match_score_v1: resetMatchScore,
-    prepare_knockout_candidates_v1: prepareKnockoutCandidates,
-    confirm_knockout_teams_v1: confirmKnockoutTeams,
     generate_knockout_bracket_v1: generateKnockoutBracket,
     clear_knockout_bracket_v1: clearKnockoutBracket,
   };

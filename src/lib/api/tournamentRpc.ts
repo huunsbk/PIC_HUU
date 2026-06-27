@@ -21,33 +21,6 @@ export interface TeamImportRow {
   seed?: SeedType;
 }
 
-export interface KnockoutCandidate {
-  team_id: string;
-  team_name: string;
-  group_id?: string;
-  group_name?: string;
-  group_rank?: number;
-  points?: number;
-  score_diff?: number;
-  set_diff?: number;
-  point_diff?: number;
-  source?: string;
-  seed_label?: string;
-  seed_source?: JsonRecord;
-  suggested_seed?: number;
-}
-
-export interface ConfirmKnockoutTeamInput {
-  team_id: string;
-  seed: number;
-  source?: string;
-  source_group_id?: string;
-  group_rank?: number;
-  seed_label?: string;
-  seed_source?: JsonRecord;
-  resolved_team_id?: string;
-}
-
 export interface EventConfigInput {
   eventId: string;
   sportId: string;
@@ -313,34 +286,6 @@ export const tournamentRpc = {
   resetMatchScore(matchId: string) {
     return callRpc<TournamentRpcResult & { match_id?: string; status?: string }>('reset_match_score_v1', {
       p_match_id: matchId,
-    });
-  },
-
-  prepareKnockoutCandidates(
-    eventId: string,
-    topPerGroup = 2,
-    bestThirdCount = 0,
-    excludeBottomResults = false,
-  ) {
-    return callRpc<TournamentRpcResult & { candidates?: KnockoutCandidate[]; candidate_count?: number }>('prepare_knockout_candidates_v1', {
-      p_event_id: eventId,
-      p_top_per_group: topPerGroup,
-      p_best_third_count: bestThirdCount,
-      p_exclude_bottom_results: excludeBottomResults,
-    });
-  },
-
-  confirmKnockoutTeams(
-    eventId: string,
-    teams: ConfirmKnockoutTeamInput[],
-    bracketSize: 4 | 8 | 16 | 32,
-    overrideReason?: string | null,
-  ) {
-    return callRpc<TournamentRpcResult & { selected_count?: number; bye_count?: number; teams?: ConfirmKnockoutTeamInput[] }>('confirm_knockout_teams_v1', {
-      p_event_id: eventId,
-      p_teams: teams,
-      p_bracket_size: bracketSize,
-      p_override_reason: overrideReason || null,
     });
   },
 
