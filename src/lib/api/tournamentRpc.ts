@@ -32,8 +32,8 @@ export interface EventConfigInput {
 
 export interface ManualKnockoutSlotInput {
   match_index: number;
-  placeholder_a: string;
-  placeholder_b: string;
+  slot_a: JsonRecord;
+  slot_b: JsonRecord;
 }
 
 export interface EventConfigResult extends TournamentRpcResult {

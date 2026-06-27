@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { useTournamentStore } from '../store';
 import { useMatches } from '../hooks/useMatches';
+import { useGroups } from '../hooks/useGroups';
 import { useTournamentRpcMutations } from '../hooks/useTournamentRpcMutations';
 import { isUsableEventId, useEvents } from '../hooks/useEvents';
 import { Trophy, AlertTriangle, ZoomIn, ZoomOut, Maximize, Trash2 } from 'lucide-react';
@@ -13,6 +14,18 @@ import { getReadableKoMatchName } from '../utils/tournamentEngine';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 type BracketSize = 4 | 8 | 16 | 32;
+type SlotCode = 'A' | 'B';
+type SlotSourceType = 'group_rank' | 'best_third';
+
+interface RankSourceCard {
+  id: string;
+  label: string;
+  source_type: SlotSourceType;
+  group_id?: string;
+  group_name?: string;
+  group_rank?: number;
+  best_third_index?: number;
+}
 
 const getRoundCount = (size: BracketSize) => {
   switch (size) {
@@ -82,8 +95,10 @@ const createManualDraftMatches = (size: BracketSize) => {
         groupId: 'knockout',
         teamAId: null,
         teamBId: null,
-        placeholderA: round === 1 ? `Vị trí ${matchIndex}` : `Thắng ${shortKoLabel(prevA?.koId)}`,
-        placeholderB: round === 1 ? `Vị trí ${size - matchIndex + 1}` : `Thắng ${shortKoLabel(prevB?.koId)}`,
+        placeholderA: round === 1 ? '' : `Thắng ${shortKoLabel(prevA?.koId)}`,
+        placeholderB: round === 1 ? '' : `Thắng ${shortKoLabel(prevB?.koId)}`,
+        slotSourceA: null,
+        slotSourceB: null,
         scoreA: null,
         scoreB: null,
         winnerId: null,
@@ -107,6 +122,7 @@ export default function KnockoutBracket() {
   } = useTournamentStore();
 
   const { data: matchesData = [] } = useMatches();
+  const { data: groupsData = [] } = useGroups();
   const { data: eventsData = [] } = useEvents();
   const selectedEventId = isUsableEventId(currentEventId) && eventsData.some((event) => event.id === currentEventId)
     ? currentEventId
@@ -122,6 +138,7 @@ export default function KnockoutBracket() {
   const [sz, setSz] = useState<BracketSize>(4);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [bestThirdCount, setBestThirdCount] = useState(0);
 
   // States nâng cấp cho chế độ chỉnh sửa thủ công và hiển thị thông báo
   const [draftMatches, setDraftMatches] = useState<any[]>([]);
@@ -149,15 +166,50 @@ export default function KnockoutBracket() {
     return { primary: placeholder || 'Chưa xác định', secondary: '' };
   };
 
+  const sortedGroups = [...groupsData].sort((a: any, b: any) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { numeric: true }));
+  const rankCards: RankSourceCard[] = [
+    ...sortedGroups.map((group: any) => {
+      const groupLabel = String(group.name || '').replace(/^Bảng\s+/i, '').trim() || group.id;
+      return {
+        id: `group_rank:${group.id}:1`,
+        label: `Hạng 1 bảng ${groupLabel}`,
+        source_type: 'group_rank' as const,
+        group_id: group.id,
+        group_name: group.name,
+        group_rank: 1,
+      };
+    }),
+    ...sortedGroups.map((group: any) => {
+      const groupLabel = String(group.name || '').replace(/^Bảng\s+/i, '').trim() || group.id;
+      return {
+        id: `group_rank:${group.id}:2`,
+        label: `Hạng 2 bảng ${groupLabel}`,
+        source_type: 'group_rank' as const,
+        group_id: group.id,
+        group_name: group.name,
+        group_rank: 2,
+      };
+    }),
+    ...Array.from({ length: bestThirdCount }).map((_, index) => ({
+      id: `best_third:${index + 1}`,
+      label: `Hạng 3 xuất sắc ${index + 1}`,
+      source_type: 'best_third' as const,
+      best_third_index: index + 1,
+    })),
+  ];
+
+  const usedCardIds = new Set<string>();
+  draftMatches.forEach((match) => {
+    if (match.slotSourceA?.id) usedCardIds.add(match.slotSourceA.id);
+    if (match.slotSourceB?.id) usedCardIds.add(match.slotSourceB.id);
+  });
+
   const validateDraftMatches = (items: any[]) => {
     const round1Matches = items.filter(m => m.round === 1);
     let hasEmpty = false;
 
     for (const m of round1Matches) {
-      const valA = String(m.placeholderA || '').trim();
-      const valB = String(m.placeholderB || '').trim();
-
-      if (valA === '' || valB === '') {
+      if (!m.slotSourceA || !m.slotSourceB) {
         hasEmpty = true;
       }
     }
@@ -165,21 +217,23 @@ export default function KnockoutBracket() {
     return { hasEmpty };
   };
 
-  const inferBracketSize = (items: any[]): BracketSize => {
-    const roundOneCount = Math.max(2, items.filter((m) => m.round === 1).length);
-    const inferred = roundOneCount * 2;
-    if (inferred <= 4) return 4;
-    if (inferred <= 8) return 8;
-    if (inferred <= 16) return 16;
-    return 32;
+  const handleSlotDrop = (matchId: string, slot: SlotCode, card: RankSourceCard) => {
+    setDraftMatches((prev) => prev.map((m) => {
+      if (m.id !== matchId) return m;
+      const sourceKey = slot === 'A' ? 'slotSourceA' : 'slotSourceB';
+      const placeholderKey = slot === 'A' ? 'placeholderA' : 'placeholderB';
+      return slot === 'A'
+        ? { ...m, [sourceKey]: card, [placeholderKey]: card.label, teamAId: null, scoreA: null, scoreB: null, winnerId: null, status: 'pending' }
+        : { ...m, [sourceKey]: card, [placeholderKey]: card.label, teamBId: null, scoreA: null, scoreB: null, winnerId: null, status: 'pending' };
+    }));
   };
 
-  const handlePlaceholderChange = (matchId: string, slot: 'A' | 'B', value: string) => {
+  const handleClearSlot = (matchId: string, slot: SlotCode) => {
     setDraftMatches((prev) => prev.map((m) => {
       if (m.id !== matchId) return m;
       return slot === 'A'
-        ? { ...m, placeholderA: value, teamAId: null, scoreA: null, scoreB: null, winnerId: null, status: 'pending' }
-        : { ...m, placeholderB: value, teamBId: null, scoreA: null, scoreB: null, winnerId: null, status: 'pending' };
+        ? { ...m, slotSourceA: null, placeholderA: '', teamAId: null, scoreA: null, scoreB: null, winnerId: null, status: 'pending' }
+        : { ...m, slotSourceB: null, placeholderB: '', teamBId: null, scoreA: null, scoreB: null, winnerId: null, status: 'pending' };
     }));
   };
 
@@ -187,23 +241,12 @@ export default function KnockoutBracket() {
     if (!canManage) return;
     if (!isEditMode) {
       const existingMatches = matches.filter((m) => m.groupId === 'knockout');
-      const draftList = existingMatches.length > 0
-        ? JSON.parse(JSON.stringify(existingMatches)).map((m: any) => ({
-          ...m,
-          teamAId: null,
-          teamBId: null,
-          scoreA: null,
-          scoreB: null,
-          winnerId: null,
-          status: 'pending',
-        }))
-        : createManualDraftMatches(sz);
-
       if (existingMatches.length > 0) {
-        setSz(inferBracketSize(existingMatches));
+        setErrorMessage('Sơ đồ KO đã khóa. Hãy xóa sơ đồ trước khi tạo lại.');
+        return;
       }
       setErrorMessage(null);
-      setDraftMatches(draftList);
+      setDraftMatches(createManualDraftMatches(sz));
       setIsEditMode(true);
     } else {
       handleCancelEditMode();
@@ -232,8 +275,8 @@ export default function KnockoutBracket() {
         .sort((a, b) => (a.knockoutMatchId || '').localeCompare(b.knockoutMatchId || '', undefined, { numeric: true }))
         .map((m, index) => ({
           match_index: index + 1,
-          placeholder_a: String(m.placeholderA || '').trim(),
-          placeholder_b: String(m.placeholderB || '').trim(),
+          slot_a: m.slotSourceA,
+          slot_b: m.slotSourceB,
         }));
 
       const result = await save_manual_knockout_bracket_v1.mutateAsync({
@@ -295,8 +338,8 @@ export default function KnockoutBracket() {
           </h3>
           <p className="text-xs text-zinc-400 font-semibold">
             {isEditMode 
-              ? "Nhập placeholder cho từng slot. Sơ đồ này không chọn đội thật và không nhập điểm tại màn này."
-              : "Sơ đồ knockout chỉ dùng placeholder. Điểm số và đội thật được xử lý ở menu nhập điểm/trình chiếu."}
+              ? "Kéo thẻ hạng bảng hoặc hạng 3 xuất sắc vào từng slot vòng đầu."
+              : "Sơ đồ knockout chỉ hiển thị placeholder nguồn hạng. Đội thật được xử lý ở lịch thi đấu/trình chiếu."}
           </p>
         </div>
 
@@ -330,7 +373,7 @@ export default function KnockoutBracket() {
             )}
 
             {/* Nút 2: Sửa thủ công / Hoàn tất */}
-            {!isEditMode && (
+            {!isEditMode && koMatches.length === 0 && (
               <button
                 onClick={handleToggleEditMode}
                 className="px-5 py-3 text-xs font-black rounded-xl cursor-pointer border transition-all uppercase tracking-wider shadow-xs bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border-zinc-250 dark:border-zinc-700 shadow-sm"
@@ -346,7 +389,7 @@ export default function KnockoutBracket() {
         <div className="py-24 text-center text-zinc-400 bg-white dark:bg-zinc-900 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl space-y-4 shadow-inner">
           <Trophy size={54} className="mx-auto text-zinc-300 dark:text-zinc-700 animate-bounce" />
           <p className="font-extrabold text-zinc-700 dark:text-zinc-300 text-lg">Sơ đồ đấu loại trực tiếp (Cúp vàng) chưa được lập.</p>
-          <p className="text-xs text-zinc-500 max-w-sm mx-auto font-semibold">Chọn quy mô, sau đó nhấn "Chỉnh sửa thủ công" để tạo sơ đồ placeholder.</p>
+          <p className="text-xs text-zinc-500 max-w-sm mx-auto font-semibold">Chọn quy mô, sau đó nhấn "Chỉnh sửa thủ công" để kéo thẻ hạng bảng vào sơ đồ.</p>
         </div>
       ) : (
         <div className={isEditMode ? "fixed inset-0 z-[100] bg-zinc-50 dark:bg-zinc-950 flex flex-row w-screen h-screen overflow-hidden" : "space-y-8"}>
@@ -383,8 +426,7 @@ export default function KnockoutBracket() {
                   </div>
                 )}
                 
-                {matches.filter((m) => m.groupId === 'knockout').length === 0 && (
-                  <div className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-inner">
+                <div className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-inner">
                     <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest text-center">Quy mô sơ đồ</span>
                     <select
                       value={sz}
@@ -401,14 +443,61 @@ export default function KnockoutBracket() {
                       <option value={32}>32 đội - Vòng 32</option>
                     </select>
                   </div>
-                )}
+
+                <div className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-inner">
+                  <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest text-center">Số thẻ hạng 3 xuất sắc</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={32}
+                    value={bestThirdCount}
+                    onChange={(e) => setBestThirdCount(Math.max(0, Number(e.target.value) || 0))}
+                    className="w-full px-3 py-2 text-sm font-bold border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-center"
+                  />
+                </div>
               </div>
 
-              <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 leading-relaxed bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
-                Chỉ nhập placeholder cho slot vòng đầu. Các vòng sau tự hiển thị dạng "Thắng ...". Không chọn đội thật và không nhập điểm trong màn Sơ đồ Knockout.
-                <div className="mt-3 text-[11px] font-black text-zinc-700 dark:text-zinc-200">
-                  Số placeholder vòng đầu: {draftMatches.filter((m) => m.round === 1).length * 2}
+              <div className="space-y-4">
+                <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 leading-relaxed bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
+                  Kéo mỗi thẻ vào một slot vòng đầu. Sau khi lưu, sơ đồ KO bị khóa và chỉ còn thao tác xóa để tạo lại.
+                  <div className="mt-3 text-[11px] font-black text-zinc-700 dark:text-zinc-200">
+                    Slot cần điền: {draftMatches.filter((m) => m.round === 1).length * 2} · Thẻ còn lại: {rankCards.filter((card) => !usedCardIds.has(card.id)).length}
+                  </div>
+                  {rankCards.length < draftMatches.filter((m) => m.round === 1).length * 2 && (
+                    <div className="mt-2 text-[11px] font-black text-red-600 dark:text-red-400">
+                      Số thẻ nguồn chưa đủ slot. Tăng số hạng 3 xuất sắc hoặc giảm quy mô sơ đồ.
+                    </div>
+                  )}
                 </div>
+
+                {[
+                  { title: 'Hạng 1 bảng', cards: rankCards.filter((card) => card.source_type === 'group_rank' && card.group_rank === 1) },
+                  { title: 'Hạng 2 bảng', cards: rankCards.filter((card) => card.source_type === 'group_rank' && card.group_rank === 2) },
+                  { title: 'Hạng 3 xuất sắc', cards: rankCards.filter((card) => card.source_type === 'best_third') },
+                ].map((section) => (
+                  <div key={section.title} className="space-y-2">
+                    <div className="text-[11px] font-black uppercase text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 text-center py-2 rounded-lg">
+                      {section.title}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {section.cards.filter((card) => !usedCardIds.has(card.id)).map((card) => (
+                        <div
+                          key={card.id}
+                          draggable
+                          onDragStart={(e) => e.dataTransfer.setData('application/json', JSON.stringify(card))}
+                          className="px-4 py-3 bg-white dark:bg-zinc-800 rounded-xl text-xs font-black cursor-move border border-zinc-200 dark:border-zinc-700 hover:border-blue-500 hover:shadow-md hover:-translate-y-0.5 transition-all text-center"
+                        >
+                          {card.label}
+                        </div>
+                      ))}
+                      {section.cards.filter((card) => !usedCardIds.has(card.id)).length === 0 && (
+                        <div className="text-xs text-zinc-400 text-center py-3 italic font-medium bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                          Không còn thẻ khả dụng
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -505,14 +594,36 @@ export default function KnockoutBracket() {
                                 return (
                                   <div key={slot} className="flex items-center justify-between gap-3">
                                     {isEditMode && m.round === 1 ? (
-                                      <input
-                                        type="text"
-                                        value={value || ''}
-                                        onChange={(e) => handlePlaceholderChange(m.id, slot, e.target.value)}
-                                        className="w-full h-10 px-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-black text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder={`Placeholder ${slot}`}
-                                        id={`input-ko-match-${m.id}-placeholder-${slot}`}
-                                      />
+                                      <div
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={(e) => {
+                                          e.preventDefault();
+                                          const raw = e.dataTransfer.getData('application/json');
+                                          if (!raw) return;
+                                          const card = JSON.parse(raw) as RankSourceCard;
+                                          handleSlotDrop(m.id, slot, card);
+                                        }}
+                                        className={`relative w-full min-h-10 px-3 py-2 rounded-lg border-2 border-dashed text-xs font-black transition-all ${
+                                          value
+                                            ? 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100'
+                                            : 'border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-400'
+                                        }`}
+                                        id={`drop-ko-match-${m.id}-slot-${slot}`}
+                                      >
+                                        <span className="block truncate pr-6">
+                                          {value || 'Thả thẻ vào đây'}
+                                        </span>
+                                        {value && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleClearSlot(m.id, slot)}
+                                            className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-black leading-5 text-center hover:bg-red-600"
+                                            title="Gỡ thẻ khỏi slot"
+                                          >
+                                            x
+                                          </button>
+                                        )}
+                                      </div>
                                     ) : (
                                       <div
                                         className="max-w-[240px] text-zinc-800 dark:text-zinc-200"
