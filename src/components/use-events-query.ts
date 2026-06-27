@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useTournamentStore } from '../store';
-import { isUsableEventId } from '../hooks/useEvents';
+import { isPublicViewerRoute, isUsableEventId } from '../hooks/useEvents';
 import { tournamentRpc } from '../lib/api/tournamentRpc';
 
 export function useEventsQuery() {
@@ -11,6 +11,8 @@ export function useEventsQuery() {
   const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
   const setCurrentEvent = useTournamentStore((state) => state.setCurrentEvent);
+  const userRole = useTournamentStore((state) => state.userRole);
+  const shouldUsePublicSnapshot = userRole === 'guest' && isPublicViewerRoute();
 
   const query = useQuery({
     queryKey: ['events', activeTournamentId || tournamentId],
@@ -30,10 +32,11 @@ export function useEventsQuery() {
 
       return events;
     },
-    enabled: !!activeTenantId && activeTenantId !== 'default' && !!(activeTournamentId || tournamentId),
+    enabled: !shouldUsePublicSnapshot && !!activeTenantId && activeTenantId !== 'default' && !!(activeTournamentId || tournamentId),
   });
 
   useEffect(() => {
+    if (shouldUsePublicSnapshot) return;
     const events = query.data || [];
     if (events.length === 0) return;
 
@@ -41,7 +44,7 @@ export function useEventsQuery() {
     if (!hasSelectedEvent) {
       setCurrentEvent(events[0].id);
     }
-  }, [query.data, currentEventId, setCurrentEvent]);
+  }, [query.data, currentEventId, setCurrentEvent, shouldUsePublicSnapshot]);
 
   return query;
 }

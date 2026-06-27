@@ -16,6 +16,18 @@ export interface TournamentRpcResult extends JsonRecord {
   message?: string;
 }
 
+export interface PublicTournamentSnapshot {
+  success: boolean;
+  generated_at: string;
+  tenant: JsonRecord;
+  tournament: JsonRecord;
+  events: JsonRecord[];
+  teams: JsonRecord[];
+  groups: JsonRecord[];
+  matches: JsonRecord[];
+  match_sets: JsonRecord[];
+}
+
 export interface TeamImportRow {
   name: string;
   seed?: SeedType;
@@ -136,6 +148,20 @@ async function callRpc<T>(name: string, params: JsonRecord): Promise<T> {
 }
 
 export const tournamentRpc = {
+  async getPublicTournamentSnapshot(slug: string) {
+    const response = await fetch(`/api/public/tournament/${encodeURIComponent(slug)}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(payload?.error || 'Không tải được dữ liệu công khai của giải đấu.');
+    }
+
+    return payload as PublicTournamentSnapshot;
+  },
+
   listEventsByTournament(tournamentId: string) {
     return callRpc<any[]>('list_events_by_tournament_v1', {
       p_tournament_id: tournamentId,

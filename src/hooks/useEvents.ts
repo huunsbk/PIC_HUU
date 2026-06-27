@@ -14,12 +14,20 @@ export function isUsableEventId(eventId?: string | null) {
   return !!eventId && /^evt_[A-Za-z0-9]+$/.test(eventId) && !PLACEHOLDER_EVENT_IDS.has(eventId);
 }
 
+export function isPublicViewerRoute() {
+  if (typeof window === 'undefined') return false;
+  const pathname = window.location.pathname;
+  return pathname.includes('/tournament/') || pathname.includes('/admin/workspace/');
+}
+
 export function useEvents() {
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const activeTournamentId = useTournamentStore((state) => state.activeTournamentId);
   const tournamentId = useTournamentStore((state) => state.tournament.id);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
   const setCurrentEvent = useTournamentStore((state) => state.setCurrentEvent);
+  const userRole = useTournamentStore((state) => state.userRole);
+  const shouldUsePublicSnapshot = userRole === 'guest' && isPublicViewerRoute();
 
   const query = useQuery({
     queryKey: ['events', activeTournamentId || tournamentId],
@@ -31,10 +39,11 @@ export function useEvents() {
 
       return tournamentRpc.listEventsByTournament(scopedTournamentId);
     },
-    enabled: !!activeTenantId && activeTenantId !== 'default' && !!(activeTournamentId || tournamentId),
+    enabled: !shouldUsePublicSnapshot && !!activeTenantId && activeTenantId !== 'default' && !!(activeTournamentId || tournamentId),
   });
 
   useEffect(() => {
+    if (shouldUsePublicSnapshot) return;
     const events = query.data || [];
     if (events.length === 0) return;
 
@@ -42,7 +51,7 @@ export function useEvents() {
     if (!hasSelectedEvent) {
       setCurrentEvent(events[0].id);
     }
-  }, [query.data, currentEventId, setCurrentEvent]);
+  }, [query.data, currentEventId, setCurrentEvent, shouldUsePublicSnapshot]);
 
   return query;
 }

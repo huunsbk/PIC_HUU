@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ExcelJS from 'exceljs';
 import { useQuery } from '@tanstack/react-query';
 import { useTournamentStore } from '../store';
-import { useEvents } from '../hooks/useEvents';
+import { isPublicViewerRoute, useEvents } from '../hooks/useEvents';
 import { supabase } from '../supabaseClient';
 import { tournamentRpc } from '../lib/api/tournamentRpc';
 import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
@@ -367,17 +367,40 @@ const sortEventMatchesForTv = (matches: any[]) => {
   return [...balanceMatchesRestTime(groupMatches), ...koMatches];
 };
 
+const getRouteSlug = () => {
+  if (typeof window === 'undefined') return '';
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  const marker = parts.includes('tournament') ? 'tournament' : parts.includes('workspace') ? 'workspace' : '';
+  const markerIndex = marker ? parts.indexOf(marker) : -1;
+  return markerIndex >= 0 ? decodeURIComponent(parts[markerIndex + 1] || '') : '';
+};
+
 export default function LiveDashboard() {
   const { data: eventsData = [] } = useEvents();
   const tournament = useTournamentStore(state => state.tournament);
   const activeTenantId = useTournamentStore(state => state.activeTenantId);
+  const userRole = useTournamentStore(state => state.userRole);
   const canManage = useTournamentStore(state => state.hasPermission("manage_matches"));
   const addLog = useTournamentStore(state => state.addLog);
+  const publicSlug = React.useMemo(() => getRouteSlug(), []);
+  const usePublicSnapshot = userRole === 'guest' && isPublicViewerRoute() && !!publicSlug;
   const eventIds = React.useMemo(() => eventsData.map((event: any) => event.id), [eventsData]);
 
   const {
-    data: liveData = { teams: [], groups: [], matches: [], matchSets: [] },
-    isLoading: liveDataLoading,
+    data: publicSnapshot,
+    isLoading: publicSnapshotLoading,
+  } = useQuery({
+    queryKey: ['public-tournament-snapshot', publicSlug],
+    queryFn: () => tournamentRpc.getPublicTournamentSnapshot(publicSlug),
+    enabled: usePublicSnapshot,
+    staleTime: 5000,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
+  });
+
+  const {
+    data: privateLiveData = { teams: [], groups: [], matches: [], matchSets: [] },
+    isLoading: privateLiveDataLoading,
   } = useQuery({
     queryKey: ['live-dashboard-data', activeTenantId, eventIds],
     queryFn: async () => {
@@ -436,8 +459,37 @@ export default function LiveDashboard() {
         matchSets: (matchSetsResult.data || []) as MatchSet[],
       };
     },
-    enabled: !!activeTenantId && activeTenantId !== 'default' && eventIds.length > 0,
+    enabled: !usePublicSnapshot && !!activeTenantId && activeTenantId !== 'default' && eventIds.length > 0,
   });
+
+  const effectiveEventsData = React.useMemo(
+    () => (publicSnapshot?.events || eventsData) as any[],
+    [eventsData, publicSnapshot]
+  );
+  const liveData = React.useMemo(
+    () => publicSnapshot
+      ? {
+          teams: publicSnapshot.teams || [],
+          groups: publicSnapshot.groups || [],
+          matches: publicSnapshot.matches || [],
+          matchSets: (publicSnapshot.match_sets || []) as MatchSet[],
+        }
+      : privateLiveData,
+    [privateLiveData, publicSnapshot]
+  );
+  const effectiveTournament = React.useMemo(
+    () => publicSnapshot?.tournament
+      ? {
+          ...tournament,
+          ...publicSnapshot.tournament,
+          id: String(publicSnapshot.tournament.id || tournament.id),
+          name: String(publicSnapshot.tournament.name || tournament.name),
+          settings: (publicSnapshot.tournament.settings as any) || tournament.settings,
+        }
+      : tournament,
+    [publicSnapshot, tournament]
+  );
+  const liveDataLoading = usePublicSnapshot ? publicSnapshotLoading : privateLiveDataLoading;
 
   const events = React.useMemo(() => {
     const record: Record<string, any> = {};
@@ -497,7 +549,7 @@ export default function LiveDashboard() {
       });
     });
 
-    eventsData.forEach((event: any) => {
+    effectiveEventsData.forEach((event: any) => {
       record[event.id] = {
         ...event,
         teams: teamsByEvent[event.id] || {},
@@ -507,7 +559,7 @@ export default function LiveDashboard() {
     });
 
     return record;
-  }, [eventsData, liveData]);
+  }, [effectiveEventsData, liveData]);
 
   const [selectedEventFilter, setSelectedEventFilter] = useState<string>('all');
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -599,7 +651,7 @@ export default function LiveDashboard() {
         // Dòng phụ đề
         worksheet.mergeCells('A2:G2');
         const subTitle = worksheet.getCell('A2');
-        subTitle.value = `GIẢI ĐẤU: ${String(tournament.name).toUpperCase()} | Sân: ${tournament.location || 'Trung tâm'} | Ngày lập: 2026`;
+        subTitle.value = `GIẢI ĐẤU: ${String(effectiveTournament.name).toUpperCase()} | Sân: ${effectiveTournament.location || 'Trung tâm'} | Ngày lập: 2026`;
         subTitle.font = { name: 'Times New Roman', size: 12, italic: true };
         subTitle.alignment = { horizontal: 'center', vertical: 'middle' };
         worksheet.getRow(2).height = 25;
