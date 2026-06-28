@@ -32,7 +32,6 @@ import {
   CalendarDays,
   FileSpreadsheet,
   Network,
-  Tv,
   ClipboardList,
   Sun,
   Moon,
@@ -42,7 +41,11 @@ import {
   ShieldAlert,
   UserCog,
   Building2,
-  UserCircle
+  UserCircle,
+  Settings,
+  Presentation,
+  Wrench,
+  ListChecks
 } from 'lucide-react';
 
 function isRouteWorkspacePathname() {
@@ -55,6 +58,233 @@ function isRouteWorkspacePathname() {
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+const TAB_GROUP_ALIASES: Record<string, string> = {
+  teams: 'content',
+  groups: 'content',
+  events_center: 'content',
+  matches: 'operations',
+  scoreEntry: 'operations',
+  standings: 'rankings',
+  knockout: 'rankings',
+  tenants: 'admin',
+  workspaces: 'admin',
+  accounts: 'admin',
+  logs: 'admin',
+  export: 'admin',
+};
+
+const panelShellClass = 'rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900';
+
+function WorkspaceTabs({
+  tabs,
+  activeTab,
+  onChange,
+}: {
+  tabs: Array<{ id: string; label: string; icon: React.ElementType; disabled?: boolean }>;
+  activeTab: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-950">
+      {tabs.map((tab) => {
+        const Icon = tab.icon;
+        const active = activeTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            disabled={tab.disabled}
+            onClick={() => onChange(tab.id)}
+            className={`flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-xs font-black transition-all ${
+              active
+                ? 'bg-white text-blue-700 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-900 dark:text-blue-300 dark:ring-zinc-800'
+                : 'text-zinc-600 hover:bg-white/80 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100'
+            } ${tab.disabled ? 'cursor-not-allowed opacity-45' : 'cursor-pointer'}`}
+          >
+            <Icon size={15} />
+            <span>{tab.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function SectionHeader({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">{eyebrow}</p>
+      <h1 className="text-xl font-black tracking-tight text-zinc-950 dark:text-zinc-50">{title}</h1>
+      <p className="max-w-3xl text-sm font-medium text-zinc-500 dark:text-zinc-400">{description}</p>
+    </div>
+  );
+}
+
+function ContentWorkspace() {
+  const selectedTab = useTournamentStore((state) => state.selectedTab);
+  const [activeSubTab, setActiveSubTab] = React.useState(() =>
+    ['events_center', 'teams', 'groups', 'matches'].includes(selectedTab) ? selectedTab : 'events_center'
+  );
+
+  useEffect(() => {
+    if (['events_center', 'teams', 'groups', 'matches'].includes(selectedTab)) {
+      setActiveSubTab(selectedTab);
+    }
+  }, [selectedTab]);
+
+  return (
+    <div className="space-y-4">
+      <div className={panelShellClass}>
+        <div className="space-y-4 p-4">
+          <SectionHeader
+            eyebrow="Thiết lập nội dung"
+            title="Nội dung thi đấu"
+            description="Quản lý cấu hình nội dung, danh sách đội, chia bảng và lịch vòng bảng trong cùng một luồng."
+          />
+          <WorkspaceTabs
+            activeTab={activeSubTab}
+            onChange={setActiveSubTab}
+            tabs={[
+              { id: 'events_center', label: 'Cấu hình nội dung', icon: Settings },
+              { id: 'teams', label: 'Đội thi đấu', icon: Users },
+              { id: 'groups', label: 'Chia bảng', icon: Layers },
+              { id: 'matches', label: 'Lịch vòng bảng', icon: CalendarDays },
+            ]}
+          />
+          {activeSubTab !== 'events_center' && <EventBar />}
+        </div>
+      </div>
+      {activeSubTab === 'events_center' && <EventManagementPage />}
+      {activeSubTab === 'teams' && <TeamManager />}
+      {activeSubTab === 'groups' && <GroupManager />}
+      {activeSubTab === 'matches' && <SchedulerAndScoreKeeper />}
+    </div>
+  );
+}
+
+function OperationsWorkspace() {
+  const selectedTab = useTournamentStore((state) => state.selectedTab);
+  const [activeSubTab, setActiveSubTab] = React.useState(() =>
+    ['scoreEntry', 'matches'].includes(selectedTab) ? selectedTab : 'scoreEntry'
+  );
+
+  useEffect(() => {
+    if (['scoreEntry', 'matches'].includes(selectedTab)) {
+      setActiveSubTab(selectedTab);
+    }
+  }, [selectedTab]);
+
+  return (
+    <div className="space-y-4">
+      <div className={panelShellClass}>
+        <div className="space-y-4 p-4">
+          <SectionHeader
+            eyebrow="Vận hành thi đấu"
+            title="Điều hành trận đấu"
+            description="Theo dõi trận chờ đấu, trận đang đấu, nhập điểm và kiểm tra kết quả theo nội dung hiện tại."
+          />
+          <WorkspaceTabs
+            activeTab={activeSubTab}
+            onChange={setActiveSubTab}
+            tabs={[
+              { id: 'scoreEntry', label: 'Panel nhập điểm', icon: Gamepad2 },
+              { id: 'matches', label: 'Lịch & kết quả', icon: CalendarDays },
+            ]}
+          />
+          <EventBar />
+        </div>
+      </div>
+      {activeSubTab === 'scoreEntry' && <ScoreEntry />}
+      {activeSubTab === 'matches' && <SchedulerAndScoreKeeper />}
+    </div>
+  );
+}
+
+function RankingKnockoutWorkspace() {
+  const selectedTab = useTournamentStore((state) => state.selectedTab);
+  const [activeSubTab, setActiveSubTab] = React.useState(() =>
+    ['standings', 'knockout'].includes(selectedTab) ? selectedTab : 'standings'
+  );
+
+  useEffect(() => {
+    if (['standings', 'knockout'].includes(selectedTab)) {
+      setActiveSubTab(selectedTab);
+    }
+  }, [selectedTab]);
+
+  return (
+    <div className="space-y-4">
+      <div className={panelShellClass}>
+        <div className="space-y-4 p-4">
+          <SectionHeader
+            eyebrow="Vào vòng trong"
+            title="Xếp hạng & Knockout"
+            description="Xem thứ hạng vòng bảng, cấu hình slot và quản lý sơ đồ knockout của nội dung đang chọn."
+          />
+          <WorkspaceTabs
+            activeTab={activeSubTab}
+            onChange={setActiveSubTab}
+            tabs={[
+              { id: 'standings', label: 'Xếp hạng bảng', icon: FileSpreadsheet },
+              { id: 'knockout', label: 'Sơ đồ KO', icon: Network },
+            ]}
+          />
+          <EventBar />
+        </div>
+      </div>
+      {activeSubTab === 'standings' && <Standings />}
+      {activeSubTab === 'knockout' && <KnockoutBracket />}
+    </div>
+  );
+}
+
+function AdminWorkspacePanel() {
+  const selectedTab = useTournamentStore((state) => state.selectedTab);
+  const hasPermission = useTournamentStore((state) => state.hasPermission);
+  const userRole = useTournamentStore((state) => state.userRole);
+  const canManageTenants = userRole === 'SUPER_ADMIN' && (hasPermission('*') || hasPermission('manage_tenants'));
+  const canManageTournaments = hasPermission('*') || hasPermission('manage_tournaments');
+  const canManageAccounts = hasPermission('*') || hasPermission('manage_accounts');
+  const canViewLogs = hasPermission('*') || hasPermission('view_audit_logs');
+  const adminTabs = [
+    { id: 'workspaces', label: 'Giải đấu', icon: Layers, disabled: !canManageTournaments },
+    { id: 'tenants', label: 'Đơn vị', icon: Building2, disabled: !canManageTenants },
+    { id: 'accounts', label: 'Tài khoản', icon: UserCog, disabled: !canManageAccounts },
+    { id: 'logs', label: 'Nhật ký', icon: ClipboardList, disabled: !canViewLogs },
+    { id: 'export', label: 'Xuất file', icon: FileDown, disabled: false },
+  ];
+  const firstAllowed = adminTabs.find((tab) => !tab.disabled)?.id || 'workspaces';
+  const [activeSubTab, setActiveSubTab] = React.useState(() =>
+    adminTabs.some((tab) => tab.id === selectedTab && !tab.disabled) ? selectedTab : firstAllowed
+  );
+
+  useEffect(() => {
+    if (adminTabs.some((tab) => tab.id === selectedTab && !tab.disabled)) {
+      setActiveSubTab(selectedTab);
+    }
+  }, [selectedTab, adminTabs]);
+
+  return (
+    <div className="space-y-4">
+      <div className={panelShellClass}>
+        <div className="space-y-4 p-4">
+          <SectionHeader
+            eyebrow="Thiết lập hệ thống"
+            title="Quản trị"
+            description="Quản lý đơn vị, giải đấu, tài khoản, phân quyền và nhật ký hệ thống."
+          />
+          <WorkspaceTabs tabs={adminTabs} activeTab={activeSubTab} onChange={setActiveSubTab} />
+        </div>
+      </div>
+      {activeSubTab === 'tenants' && <TenantManagementPage />}
+      {activeSubTab === 'workspaces' && <TournamentWorkspaceListPage />}
+      {activeSubTab === 'accounts' && <AccountManager />}
+      {activeSubTab === 'logs' && <AuditLogger />}
+      {activeSubTab === 'export' && <ExportManager />}
+    </div>
+  );
 }
 
 // Wrapper for Admin Workspace
@@ -457,20 +687,12 @@ function TournamentShell() {
 
   const navItems = React.useMemo(() => {
     const allNavItems = [
-      { id: 'dashboard', label: 'Tổng quan giải', icon: Trophy, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
-      { id: 'teams', label: 'Quản lý đội', icon: Users, permission: 'manage_teams', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
-      { id: 'groups', label: 'Chia bảng', icon: Layers, permission: 'manage_groups', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
-      { id: 'scoreEntry', label: 'Nhập điểm', icon: Gamepad2, permission: 'enter_scores', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
-      { id: 'matches', label: 'Lịch & Kết quả', icon: CalendarDays, permission: 'manage_matches', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
-      { id: 'standings', label: 'Xếp hạng & Vào vòng trong', icon: FileSpreadsheet, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
-      { id: 'knockout', label: 'Sơ đồ Knockout', icon: Network, permission: 'manage_matches', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
-      { id: 'live', label: 'Bảng trình chiếu TV', icon: Tv, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'guest'] },
-      { id: 'export', label: 'Xuất file', icon: FileDown, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
-      { id: 'tenants', label: 'Quản lý đơn vị', icon: Building2, permission: 'manage_tenants', roles: ['SUPER_ADMIN'] },
-      { id: 'workspaces', label: 'Quản lý giải đấu', icon: Layers, permission: 'manage_tournaments', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
-      { id: 'events_center', label: 'Nội dung thi đấu', icon: CalendarDays, permission: 'manage_events', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
-      { id: 'logs', label: 'Nhật ký hệ thống', icon: ClipboardList, permission: 'view_audit_logs', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
-      { id: 'accounts', label: 'Quản lý tài khoản', icon: UserCog, permission: 'manage_accounts', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
+      { id: 'dashboard', label: 'Tổng quan', icon: Trophy, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'content', label: 'Nội dung thi đấu', icon: ListChecks, permission: 'manage_events', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'operations', label: 'Điều hành trận đấu', icon: Gamepad2, permission: 'enter_scores', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
+      { id: 'rankings', label: 'Xếp hạng & KO', icon: Network, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
+      { id: 'live', label: 'Trình chiếu', icon: Presentation, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'guest'] },
+      { id: 'admin', label: 'Quản trị', icon: Wrench, permission: 'manage_tournaments', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
     ];
     
     if (userRole === 'guest') {
@@ -484,13 +706,15 @@ function TournamentShell() {
     });
   }, [permissions, userRole, hasPermission]);
 
+  const currentPrimaryTab = TAB_GROUP_ALIASES[selectedTab] || selectedTab;
+
   useEffect(() => {
-    if (!navItems.find(item => item.id === selectedTab)) {
+    if (!navItems.find(item => item.id === currentPrimaryTab)) {
       if (navItems.length > 0) {
         setSelectedTab(navItems[0].id);
       }
     }
-  }, [navItems, selectedTab, setSelectedTab]);
+  }, [navItems, currentPrimaryTab, setSelectedTab]);
 
   return (
     <div className="min-h-screen bg-[#f8fafc] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans transition-colors duration-250">
@@ -513,7 +737,7 @@ function TournamentShell() {
             <div className="space-y-0.5">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = selectedTab === item.id;
+                const isActive = currentPrimaryTab === item.id;
                 return (
                   <button
                     key={item.id}
@@ -584,10 +808,9 @@ function TournamentShell() {
           </header>
 
           <main className="flex-1 p-4 lg:p-6 w-full print:p-0 print:w-full" id="main-content-panel">
-            {selectedTab !== 'live' && selectedTab !== 'tenants' && selectedTab !== 'workspaces' && selectedTab !== 'events_center' && selectedTab !== 'logs' && selectedTab !== 'export' && selectedTab !== 'scoreEntry' && selectedTab !== 'accounts' && <EventBar />}
             <div className="animate-fade-in">
               {(() => {
-                const isTabAllowed = navItems.some(item => item.id === selectedTab);
+                const isTabAllowed = navItems.some(item => item.id === currentPrimaryTab);
                 if (!isTabAllowed) {
                   return (
                     <div className="flex flex-col items-center justify-center p-12 text-center bg-white dark:bg-zinc-900 rounded-xl border border-red-100 dark:border-red-900/30">
@@ -599,20 +822,12 @@ function TournamentShell() {
 
                 return (
                   <>
-                    {selectedTab === 'dashboard' && <Dashboard />}
-                    {selectedTab === 'teams' && <TeamManager />}
-                    {selectedTab === 'groups' && <GroupManager />}
-                    {selectedTab === 'scoreEntry' && <ScoreEntry />}
-                    {selectedTab === 'matches' && <SchedulerAndScoreKeeper />}
-                    {selectedTab === 'standings' && <Standings />}
-                    {selectedTab === 'knockout' && <KnockoutBracket />}
-                    {selectedTab === 'live' && <LiveDashboard />}
-                    {selectedTab === 'export' && <ExportManager />}
-                    {selectedTab === 'tenants' && <TenantManagementPage />}
-                    {selectedTab === 'workspaces' && <TournamentWorkspaceListPage />}
-                    {selectedTab === 'events_center' && <EventManagementPage />}
-                    {selectedTab === 'logs' && <AuditLogger />}
-                    {selectedTab === 'accounts' && <AccountManager />}
+                    {currentPrimaryTab === 'dashboard' && <Dashboard />}
+                    {currentPrimaryTab === 'content' && <ContentWorkspace />}
+                    {currentPrimaryTab === 'operations' && <OperationsWorkspace />}
+                    {currentPrimaryTab === 'rankings' && <RankingKnockoutWorkspace />}
+                    {currentPrimaryTab === 'live' && <LiveDashboard />}
+                    {currentPrimaryTab === 'admin' && <AdminWorkspacePanel />}
                   </>
                 );
               })()}
