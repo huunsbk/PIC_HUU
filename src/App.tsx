@@ -424,10 +424,14 @@ function AdminWorkspace() {
 
 function WorkspaceDirectory() {
   const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
+  const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
+  const userRole = useTournamentStore((state) => state.userRole);
 
   useEffect(() => {
-    setSelectedTab('workspaces');
-  }, [setSelectedTab]);
+    if (currentEnterpriseUser || userRole !== 'guest') {
+      setSelectedTab('workspaces');
+    }
+  }, [setSelectedTab, currentEnterpriseUser, userRole]);
 
   return <TournamentShell />;
 }
