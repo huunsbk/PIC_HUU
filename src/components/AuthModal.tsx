@@ -104,8 +104,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setSuccessMsg(`Đăng nhập thành công! Chào mừng đại diện ${accountData.display_name}.`);
     
     setTimeout(() => {
-      setAuthStatus(mappedRole, accountData.username, tenantIdStr, enterpriseUser);
-      onClose();
+      setAuthStatus(mappedRole, accountData.username, tenantIdStr, enterpriseUser)
+        .then(() => onClose())
+        .catch(() => {
+          setErrorMsg('Đăng nhập thành công nhưng chưa tải được workspace được phân quyền.');
+        });
     }, 800);
     } catch {
       console.warn('[Auth] Login request failed.');

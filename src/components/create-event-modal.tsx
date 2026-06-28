@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { X, Save } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTournamentStore } from '../store';
-import { buildScoringConfig, tournamentRpc } from '../lib/api/tournamentRpc';
+import { tournamentRpc } from '../lib/api/tournamentRpc';
+import { buildDefaultEventRankingConfig, buildDefaultEventScoringConfig } from '../lib/eventSettings';
 import type { CompetitionType, EventFormatType, MatchSetMode } from '../types';
 
 export default function CreateEventModal({ onClose }: { onClose: () => void }) {
@@ -20,9 +21,11 @@ export default function CreateEventModal({ onClose }: { onClose: () => void }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
   const activeTournamentId = useTournamentStore(state => state.activeTournamentId);
-  const tournamentId = useTournamentStore(state => state.tournament.id);
+  const tournament = useTournamentStore(state => state.tournament);
+  const tournamentId = tournament.id;
   const scopedTournamentId = activeTournamentId || tournamentId;
   const setCurrentEvent = useTournamentStore(state => state.setCurrentEvent);
+  const defaultSettings = tournament.settings || {};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,8 +43,8 @@ export default function CreateEventModal({ onClose }: { onClose: () => void }) {
           sportId,
           competitionType,
           formatType,
-          scoringConfig: buildScoringConfig(matchSetMode),
-          rankingConfig: {
+          scoringConfig: buildDefaultEventScoringConfig(defaultSettings, matchSetMode),
+          rankingConfig: buildDefaultEventRankingConfig(defaultSettings, {
             groupCount,
             top_per_group: topPerGroup,
             best_third_count: bestThirdCount,
@@ -50,12 +53,7 @@ export default function CreateEventModal({ onClose }: { onClose: () => void }) {
               court_count: courtCount,
               scheduling_mode: 'round_robin_balanced',
             },
-            bestThirds: {
-              enabled: bestThirdCount > 0,
-              count: bestThirdCount,
-              excludeBottomTeamResults: excludeBottomResults,
-            },
-          } as any,
+          }),
         });
 
       const eventId = result.event_id || result.event?.id;
@@ -132,6 +130,9 @@ export default function CreateEventModal({ onClose }: { onClose: () => void }) {
                 <option value="single">Một séc</option>
                 <option value="best_of_3">Best of 3</option>
               </select>
+            </div>
+            <div className="sm:col-span-2 rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs font-semibold text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-200">
+              Nội dung mới sẽ lấy luật mặc định từ Tổng quan: thắng {defaultSettings.winPoint ?? 2} điểm, thua {defaultSettings.lossPoint ?? 1} điểm, set chạm {defaultSettings.maxScore ?? 15}, cap {defaultSettings.capScore ?? 17}.
             </div>
             <div>
               <label className="block text-xs font-bold text-zinc-500 mb-1 uppercase">Số bảng</label>

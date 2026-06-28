@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Archive, CalendarDays, Copy, ExternalLink, Plus, ShieldAlert, ShieldCheck, Trash2, Users } from 'lucide-react';
+import { Archive, CalendarDays, Copy, ExternalLink, Plus, Settings, ShieldAlert, ShieldCheck, Trash2, Users } from 'lucide-react';
 import { useEventsQuery, useEventMembersQuery } from './use-events-query';
 import EventMembersManager from './event-members-manager';
 import CreateEventModal from './create-event-modal';
+import EventConfigModal from './EventConfigModal';
 import ConfirmDialog from './ConfirmDialog';
 import { useTournamentStore } from '../store';
 import { tournamentRpc } from '../lib/api/tournamentRpc';
@@ -45,6 +46,7 @@ export default function EventManagementPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [membersEventId, setMembersEventId] = useState<string | null>(null);
   const [archiveEvent, setArchiveEvent] = useState<any | null>(null);
+  const [configEvent, setConfigEvent] = useState<any | null>(null);
 
   const { data: events, isLoading, error } = useEventsQuery();
   const queryClient = useQueryClient();
@@ -201,6 +203,14 @@ export default function EventManagementPage() {
                       <div className="flex justify-end gap-1.5">
                         <button
                           type="button"
+                          onClick={() => setConfigEvent(event)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-indigo-50 hover:text-indigo-600"
+                          title="Chỉnh cấu hình nội dung"
+                        >
+                          <Settings size={15} />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => copyPublicLink(event)}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-blue-50 hover:text-blue-600"
                           title="Copy link"
@@ -251,6 +261,7 @@ export default function EventManagementPage() {
       </section>
 
       {isCreateModalOpen && <CreateEventModal onClose={() => setIsCreateModalOpen(false)} />}
+      {configEvent && <EventConfigModal event={configEvent} onClose={() => setConfigEvent(null)} />}
       {membersEventId && <EventMembersManager eventId={membersEventId} onClose={() => setMembersEventId(null)} />}
 
       <ConfirmDialog

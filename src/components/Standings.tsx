@@ -9,9 +9,11 @@ import { useTeams } from '../hooks/useTeams';
 import { useGroups } from '../hooks/useGroups';
 import { useMatches } from '../hooks/useMatches';
 import { useMatchSets } from '../hooks/useMatchSets';
+import { useEvents } from '../hooks/useEvents';
 import { supabase } from '../supabaseClient';
 import { calculateGroupStandings, calculateBestThirdPlaces } from '../utils/tournamentEngine';
 import { attachMatchSets } from '../utils/scoreDisplay';
+import { getEffectiveTournamentSettings } from '../lib/eventSettings';
 import { BarChart3, Star, Download, Printer, ShieldAlert, Award } from 'lucide-react';
 
 export default function Standings() {
@@ -19,6 +21,7 @@ export default function Standings() {
   const { data: matchSetsData = [] } = useMatchSets();
   const { data: teamsData = [] } = useTeams();
   const { data: groupsData = [] } = useGroups();
+  const { data: eventsData = [] } = useEvents();
   const matches = React.useMemo(() => attachMatchSets(matchesData as any[], matchSetsData), [matchesData, matchSetsData]);
   const teams = React.useMemo(() => {
     const record: Record<string, any> = {};
@@ -45,7 +48,11 @@ export default function Standings() {
   const clearManualQualifiedTeams = useTournamentStore(state => state.clearManualQualifiedTeams);
 
   const groupList = groupsData;
-  const settings = tournament.settings;
+  const currentEvent = eventsData.find((event: any) => event.id === currentEventId) || eventsData[0];
+  const settings = React.useMemo(
+    () => getEffectiveTournamentSettings(currentEvent, tournament.settings),
+    [currentEvent, tournament.settings],
+  );
 
   // 1. Tính toán BXH toàn bộ các bảng ở trạng thái tức thì
   const { standingsByGroup, groupFinishedMap, allGroupsFinished } = React.useMemo(() => {

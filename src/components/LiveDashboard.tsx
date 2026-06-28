@@ -12,6 +12,7 @@ import { supabase } from '../supabaseClient';
 import { tournamentRpc } from '../lib/api/tournamentRpc';
 import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
 import { attachMatchSets, getSetScoreText } from '../utils/scoreDisplay';
+import { getEffectiveTournamentSettings } from '../lib/eventSettings';
 import type { MatchSet } from '../types';
 import { 
   Monitor, 
@@ -23,7 +24,8 @@ import {
   Trophy, 
   Layers, 
   GitCommit, 
-  Grid
+  Grid,
+  Share2
 } from 'lucide-react';
 import { LiveBracket } from './LiveBracket';
 
@@ -552,6 +554,7 @@ export default function LiveDashboard() {
     effectiveEventsData.forEach((event: any) => {
       record[event.id] = {
         ...event,
+        settings: getEffectiveTournamentSettings(event, effectiveTournament.settings),
         teams: teamsByEvent[event.id] || {},
         groups: groupsByEvent[event.id] || {},
         matches: matchesByEvent[event.id] || [],
@@ -559,11 +562,31 @@ export default function LiveDashboard() {
     });
 
     return record;
-  }, [effectiveEventsData, liveData]);
+  }, [effectiveEventsData, effectiveTournament.settings, liveData]);
 
   const [selectedEventFilter, setSelectedEventFilter] = useState<string>('all');
   const [currentTime, setCurrentTime] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [shareMessage, setShareMessage] = useState<string>('');
+
+  const publicTournamentUrl = React.useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    const slug = String((publicSnapshot?.tournament?.slug as any) || getRouteSlug() || '');
+    const basePath = import.meta.env.BASE_URL || '/';
+    const normalizedBase = basePath.endsWith('/') ? basePath : `${basePath}/`;
+    return `${window.location.origin}${normalizedBase}tournament/${encodeURIComponent(slug)}`;
+  }, [publicSnapshot]);
+
+  const handleShareTournamentLink = async () => {
+    if (!publicTournamentUrl) return;
+    try {
+      await navigator.clipboard.writeText(publicTournamentUrl);
+      setShareMessage('Đã sao chép link giải đấu.');
+    } catch {
+      setShareMessage(publicTournamentUrl);
+    }
+    window.setTimeout(() => setShareMessage(''), 2500);
+  };
 
   // Đếm giờ địa phương ticking liên tục
   useEffect(() => {
@@ -956,8 +979,20 @@ export default function LiveDashboard() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
-          
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {shareMessage && (
+            <span className="rounded-lg bg-emerald-50 px-2.5 py-1.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+              {shareMessage}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleShareTournamentLink}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-black text-zinc-700 shadow-xs transition hover:border-blue-200 hover:text-blue-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-blue-900 dark:hover:text-blue-300"
+          >
+            <Share2 size={14} />
+            Chia sẻ link giải đấu
+          </button>
         </div>
       </div>
 

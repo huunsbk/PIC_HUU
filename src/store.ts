@@ -37,6 +37,37 @@ const navigateToTenantHash = (tenantId: string, reload = false) => {
   }
 };
 
+const navigateToWorkspaceSlug = (slug: string) => {
+  const targetUrl = `${window.location.origin}${getBasePath()}admin/workspace/${encodeURIComponent(slug)}`;
+  if (window.location.href === targetUrl) return;
+  window.history.replaceState(null, '', targetUrl);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+};
+
+async function resolveWorkspaceSlugForTenant(tenantId: string) {
+  if (!tenantId || tenantId === 'default') return null;
+
+  const { data: tournamentData } = await supabase
+    .from('tournament')
+    .select('slug')
+    .eq('tenant_id', tenantId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (tournamentData?.slug) return tournamentData.slug;
+
+  const { data: tenantData } = await supabase
+    .from('tenants')
+    .select('slug')
+    .eq('id', tenantId)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  return tenantData?.slug || null;
+}
+
 export async function getCurrentTenantId() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -354,16 +385,22 @@ export const useTournamentStore = create<AppState>()(
             userRole: role || 'guest',
             currentUser: username,
             currentEnterpriseUser: normalizedEnterpriseUser,
-            activeTenantId: isWorkspaceRoute ? currentState.activeTenantId : tenantId,
-            activeTenantName: isWorkspaceRoute ? currentState.activeTenantName : normalizedEnterpriseUser?.tenant?.name || null,
+            activeTenantId: tenantId,
+            activeTenantName: normalizedEnterpriseUser?.tenant?.name || currentState.activeTenantName || null,
             permissions: normalizedEnterpriseUser?.permissions || [],
             isAdmin: false /* deprecated */,
             selectedTab: selectedTabAfterAuth,
             isLoadingSupabase: true
           });
 
-          if (normalizedEnterpriseUser && normalizedEnterpriseUser.id) {
-            // Đảm bảo URL trên trình duyệt đồng bộ với tenant được cấp quyền, tránh nhầm lẫn
+          if (normalizedEnterpriseUser && normalizedEnterpriseUser.id && tenantId !== 'default') {
+            const workspaceSlug = await resolveWorkspaceSlugForTenant(tenantId);
+            if (workspaceSlug) {
+              navigateToWorkspaceSlug(workspaceSlug);
+              originalSet({ isLoadingSupabase: false, supabaseConnected: true });
+              return;
+            }
+
             requestAnimationFrame(() => {
               if (isRouteWorkspacePath()) return;
               const expectedTenantHash = tenantId.replace(/_/g, '-');

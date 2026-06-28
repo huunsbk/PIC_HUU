@@ -50,6 +50,20 @@ export default function Dashboard() {
     }
   }, [isTenantWorkspace, lockedOrganizationName, org]);
 
+  React.useEffect(() => {
+    setWinPt(tournament.settings.winPoint);
+    setLossPt(tournament.settings.lossPoint);
+    setMaxSc(tournament.settings.maxScore);
+    setCapSc(tournament.settings.capScore);
+    setAdvCount(tournament.settings.advanceCount);
+  }, [
+    tournament.settings.winPoint,
+    tournament.settings.lossPoint,
+    tournament.settings.maxScore,
+    tournament.settings.capScore,
+    tournament.settings.advanceCount,
+  ]);
+
   // States for custom modals & backups
   const [jsonInput, setJsonInput] = useState('');
   const [showJsonModal, setShowJsonModal] = useState(false);
@@ -134,6 +148,10 @@ export default function Dashboard() {
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (Number(capSc) < Number(maxSc)) {
+        showToast('Điểm Kịch Trần (Cap) phải lớn hơn hoặc bằng Set Chạm Đến.', 'error');
+        return;
+      }
       await updateSettings({
         winPoint: Number(winPt),
         lossPoint: Number(lossPt),
