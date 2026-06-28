@@ -6,6 +6,7 @@ import {
   handleError,
   handleOptions,
   getRoleName,
+  ensureEventAdminCanManageTargetAccount,
   sendJson,
   setCorsHeaders,
   validateTargetAccount,
@@ -45,6 +46,7 @@ export default async function handler(req, res) {
       if (actor.roleName === 'TENANT_ADMIN' && targetAccount.tenant_id !== actor.tenant_id) {
         throw apiError('TENANT_ADMIN chỉ được cập nhật tài khoản trong tenant của mình.', 403);
       }
+      await ensureEventAdminCanManageTargetAccount(admin, actor, accountId);
 
       const { roleRecord } = await validateTargetAccount(admin, actor, role, tenantId, {
         excludeAccountId: accountId,
@@ -82,11 +84,13 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      if (actor.roleName !== 'SUPER_ADMIN') throw apiError('Chỉ SUPER_ADMIN được xóa hoặc khóa tài khoản.', 403);
+      if (!['SUPER_ADMIN', 'EVENT_ADMIN'].includes(actor.roleName || '')) {
+        throw apiError('Chỉ SUPER_ADMIN hoặc EVENT_ADMIN có phạm vi phù hợp được xóa hoặc khóa tài khoản.', 403);
+      }
 
       const { data: targetAccount, error: targetError } = await admin
         .from('accounts')
-        .select('id, tenant_id, user_id, username, roles(name)')
+        .select('id, tenant_id, user_id, username, roles(name), created_by_account_id')
         .eq('id', accountId)
         .is('deleted_at', null)
         .single();
@@ -97,6 +101,8 @@ export default async function handler(req, res) {
       }
 
       const targetRoleName = getRoleName(targetAccount.roles);
+      await ensureEventAdminCanManageTargetAccount(admin, actor, accountId);
+
       if (targetRoleName === 'SUPER_ADMIN') {
         const { count: activeSuperAdminCount, error: countError } = await admin
           .from('accounts')

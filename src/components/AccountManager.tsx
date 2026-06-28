@@ -1,10 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useTournamentStore } from '../store';
 import { supabase } from '../supabaseClient';
-import { Users, Plus, Search, ShieldAlert, X, Shield, Building2, CheckCircle2, Edit, Trash2, KeyRound } from 'lucide-react';
+import { Users, Plus, Search, ShieldAlert, X, Shield, Building2, CheckCircle2, Edit, Trash2, KeyRound, SlidersHorizontal } from 'lucide-react';
 import ConfirmDialog from './ConfirmDialog';
 import SecurityAccountPanel from './SecurityAccountPanel';
 import { createAdminAccount, deleteAdminAccount, updateAdminAccount } from '../lib/api/adminAccounts';
+import { normalizeRpcError, tournamentRpc } from '../lib/api/tournamentRpc';
+
+const EVENT_PERMISSION_OPTIONS = [
+  { id: 'view_event', label: 'Xem nội dung' },
+  { id: 'manage_event_config', label: 'Cấu hình nội dung' },
+  { id: 'manage_teams', label: 'Quản lý đội' },
+  { id: 'manage_groups', label: 'Chia bảng' },
+  { id: 'manage_schedule', label: 'Tạo lịch' },
+  { id: 'enter_scores', label: 'Nhập điểm' },
+  { id: 'manage_standings', label: 'Xếp hạng' },
+  { id: 'manage_knockout', label: 'Sơ đồ KO' },
+  { id: 'manage_referees', label: 'Quản lý trọng tài' },
+  { id: 'manage_events', label: 'Toàn quyền nội dung' },
+];
+
+const REFEREE_PERMISSION_IDS = new Set(['view_event', 'enter_scores']);
 
 export default function AccountManager() {
   const userRole = useTournamentStore((state) => state.userRole);
@@ -27,6 +43,10 @@ export default function AccountManager() {
   const [actionLoading, setActionLoading] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<any>(null);
+  const [permissionTree, setPermissionTree] = useState<any[]>([]);
+  const [permissionAccount, setPermissionAccount] = useState<any>(null);
+  const [selectedPermissions, setSelectedPermissions] = useState<Record<string, Set<string>>>({});
+  const [scopeLoading, setScopeLoading] = useState(false);
 
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editPassword, setEditPassword] = useState('');
@@ -39,7 +59,7 @@ export default function AccountManager() {
     setEditDisplayName(acc.display_name || '');
     setEditPassword('');
     const currentRole = acc.roles?.name || acc.role_id || 'VIEWER';
-    setEditRole(currentRole);
+    setEditRole(isEventAdmin ? 'REFEREE' : currentRole);
     setEditTenantId(acc.tenant_id || '');
     setEditStatus(acc.status || 'active');
     setIsEditModalOpen(true);
@@ -63,7 +83,7 @@ export default function AccountManager() {
       await updateAdminAccount(editingAccount.id, {
         displayName: editDisplayName.trim(),
         password: editPassword.trim(),
-        role: editRole,
+        role: isEventAdmin ? 'REFEREE' : editRole,
         tenantId: isSuperAdmin ? editTenantId : activeTenantId,
         status: editStatus,
         userId: editingAccount.user_id
@@ -83,17 +103,48 @@ export default function AccountManager() {
   const [successMsg, setSuccessMsg] = useState('');
 
   const isSuperAdmin = userRole === 'SUPER_ADMIN';
+  const isEventAdmin = userRole === 'EVENT_ADMIN';
+  const canCreateAccounts = isSuperAdmin || userRole === 'TENANT_ADMIN' || isEventAdmin;
 
   useEffect(() => {
     fetchAccounts();
-    if (isSuperAdmin) {
-      fetchTenants();
-    }
-  }, [userRole, activeTenantId, isSuperAdmin]);
+    fetchTenants();
+    if (isEventAdmin) setNewRole('REFEREE');
+  }, [userRole, activeTenantId, isSuperAdmin, isEventAdmin]);
 
   const fetchAccounts = async () => {
     setLoading(true);
     try {
+      const tenantParam = isSuperAdmin ? null : activeTenantId;
+      const scoped = await supabase.rpc('list_account_access_summary_v1', {
+        p_tenant_id: tenantParam,
+      });
+
+      if (!scoped.error && Array.isArray(scoped.data)) {
+        const nextScopes: Record<string, any> = {};
+        const scopedAccounts = scoped.data.map((row: any) => {
+          nextScopes[row.account_id] = row;
+          return {
+            id: row.account_id,
+            user_id: row.user_id,
+            tenant_id: row.tenant_id,
+            username: row.username,
+            display_name: row.display_name,
+            status: row.status,
+            created_at: row.created_at,
+            created_by_account_id: row.created_by_account_id,
+            roles: { name: row.role_name },
+          };
+        });
+        setAccounts(scopedAccounts);
+        setAccountScopes(nextScopes);
+        return;
+      }
+
+      if (isEventAdmin) {
+        throw scoped.error || new Error('Không tải được phạm vi tài khoản.');
+      }
+
       let query = supabase.from('accounts').select(`
         id, user_id, tenant_id, username, display_name, status, created_at,
         roles!inner(name)
@@ -124,6 +175,22 @@ export default function AccountManager() {
       // Wait to see if we really want to show error to user or just let it be empty
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPermissionTree = async () => {
+    setScopeLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('list_permission_tree_v1', {
+        p_tenant_id: isSuperAdmin ? null : activeTenantId,
+      });
+      if (error) throw error;
+      setPermissionTree(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setErrorMsg(normalizeRpcError(error).message);
+      setPermissionTree([]);
+    } finally {
+      setScopeLoading(false);
     }
   };
 
@@ -236,7 +303,7 @@ export default function AccountManager() {
         username,
         password: newPassword,
         displayName: newDisplayName.trim(),
-        role: newRole,
+        role: isEventAdmin ? 'REFEREE' : newRole,
         tenantId,
       });
 
@@ -255,7 +322,6 @@ export default function AccountManager() {
   };
 
   const handleDeleteAccount = (accountId: string, username: string) => {
-    if (!isSuperAdmin) return;
     setAccountToDelete({ id: accountId, username });
     setIsDeleteConfirmOpen(true);
   };
@@ -290,6 +356,89 @@ export default function AccountManager() {
     a.username?.toLowerCase().includes(searchQuery.toLowerCase()) || 
     a.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const canDeleteAccount = (acc: any) => {
+    const roleName = acc.roles?.name || acc.role_id || 'VIEWER';
+    if (isSuperAdmin) return true;
+    if (isEventAdmin) return roleName === 'REFEREE';
+    return false;
+  };
+
+  const openPermissionModal = async (acc: any) => {
+    setPermissionAccount(acc);
+    const grants = accountScopes[acc.id]?.event_grants || [];
+    const next: Record<string, Set<string>> = {};
+    grants.forEach((grant: any) => {
+      next[grant.event_id] = next[grant.event_id] || new Set<string>();
+      next[grant.event_id].add(grant.permission || 'enter_scores');
+    });
+    setSelectedPermissions(next);
+    if (permissionTree.length === 0) {
+      await fetchPermissionTree();
+    }
+    setErrorMsg('');
+    setSuccessMsg('');
+  };
+
+  const isPermissionAllowed = (eventNode: any, permissionId: string, targetRole: string) => {
+    const allowed = new Set(eventNode.allowed_permissions || []);
+    if (targetRole === 'REFEREE' && !REFEREE_PERMISSION_IDS.has(permissionId)) return false;
+    if (isSuperAdmin || userRole === 'TENANT_ADMIN') return true;
+    return allowed.has(permissionId) || allowed.has('manage_events');
+  };
+
+  const togglePermission = (eventId: string, permissionId: string) => {
+    setSelectedPermissions((current) => {
+      const next = { ...current };
+      const existing = new Set(next[eventId] || []);
+      if (existing.has(permissionId)) {
+        existing.delete(permissionId);
+      } else {
+        existing.add(permissionId);
+        if (permissionId !== 'view_event') existing.add('view_event');
+      }
+      next[eventId] = existing;
+      return next;
+    });
+  };
+
+  const savePermissionTree = async () => {
+    if (!permissionAccount) return;
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const currentGrants = accountScopes[permissionAccount.id]?.event_grants || [];
+      const currentKeys = new Set(currentGrants.map((grant: any) => `${grant.event_id}::${grant.permission || 'enter_scores'}`));
+      const desiredKeys = new Set<string>();
+
+      Object.entries(selectedPermissions).forEach(([eventId, permissions]) => {
+        permissions.forEach((permission) => desiredKeys.add(`${eventId}::${permission}`));
+      });
+
+      for (const key of desiredKeys) {
+        if (!currentKeys.has(key)) {
+          const [eventId, permission] = key.split('::');
+          await tournamentRpc.grantEventAccess(eventId, permissionAccount.id, permission);
+        }
+      }
+
+      for (const key of currentKeys) {
+        if (!desiredKeys.has(key)) {
+          const [eventId, permission] = key.split('::');
+          await tournamentRpc.revokeEventAccess(eventId, permissionAccount.id, permission);
+        }
+      }
+
+      setSuccessMsg('Đã lưu cây phân quyền.');
+      setPermissionAccount(null);
+      await fetchAccounts();
+    } catch (error) {
+      setErrorMsg(normalizeRpcError(error).message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const renderAccessScope = (acc: any, roleName: string) => {
     const tenantName = tenants.find(t => t.id === acc.tenant_id)?.name || accountScopes[acc.id]?.tenant_name || acc.tenant_id || 'Chưa rõ đơn vị';
@@ -347,13 +496,15 @@ export default function AccountManager() {
           </p>
         </div>
 
+        {canCreateAccounts && (
         <button
           onClick={() => setIsCreateModalOpen(true)}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors"
         >
           <Plus size={18} />
-          Tạo Tài Khoản Cấp {isSuperAdmin ? '2/3' : '3'}
+          {isEventAdmin ? 'Tạo trọng tài' : `Tạo Tài Khoản Cấp ${isSuperAdmin ? '2/3' : '3'}`}
         </button>
+        )}
       </div>
 
       {/* Thao tác quản trị */}
@@ -447,12 +598,20 @@ export default function AccountManager() {
                       <div className="flex justify-end gap-1">
                         <button 
                           onClick={() => openEditModal(acc)}
+                          disabled={isEventAdmin && roleName !== 'REFEREE'}
                           className="p-1.5 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
                           title="Chỉnh sửa tài khoản"
                         >
                           <Edit size={16} />
                         </button>
-                        {isSuperAdmin && (
+                        <button
+                          onClick={() => openPermissionModal(acc)}
+                          className="p-1.5 text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-md transition-colors"
+                          title="Phân quyền chi tiết"
+                        >
+                          <SlidersHorizontal size={16} />
+                        </button>
+                        {canDeleteAccount(acc) && (
                           <button 
                             onClick={() => handleDeleteAccount(acc.id, acc.username)}
                             className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
@@ -535,11 +694,12 @@ export default function AccountManager() {
                   value={newRole} 
                   onChange={e => setNewRole(e.target.value)} 
                   className="w-full px-3 py-2 border rounded-lg dark:border-zinc-700 dark:bg-zinc-800 font-medium"
+                  disabled={isEventAdmin}
                 >
                   {isSuperAdmin && <option value="TENANT_ADMIN">TENANT_ADMIN (Tổ chức cấp 2)</option>}
-                  <option value="EVENT_ADMIN">EVENT_ADMIN (Quản trị nội dung thi đấu)</option>
+                  {!isEventAdmin && <option value="EVENT_ADMIN">EVENT_ADMIN (Quản trị nội dung thi đấu)</option>}
                   <option value="REFEREE">REFEREE (Trọng tài giải)</option>
-                  <option value="VIEWER">VIEWER (Khán giả)</option>
+                  {!isEventAdmin && <option value="VIEWER">VIEWER (Khán giả)</option>}
                 </select>
               </div>
 
@@ -626,11 +786,12 @@ export default function AccountManager() {
                   value={editRole} 
                   onChange={e => setEditRole(e.target.value)} 
                   className="w-full px-3 py-2 border rounded-lg dark:border-zinc-700 dark:bg-zinc-800 font-medium"
+                  disabled={isEventAdmin}
                 >
                   {isSuperAdmin && <option value="TENANT_ADMIN">TENANT_ADMIN (Tổ chức cấp 2)</option>}
-                  <option value="EVENT_ADMIN">EVENT_ADMIN (Quản trị nội dung thi đấu)</option>
+                  {!isEventAdmin && <option value="EVENT_ADMIN">EVENT_ADMIN (Quản trị nội dung thi đấu)</option>}
                   <option value="REFEREE">REFEREE (Trọng tài giải)</option>
-                  <option value="VIEWER">VIEWER (Khán giả)</option>
+                  {!isEventAdmin && <option value="VIEWER">VIEWER (Khán giả)</option>}
                 </select>
               </div>
 
@@ -683,6 +844,102 @@ export default function AccountManager() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {permissionAccount && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-start justify-between gap-4 border-b border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-800 dark:bg-zinc-950">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Cây phân quyền</p>
+                <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100">
+                  {permissionAccount.display_name || permissionAccount.username}
+                </h2>
+                <p className="text-xs font-semibold text-zinc-500">
+                  @{permissionAccount.username} · {permissionAccount.roles?.name || permissionAccount.role_id || 'VIEWER'}
+                </p>
+              </div>
+              <button onClick={() => setPermissionAccount(null)} className="rounded-full p-2 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-4 overflow-y-auto p-5">
+              {scopeLoading ? (
+                <div className="py-12 text-center text-sm font-semibold text-zinc-500">Đang tải cây phân quyền...</div>
+              ) : permissionTree.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-zinc-300 p-8 text-center text-sm font-semibold text-zinc-500">
+                  Chưa có giải/nội dung nào trong phạm vi có thể phân quyền.
+                </div>
+              ) : (
+                permissionTree.map((tournament) => (
+                  <section key={tournament.tournament_id} className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+                    <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{tournament.tenant_name}</p>
+                      <h3 className="font-black text-zinc-900 dark:text-zinc-100">{tournament.tournament_name}</h3>
+                    </div>
+                    <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                      {(tournament.events || []).map((eventNode: any) => {
+                        const targetRole = permissionAccount.roles?.name || permissionAccount.role_id || 'VIEWER';
+                        return (
+                          <div key={eventNode.event_id} className="grid gap-3 p-4 md:grid-cols-[220px_1fr]">
+                            <div>
+                              <p className="font-bold text-zinc-900 dark:text-zinc-100">{eventNode.event_name}</p>
+                              <p className="text-xs text-zinc-500">Nội dung thi đấu</p>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                              {EVENT_PERMISSION_OPTIONS.map((permission) => {
+                                const allowed = isPermissionAllowed(eventNode, permission.id, targetRole);
+                                const checked = selectedPermissions[eventNode.event_id]?.has(permission.id) || false;
+                                return (
+                                  <label
+                                    key={permission.id}
+                                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
+                                      allowed
+                                        ? 'border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'
+                                        : 'border-zinc-100 bg-zinc-50 text-zinc-300 dark:border-zinc-900 dark:bg-zinc-950 dark:text-zinc-700'
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      disabled={!allowed || actionLoading}
+                                      onChange={() => togglePermission(eventNode.event_id, permission.id)}
+                                      className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40"
+                                    />
+                                    <span>{permission.label}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))
+              )}
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setPermissionAccount(null)}
+                className="rounded-lg bg-zinc-100 px-4 py-2 text-sm font-bold text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={savePermissionTree}
+                disabled={actionLoading}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {actionLoading ? 'Đang lưu...' : 'Lưu phân quyền'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

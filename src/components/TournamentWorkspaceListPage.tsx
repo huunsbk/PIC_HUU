@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trophy, ShieldAlert, ArrowRight, Loader2 } from 'lucide-react';
+import { Plus, Trophy, ShieldAlert, ArrowRight, Loader2, Search, Filter } from 'lucide-react';
 import { useTournamentWorkspaces } from '../hooks/useTournamentWorkspaces';
 import { useTournamentStore } from '../store';
 import TournamentWorkspaceCard from './TournamentWorkspaceCard';
@@ -7,6 +7,9 @@ import CreateTournamentWorkspaceDialog from './CreateTournamentWorkspaceDialog';
 
 export default function TournamentWorkspaceListPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('active');
+  const [tenantFilter, setTenantFilter] = useState('all');
   
   const limit = 50;
   const { data: workspacesResponse, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useTournamentWorkspaces(limit);
@@ -25,10 +28,30 @@ export default function TournamentWorkspaceListPage() {
   }
 
   const tournaments = workspacesResponse?.pages.flatMap(page => page.data) || [];
+  const tenantOptions = React.useMemo(() => {
+    return Array.from(
+      new Set(tournaments.map((tour) => tour.tenant_name || tour.tenant_id || 'Chưa rõ đơn vị'))
+    ).sort((a, b) => a.localeCompare(b, 'vi'));
+  }, [tournaments]);
+  const filteredTournaments = React.useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    return tournaments.filter((tour) => {
+      const tenantName = tour.tenant_name || tour.tenant_id || 'Chưa rõ đơn vị';
+      const matchesTenant = tenantFilter === 'all' || tenantName === tenantFilter;
+      const status = tour.status || 'active';
+      const matchesStatus = statusFilter === 'all' || status === statusFilter;
+      const matchesSearch =
+        !normalizedQuery ||
+        tour.name?.toLowerCase().includes(normalizedQuery) ||
+        tour.slug?.toLowerCase().includes(normalizedQuery) ||
+        tenantName.toLowerCase().includes(normalizedQuery);
+      return matchesTenant && matchesStatus && matchesSearch;
+    });
+  }, [tournaments, searchQuery, statusFilter, tenantFilter]);
   const groupedTournaments = React.useMemo(() => {
-    const groups = new Map<string, typeof tournaments>();
+    const groups = new Map<string, typeof filteredTournaments>();
 
-    tournaments.forEach((tour) => {
+    filteredTournaments.forEach((tour) => {
       const tenantName = tour.tenant_name || tour.tenant_id || 'Chưa rõ đơn vị';
       const current = groups.get(tenantName) || [];
       current.push(tour);
@@ -36,7 +59,7 @@ export default function TournamentWorkspaceListPage() {
     });
 
     return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b, 'vi'));
-  }, [tournaments]);
+  }, [filteredTournaments]);
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -64,6 +87,42 @@ export default function TournamentWorkspaceListPage() {
         )}
       </header>
 
+      <div className="grid gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 md:grid-cols-[1fr_220px_180px]">
+        <label className="relative block">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+          <input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Tìm theo tên giải, đường dẫn hoặc đơn vị..."
+            className="w-full rounded-lg border border-zinc-200 bg-white py-2 pl-10 pr-3 text-sm font-semibold dark:border-zinc-700 dark:bg-zinc-950"
+          />
+        </label>
+        <label className="relative block">
+          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+          <select
+            value={tenantFilter}
+            onChange={(event) => setTenantFilter(event.target.value)}
+            className="w-full rounded-lg border border-zinc-200 bg-white py-2 pl-9 pr-3 text-sm font-semibold dark:border-zinc-700 dark:bg-zinc-950"
+          >
+            <option value="all">Tất cả đơn vị</option>
+            {tenantOptions.map((tenantName) => (
+              <option key={tenantName} value={tenantName}>{tenantName}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold dark:border-zinc-700 dark:bg-zinc-950"
+          >
+            <option value="active">Đang hoạt động</option>
+            <option value="archived">Đã lưu trữ</option>
+            <option value="all">Tất cả trạng thái</option>
+          </select>
+        </label>
+      </div>
+
       {isLoading ? (
         <div className="flex flex-col items-center justify-center p-24">
           <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div>
@@ -73,7 +132,7 @@ export default function TournamentWorkspaceListPage() {
         <div className="p-6 bg-red-50 text-red-600 rounded-xl border border-red-200">
            Đã xảy ra lỗi khi tải danh sách giải đấu: {(error as any).message}
         </div>
-      ) : (!tournaments || tournaments.length === 0) ? (
+      ) : (!filteredTournaments || filteredTournaments.length === 0) ? (
         <div className="flex flex-col items-center justify-center py-24 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl border-dashed">
           <div className="bg-zinc-100 dark:bg-zinc-800 p-6 rounded-full mb-6">
              <Trophy className="w-16 h-16 text-zinc-400 dark:text-zinc-500" />

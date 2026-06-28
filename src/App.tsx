@@ -245,7 +245,7 @@ function AdminWorkspacePanel() {
   const userRole = useTournamentStore((state) => state.userRole);
   const canManageTenants = userRole === 'SUPER_ADMIN' && (hasPermission('*') || hasPermission('manage_tenants'));
   const canManageTournaments = hasPermission('*') || hasPermission('manage_tournaments');
-  const canManageAccounts = hasPermission('*') || hasPermission('manage_accounts');
+  const canManageAccounts = hasPermission('*') || hasPermission('manage_accounts') || hasPermission('manage_referees');
   const canViewLogs = hasPermission('*') || hasPermission('view_audit_logs');
   const adminTabs = [
     { id: 'workspaces', label: 'Giải đấu', icon: Layers, disabled: !canManageTournaments },
@@ -703,7 +703,7 @@ function TournamentShell() {
       { id: 'operations', label: 'Điều hành trận đấu', icon: Gamepad2, permission: 'enter_scores', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
       { id: 'rankings', label: 'Xếp hạng & KO', icon: Network, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
       { id: 'live', label: 'Trình chiếu', icon: Presentation, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'guest'] },
-      { id: 'admin', label: 'Quản trị', icon: Wrench, permission: 'manage_tournaments', roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
+      { id: 'admin', label: 'Quản trị', icon: Wrench, permission: 'manage_accounts', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
     ];
     
     if (userRole === 'guest') {
@@ -713,7 +713,7 @@ function TournamentShell() {
     return allNavItems.filter(item => {
       if (!item.roles.includes(userRole)) return false;
       if (hasPermission('*')) return true;
-      return hasPermission(item.permission) || hasPermission('*');
+      return hasPermission(item.permission) || (item.id === 'admin' && hasPermission('manage_referees')) || hasPermission('*');
     });
   }, [permissions, userRole, hasPermission]);
 

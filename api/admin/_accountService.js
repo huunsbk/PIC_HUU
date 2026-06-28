@@ -77,7 +77,7 @@ export async function getActorAccount(req, admin) {
   }
 
   const roleName = getRoleName(actor.roles);
-  if (!['SUPER_ADMIN', 'TENANT_ADMIN'].includes(roleName || '')) {
+  if (!['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'].includes(roleName || '')) {
     throw apiError('Thiếu quyền quản lý tài khoản.', 403);
   }
 
@@ -86,6 +86,72 @@ export async function getActorAccount(req, admin) {
   }
 
   return { ...actor, roleName, authUserId: userData.user.id };
+}
+
+export async function actorCanManageReferees(admin, actor) {
+  if (['SUPER_ADMIN', 'TENANT_ADMIN'].includes(actor.roleName || '')) return true;
+  if (actor.roleName !== 'EVENT_ADMIN') return false;
+
+  const { count } = await admin
+    .from('account_event_permissions')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_id', actor.id)
+    .eq('tenant_id', actor.tenant_id)
+    .eq('permission', 'manage_referees')
+    .is('deleted_at', null);
+
+  return (count || 0) > 0;
+}
+
+export async function ensureEventAdminCanManageTargetAccount(admin, actor, accountId) {
+  if (actor.roleName !== 'EVENT_ADMIN') return;
+
+  const { data: target, error } = await admin
+    .from('accounts')
+    .select('id, tenant_id, created_by_account_id, roles(name)')
+    .eq('id', accountId)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (error || !target) {
+    throw apiError('Không tìm thấy tài khoản cần quản lý.', 404);
+  }
+
+  const targetRole = getRoleName(target.roles);
+  if (targetRole !== 'REFEREE') {
+    throw apiError('EVENT_ADMIN chỉ được quản lý tài khoản REFEREE trong phạm vi được cấp.', 403);
+  }
+
+  if (target.tenant_id !== actor.tenant_id) {
+    throw apiError('EVENT_ADMIN chỉ được quản lý trọng tài trong tenant của mình.', 403);
+  }
+
+  if (target.created_by_account_id === actor.id) return;
+
+  const { data: overlap } = await admin
+    .from('account_event_permissions')
+    .select('event_id')
+    .eq('account_id', accountId)
+    .eq('tenant_id', actor.tenant_id)
+    .is('deleted_at', null);
+
+  const eventIds = (overlap || []).map((row) => row.event_id).filter(Boolean);
+  if (eventIds.length === 0) {
+    throw apiError('REFEREE này chưa nằm trong phạm vi nội dung bạn quản lý.', 403);
+  }
+
+  const { count: manageableCount } = await admin
+    .from('account_event_permissions')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_id', actor.id)
+    .eq('tenant_id', actor.tenant_id)
+    .eq('permission', 'manage_referees')
+    .in('event_id', eventIds)
+    .is('deleted_at', null);
+
+  if ((manageableCount || 0) === 0) {
+    throw apiError('EVENT_ADMIN không có quyền quản lý trọng tài này.', 403);
+  }
 }
 
 export async function validateTargetAccount(admin, actor, role, tenantId, options = {}) {
@@ -103,6 +169,19 @@ export async function validateTargetAccount(admin, actor, role, tenantId, option
     }
     if (tenantId !== actor.tenant_id) {
       throw apiError('TENANT_ADMIN chỉ được quản lý tài khoản trong tenant của mình.', 403);
+    }
+  }
+
+  if (actor.roleName === 'EVENT_ADMIN') {
+    if (role !== 'REFEREE') {
+      throw apiError('EVENT_ADMIN chỉ được tạo hoặc cập nhật tài khoản REFEREE.', 403);
+    }
+    if (tenantId !== actor.tenant_id) {
+      throw apiError('EVENT_ADMIN chỉ được quản lý REFEREE trong tenant của mình.', 403);
+    }
+    const canManageReferees = await actorCanManageReferees(admin, actor);
+    if (!canManageReferees) {
+      throw apiError('EVENT_ADMIN chưa được cấp quyền quản lý trọng tài.', 403);
     }
   }
 

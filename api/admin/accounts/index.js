@@ -74,6 +74,7 @@ export default async function handler(req, res) {
       display_name: displayName,
       role_id: roleRecord.id,
       status: 'active',
+      created_by_account_id: actor.id,
     });
 
     if (insertError) {
