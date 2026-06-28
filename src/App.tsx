@@ -53,7 +53,7 @@ function isRouteWorkspacePathname() {
   const appPath = window.location.pathname.startsWith(basePath)
     ? window.location.pathname.slice(basePath.length)
     : window.location.pathname;
-  return appPath.startsWith('/admin/workspace/') || appPath.startsWith('/tournament/');
+  return appPath.startsWith('/admin/workspace/') || appPath.startsWith('/admin/workspaces') || appPath.startsWith('/tournament/');
 }
 
 function isUuid(value: string) {
@@ -69,7 +69,6 @@ const TAB_GROUP_ALIASES: Record<string, string> = {
   standings: 'rankings',
   knockout: 'rankings',
   tenants: 'admin',
-  workspaces: 'admin',
   accounts: 'admin',
   logs: 'admin',
   export: 'admin',
@@ -423,6 +422,16 @@ function AdminWorkspace() {
   return <TournamentShell />;
 }
 
+function WorkspaceDirectory() {
+  const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
+
+  useEffect(() => {
+    setSelectedTab('workspaces');
+  }, [setSelectedTab]);
+
+  return <TournamentShell />;
+}
+
 // Wrapper for Public Tournament
 function PublicTournament() {
   const { slug } = useParams();
@@ -571,6 +580,7 @@ export default function App() {
       )}
       <Routes>
         <Route path="/" element={<RootEntry />} />
+        <Route path="/admin/workspaces" element={<WorkspaceDirectory />} />
         <Route path="/admin/workspace/:slug" element={<AdminWorkspace />} />
         <Route path="/tournament/:slug" element={<PublicTournament />} />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -687,6 +697,7 @@ function TournamentShell() {
 
   const navItems = React.useMemo(() => {
     const allNavItems = [
+      { id: 'workspaces', label: 'Giải đấu', icon: Layers, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'VIEWER'] },
       { id: 'dashboard', label: 'Tổng quan', icon: Trophy, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
       { id: 'content', label: 'Nội dung thi đấu', icon: ListChecks, permission: 'manage_events', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
       { id: 'operations', label: 'Điều hành trận đấu', icon: Gamepad2, permission: 'enter_scores', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
@@ -823,6 +834,7 @@ function TournamentShell() {
                 return (
                   <>
                     {currentPrimaryTab === 'dashboard' && <Dashboard />}
+                    {currentPrimaryTab === 'workspaces' && <TournamentWorkspaceListPage />}
                     {currentPrimaryTab === 'content' && <ContentWorkspace />}
                     {currentPrimaryTab === 'operations' && <OperationsWorkspace />}
                     {currentPrimaryTab === 'rankings' && <RankingKnockoutWorkspace />}

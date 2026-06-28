@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTournamentStore } from '../store';
 import { supabase } from '../supabaseClient';
-import { Users, Plus, Search, ShieldAlert, X, Shield, Building2, CheckCircle2, Edit, Trash2 } from 'lucide-react';
+import { Users, Plus, Search, ShieldAlert, X, Shield, Building2, CheckCircle2, Edit, Trash2, KeyRound } from 'lucide-react';
 import ConfirmDialog from './ConfirmDialog';
 import SecurityAccountPanel from './SecurityAccountPanel';
 import { createAdminAccount, deleteAdminAccount, updateAdminAccount } from '../lib/api/adminAccounts';
@@ -12,6 +12,7 @@ export default function AccountManager() {
   
   const [accounts, setAccounts] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
+  const [accountScopes, setAccountScopes] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -108,17 +109,93 @@ export default function AccountManager() {
       
       if (data) {
         setAccounts(data);
+        fetchAccountScopes(data);
       } else {
          // Fallback if roles relation is strict/unavailable
          const { data: fallbackData, error: fallbackError } = await supabase.from('accounts').select('id, user_id, tenant_id, username, display_name, status, created_at, role_id');
          if (fallbackError) throw fallbackError;
-         if (fallbackData) setAccounts(fallbackData);
+         if (fallbackData) {
+           setAccounts(fallbackData);
+           fetchAccountScopes(fallbackData);
+         }
       }
     } catch {
       console.warn('Không thể tải danh sách tài khoản.');
       // Wait to see if we really want to show error to user or just let it be empty
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAccountScopes = async (accountRows: any[]) => {
+    try {
+      const tenantParam = isSuperAdmin ? null : activeTenantId;
+      const { data, error } = await supabase.rpc('list_account_access_summary_v1', {
+        p_tenant_id: tenantParam,
+      });
+
+      if (!error && Array.isArray(data)) {
+        const next: Record<string, any> = {};
+        data.forEach((row: any) => {
+          next[row.account_id] = row;
+        });
+        setAccountScopes(next);
+        return;
+      }
+    } catch {
+      // Local fallback below keeps the page useful when the migration is not applied yet.
+    }
+
+    try {
+      const accountIds = accountRows.map((account) => account.id).filter(Boolean);
+      if (accountIds.length === 0) {
+        setAccountScopes({});
+        return;
+      }
+
+      const { data: grants } = await supabase
+        .from('account_event_permissions')
+        .select('account_id, event_id, permission')
+        .in('account_id', accountIds)
+        .is('deleted_at', null);
+
+      const eventIds = Array.from(new Set((grants || []).map((grant: any) => grant.event_id).filter(Boolean)));
+      const { data: events } = eventIds.length > 0
+        ? await supabase.from('events').select('id, name, tournament_id').in('id', eventIds).is('deleted_at', null)
+        : { data: [] as any[] };
+
+      const tournamentIds = Array.from(new Set((events || []).map((event: any) => event.tournament_id).filter(Boolean)));
+      const { data: tournaments } = tournamentIds.length > 0
+        ? await supabase.from('tournament').select('id, name, slug').in('id', tournamentIds).is('deleted_at', null)
+        : { data: [] as any[] };
+
+      const eventById = new Map((events || []).map((event: any) => [event.id, event]));
+      const tournamentById = new Map((tournaments || []).map((tour: any) => [tour.id, tour]));
+      const next: Record<string, any> = {};
+
+      accountRows.forEach((account) => {
+        next[account.id] = {
+          account_id: account.id,
+          event_grants: (grants || [])
+            .filter((grant: any) => grant.account_id === account.id)
+            .map((grant: any) => {
+              const event = eventById.get(grant.event_id) as any;
+              const tour = event ? tournamentById.get(event.tournament_id) as any : null;
+              return {
+                event_id: grant.event_id,
+                event_name: event?.name || grant.event_id,
+                tournament_id: event?.tournament_id || null,
+                tournament_name: tour?.name || 'Giải chưa rõ',
+                tournament_slug: tour?.slug || null,
+                permission: grant.permission || 'enter_scores',
+              };
+            }),
+        };
+      });
+
+      setAccountScopes(next);
+    } catch {
+      setAccountScopes({});
     }
   };
 
@@ -214,6 +291,49 @@ export default function AccountManager() {
     a.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const renderAccessScope = (acc: any, roleName: string) => {
+    const tenantName = tenants.find(t => t.id === acc.tenant_id)?.name || accountScopes[acc.id]?.tenant_name || acc.tenant_id || 'Chưa rõ đơn vị';
+    const grants = accountScopes[acc.id]?.event_grants || [];
+    const tournamentNames = Array.from(new Set(grants.map((grant: any) => grant.tournament_name).filter(Boolean)));
+
+    if (roleName === 'SUPER_ADMIN') {
+      return <span className="font-semibold text-red-700 dark:text-red-300">Toàn hệ thống</span>;
+    }
+
+    if (roleName === 'TENANT_ADMIN') {
+      return (
+        <div className="space-y-1">
+          <p className="font-semibold text-zinc-800 dark:text-zinc-100">Tất cả giải thuộc đơn vị</p>
+          <p className="text-xs text-zinc-500">{tenantName}</p>
+        </div>
+      );
+    }
+
+    if (grants.length === 0) {
+      return <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">Chưa cấp nội dung/giải cụ thể</span>;
+    }
+
+    return (
+      <div className="max-w-md space-y-1">
+        <p className="font-semibold text-zinc-800 dark:text-zinc-100">
+          {tournamentNames.slice(0, 2).join(', ')}
+          {tournamentNames.length > 2 ? ` +${tournamentNames.length - 2} giải` : ''}
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {grants.slice(0, 3).map((grant: any) => (
+            <span key={`${grant.event_id}-${grant.permission}`} className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+              <KeyRound size={10} />
+              {grant.event_name} · {grant.permission === 'enter_scores' ? 'Nhập điểm' : 'Quản lý'}
+            </span>
+          ))}
+          {grants.length > 3 && (
+            <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-[10px] font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">+{grants.length - 3}</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -274,6 +394,7 @@ export default function AccountManager() {
                 <th className="px-6 py-3">Tài khoản</th>
                 <th className="px-6 py-3">Họ Tên</th>
                 <th className="px-6 py-3">Chức vụ (Role)</th>
+                <th className="px-6 py-3">Phạm vi quản lý</th>
                 {isSuperAdmin && <th className="px-6 py-3">Phân khu / Đơn vị tổ chức (Tenant)</th>}
                 <th className="px-6 py-3">Trạng thái</th>
                 <th className="px-6 py-3 text-right">Hành động</th>
@@ -282,11 +403,11 @@ export default function AccountManager() {
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-zinc-400 font-medium">Bơm dữ liệu từ máy chủ an toàn...</td>
+                  <td colSpan={isSuperAdmin ? 7 : 6} className="px-6 py-12 text-center text-zinc-400 font-medium">Bơm dữ liệu từ máy chủ an toàn...</td>
                 </tr>
               ) : filteredAccounts.length === 0 ? (
                  <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-zinc-400">Không tìm thấy tài khoản.</td>
+                  <td colSpan={isSuperAdmin ? 7 : 6} className="px-6 py-12 text-center text-zinc-400">Không tìm thấy tài khoản.</td>
                 </tr>
               ) : filteredAccounts.map(acc => {
                 const roleName = acc.roles?.name || acc.role_id || 'VIEWER';
@@ -304,6 +425,9 @@ export default function AccountManager() {
                       <span className={`px-2.5 py-1 rounded-md text-xs font-bold leading-none ${getRoleBadgeColor(roleName)}`}>
                         {roleName}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 align-top text-zinc-600 dark:text-zinc-300">
+                      {renderAccessScope(acc, roleName)}
                     </td>
                     {isSuperAdmin && (
                       <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">

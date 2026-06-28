@@ -11,13 +11,15 @@ export default function TournamentWorkspaceListPage() {
   const limit = 50;
   const { data: workspacesResponse, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useTournamentWorkspaces(limit);
   const currentEnterpriseUser = useTournamentStore(state => state.currentEnterpriseUser);
+  const hasPermission = useTournamentStore(state => state.hasPermission);
+  const canManageTournaments = hasPermission('*') || hasPermission('manage_tournaments');
 
-  if (!currentEnterpriseUser || (currentEnterpriseUser.role !== 'SUPER_ADMIN' && currentEnterpriseUser.role !== 'TENANT_ADMIN')) {
+  if (!currentEnterpriseUser) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center bg-white dark:bg-zinc-900 rounded-2xl border border-red-100 dark:border-red-900/30 min-h-[400px]">
         <ShieldAlert className="w-16 h-16 text-red-500 mb-6 animate-pulse" />
-        <h3 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mb-2">Truy Cập Bị Từ Chối</h3>
-        <p className="text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">Bạn phải đăng nhập bằng tài khoản SUPER_ADMIN hoặc TENANT_ADMIN để quản lý giải đấu.</p>
+        <h3 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mb-2">Cần đăng nhập</h3>
+        <p className="text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">Đăng nhập để xem danh sách giải đấu được phân quyền.</p>
       </div>
     );
   }
@@ -45,11 +47,12 @@ export default function TournamentWorkspaceListPage() {
         <div className="relative z-10">
           <h1 className="text-3xl font-black text-white mb-2 flex items-center gap-3">
              <Trophy className="text-amber-400" />
-             Quản lý giải đấu
+             Giải đấu được quyền truy cập
           </h1>
-          <p className="text-blue-200 font-medium">Quản lý danh sách giải đấu theo đơn vị đang chọn</p>
+          <p className="text-blue-200 font-medium">Chọn giải đấu cần điều hành, nhập điểm hoặc quản trị theo phạm vi quyền tài khoản</p>
         </div>
         
+        {canManageTournaments && (
         <div className="flex items-center gap-4 relative z-10">
           <button
             onClick={() => setIsCreateModalOpen(true)}
@@ -58,6 +61,7 @@ export default function TournamentWorkspaceListPage() {
             <Plus size={18} /> TẠO GIẢI ĐẤU
           </button>
         </div>
+        )}
       </header>
 
       {isLoading ? (
@@ -74,14 +78,18 @@ export default function TournamentWorkspaceListPage() {
           <div className="bg-zinc-100 dark:bg-zinc-800 p-6 rounded-full mb-6">
              <Trophy className="w-16 h-16 text-zinc-400 dark:text-zinc-500" />
           </div>
-          <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">Chưa có giải đấu nào</h3>
-          <p className="text-zinc-500 dark:text-zinc-400 mb-6 text-center max-w-sm">Đơn vị hiện tại chưa có giải đấu nào. Bấm tạo mới để khởi tạo giải.</p>
-          <button
-             onClick={() => setIsCreateModalOpen(true)}
-             className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold"
-          >
-             Khởi tạo ngay <ArrowRight size={16} />
-          </button>
+          <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">Chưa có giải đấu được phân quyền</h3>
+          <p className="text-zinc-500 dark:text-zinc-400 mb-6 text-center max-w-sm">
+            Tài khoản này chưa có giải đấu hoặc nội dung thi đấu nào trong phạm vi được cấp quyền.
+          </p>
+          {canManageTournaments && (
+            <button
+               onClick={() => setIsCreateModalOpen(true)}
+               className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold"
+            >
+               Khởi tạo ngay <ArrowRight size={16} />
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-8">

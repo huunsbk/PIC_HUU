@@ -34,15 +34,55 @@ export function useTournamentWorkspaces(limit: number = 50) {
     queryKey: ['tournaments_v1', activeTenantId, currentEnterpriseUser?.role, limit],
     queryFn: async (): Promise<InfiniteWorkspaceResponse> => {
       const tenantParam = currentEnterpriseUser?.role === 'SUPER_ADMIN' ? null : activeTenantId;
-      const { data, error } = await supabase.rpc('list_tournaments_v1', {
+      const { data, error } = await supabase.rpc('list_accessible_workspaces_v1', {
         p_tenant_id: tenantParam
       });
 
       if (error) {
+        if (currentEnterpriseUser?.role === 'SUPER_ADMIN' || currentEnterpriseUser?.role === 'TENANT_ADMIN') {
+          const fallback = await supabase.rpc('list_tournaments_v1', {
+            p_tenant_id: tenantParam
+          });
+          if (fallback.error) throw fallback.error;
+          return mapWorkspaceRows(fallback.data, limit);
+        }
         throw error;
       }
 
-      const rows = Array.isArray(data) ? data : [];
+      return mapWorkspaceRows(data, limit);
+    },
+    getNextPageParam: (lastPage) => lastPage.has_more ? lastPage.next_cursor : undefined,
+    initialPageParam: null as string | null,
+    enabled: !!activeTenantId && !!currentEnterpriseUser,
+  });
+}
+
+function mapWorkspaceRows(data: any, limit: number): InfiniteWorkspaceResponse {
+  const rows = Array.isArray(data) ? data : [];
+  return {
+    data: rows.slice(0, limit).map((row: any) => ({
+      tournament_id: row.tournament_id,
+      tenant_id: row.tenant_id,
+      tenant_name: row.tenant_name || null,
+      name: row.name,
+      slug: row.slug,
+      created_at: row.created_at,
+      settings: {},
+      status: row.status || 'active',
+      location: row.location || null,
+      start_date: row.start_date || null,
+      owner_name: null,
+      owner_account_id: null,
+      events_count: Number(row.events_count || 0),
+      teams_count: Number(row.teams_count || 0),
+      matches_count: Number(row.matches_count || 0),
+    })),
+    next_cursor: null,
+    has_more: false,
+  };
+}
+
+export async function enrichWorkspaceTenantNames(rows: TournamentWorkspaceStat[]) {
       const tenantIds = Array.from(
         new Set(rows.map((row: any) => row.tenant_id).filter((id: string | null | undefined): id is string => !!id))
       );
@@ -59,29 +99,9 @@ export function useTournamentWorkspaces(limit: number = 50) {
         });
       }
 
-      const mapped = rows.slice(0, limit).map((row: any) => ({
-        tournament_id: row.tournament_id,
-        tenant_id: row.tenant_id,
-        tenant_name: row.tenant_name || tenantNameById.get(row.tenant_id) || null,
-        name: row.name,
-        slug: row.slug,
-        created_at: row.created_at,
-        settings: {},
-        status: row.status || 'active',
-        location: row.location || null,
-        start_date: row.start_date || null,
-        owner_name: null,
-        owner_account_id: null,
-        events_count: Number(row.events_count || 0),
-        teams_count: Number(row.teams_count || 0),
-        matches_count: Number(row.matches_count || 0),
-      }));
-
-      return { data: mapped, next_cursor: null, has_more: false };
-    },
-    getNextPageParam: (lastPage) => lastPage.has_more ? lastPage.next_cursor : undefined,
-    initialPageParam: null as string | null,
-    enabled: !!activeTenantId,
-  });
+  return rows.map((row) => ({
+    ...row,
+    tenant_name: row.tenant_name || tenantNameById.get(row.tenant_id || '') || null,
+  }));
 }
 

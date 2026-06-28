@@ -23,7 +23,7 @@ const isRouteWorkspacePath = () => {
   const appPath = window.location.pathname.startsWith(basePath)
     ? window.location.pathname.slice(basePath.length)
     : window.location.pathname;
-  return appPath.startsWith('/admin/workspace/') || appPath.startsWith('/tournament/');
+  return appPath.startsWith('/admin/workspace/') || appPath.startsWith('/admin/workspaces') || appPath.startsWith('/tournament/');
 };
 
 const navigateToTenantHash = (tenantId: string, reload = false) => {
@@ -37,36 +37,12 @@ const navigateToTenantHash = (tenantId: string, reload = false) => {
   }
 };
 
-const navigateToWorkspaceSlug = (slug: string) => {
-  const targetUrl = `${window.location.origin}${getBasePath()}admin/workspace/${encodeURIComponent(slug)}`;
+const navigateToWorkspaceList = () => {
+  const targetUrl = `${window.location.origin}${getBasePath()}admin/workspaces`;
   if (window.location.href === targetUrl) return;
   window.history.replaceState(null, '', targetUrl);
   window.dispatchEvent(new PopStateEvent('popstate'));
 };
-
-async function resolveWorkspaceSlugForTenant(tenantId: string) {
-  if (!tenantId || tenantId === 'default') return null;
-
-  const { data: tournamentData } = await supabase
-    .from('tournament')
-    .select('slug')
-    .eq('tenant_id', tenantId)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (tournamentData?.slug) return tournamentData.slug;
-
-  const { data: tenantData } = await supabase
-    .from('tenants')
-    .select('slug')
-    .eq('id', tenantId)
-    .is('deleted_at', null)
-    .maybeSingle();
-
-  return tenantData?.slug || null;
-}
 
 export async function getCurrentTenantId() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -394,19 +370,9 @@ export const useTournamentStore = create<AppState>()(
           });
 
           if (normalizedEnterpriseUser && normalizedEnterpriseUser.id && tenantId !== 'default') {
-            const workspaceSlug = await resolveWorkspaceSlugForTenant(tenantId);
-            if (workspaceSlug) {
-              navigateToWorkspaceSlug(workspaceSlug);
-              originalSet({ isLoadingSupabase: false, supabaseConnected: true });
-              return;
-            }
-
             requestAnimationFrame(() => {
               if (isRouteWorkspacePath()) return;
-              const expectedTenantHash = tenantId.replace(/_/g, '-');
-              if (getCurrentTenantHash() !== expectedTenantHash || window.location.pathname !== getBasePath()) {
-                navigateToTenantHash(tenantId);
-              }
+              navigateToWorkspaceList();
             });
           }
           
