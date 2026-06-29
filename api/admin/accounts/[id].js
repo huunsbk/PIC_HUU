@@ -31,7 +31,7 @@ export default async function handler(req, res) {
       const status = String(body.status || 'active').trim();
 
       if (!displayName) throw apiError('Thiếu tên hiển thị.', 400);
-      if (!['active', 'locked', 'inactive'].includes(status)) {
+      if (!['active', 'inactive', 'banned'].includes(status)) {
         throw apiError('Trạng thái tài khoản không hợp lệ.', 400);
       }
 
@@ -132,7 +132,7 @@ export default async function handler(req, res) {
       const { error: softDeleteError } = await admin
         .from('accounts')
         .update({
-          status: 'locked',
+          status: 'inactive',
           deleted_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })

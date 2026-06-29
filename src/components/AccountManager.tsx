@@ -808,7 +808,8 @@ export default function AccountManager() {
                   className="w-full px-3 py-2 border rounded-lg dark:border-zinc-700 dark:bg-zinc-800 font-medium"
                 >
                   <option value="active">Hoạt động (Active)</option>
-                  <option value="locked">Đã khóa (Locked)</option>
+                  <option value="inactive">Tạm khóa</option>
+                  <option value="banned">Cấm đăng nhập</option>
                 </select>
               </div>
 

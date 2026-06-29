@@ -30,7 +30,7 @@ serve(async (req) => {
       throw apiError('Thiếu accountId hoặc tên hiển thị.', 400);
     }
 
-    if (!['active', 'locked', 'inactive'].includes(status)) {
+    if (!['active', 'inactive', 'banned'].includes(status)) {
       throw apiError('Trạng thái tài khoản không hợp lệ.', 400);
     }
 
