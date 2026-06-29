@@ -46,6 +46,7 @@ const navigateToWorkspaceList = () => {
 
 const EVENT_SCOPED_PERMISSIONS = new Set([
   'view_event',
+  'create_events',
   'manage_event_config',
   'manage_events',
   'manage_teams',
@@ -60,6 +61,7 @@ const EVENT_SCOPED_PERMISSIONS = new Set([
 
 const EVENT_PERMISSION_ALIASES: Record<string, string[]> = {
   manage_events: ['manage_event_config'],
+  manage_event_config: ['manage_events'],
   manage_matches: ['manage_schedule'],
 };
 

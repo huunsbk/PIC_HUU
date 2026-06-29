@@ -8,6 +8,7 @@ import { createAdminAccount, deleteAdminAccount, updateAdminAccount } from '../l
 import { normalizeRpcError, tournamentRpc } from '../lib/api/tournamentRpc';
 
 const EVENT_PERMISSION_OPTIONS = [
+  { id: 'create_events', label: 'Tạo nội dung' },
   { id: 'view_event', label: 'Xem nội dung' },
   { id: 'manage_event_config', label: 'Cấu hình nội dung' },
   { id: 'manage_teams', label: 'Quản lý đội' },
@@ -22,6 +23,7 @@ const EVENT_PERMISSION_OPTIONS = [
 const REFEREE_PERMISSION_IDS = new Set(['view_event', 'enter_scores']);
 const EVENT_ADMIN_DEFAULT_PERMISSION_IDS = [
   'view_event',
+  'create_events',
   'manage_event_config',
   'manage_teams',
   'manage_groups',
@@ -32,6 +34,28 @@ const EVENT_ADMIN_DEFAULT_PERMISSION_IDS = [
   'manage_referees',
 ];
 const EVENT_PERMISSION_LABELS = new Map(EVENT_PERMISSION_OPTIONS.map((permission) => [permission.id, permission.label]));
+const EVENT_PERMISSION_GROUPS = [
+  {
+    id: 'content',
+    label: 'Nội dung thi đấu',
+    permissionIds: ['create_events', 'view_event', 'manage_event_config', 'manage_teams', 'manage_groups', 'manage_schedule'],
+  },
+  {
+    id: 'scores',
+    label: 'Nhập điểm',
+    permissionIds: ['view_event', 'enter_scores'],
+  },
+  {
+    id: 'ranking_ko',
+    label: 'Xếp hạng và KO',
+    permissionIds: ['view_event', 'manage_standings', 'manage_knockout'],
+  },
+  {
+    id: 'referees',
+    label: 'Quản lý trọng tài',
+    permissionIds: ['view_event', 'manage_referees'],
+  },
+];
 
 export default function AccountManager() {
   const userRole = useTournamentStore((state) => state.userRole);
@@ -435,8 +459,33 @@ export default function AccountManager() {
     return EVENT_PERMISSION_OPTIONS.filter((permission) => selectedPermissions[eventId]?.has(permission.id)).length;
   };
 
+  const getEventPermissionGroupCount = (eventId: string) => {
+    return EVENT_PERMISSION_GROUPS.filter((group) => isPermissionGroupChecked(eventId, group.permissionIds)).length;
+  };
+
   const isEventAdminDefaultChecked = (eventId: string) => {
     return EVENT_ADMIN_DEFAULT_PERMISSION_IDS.every((permissionId) => selectedPermissions[eventId]?.has(permissionId));
+  };
+
+  const isPermissionGroupChecked = (eventId: string, permissionIds: string[]) => {
+    return permissionIds.every((permissionId) => selectedPermissions[eventId]?.has(permissionId));
+  };
+
+  const togglePermissionGroup = (eventId: string, permissionIds: string[], enabled: boolean) => {
+    setSelectedPermissions((current) => {
+      const next = { ...current };
+      const existing = new Set(next[eventId] || []);
+      permissionIds.forEach((permissionId) => {
+        if (enabled) existing.add(permissionId);
+        else if (permissionId !== 'view_event') existing.delete(permissionId);
+      });
+      if (!enabled) {
+        const hasAnyScopedPermission = Array.from(existing).some((permissionId) => permissionId !== 'view_event');
+        if (!hasAnyScopedPermission) existing.delete('view_event');
+      }
+      next[eventId] = existing;
+      return next;
+    });
   };
 
   const savePermissionTree = async () => {
@@ -954,8 +1003,12 @@ export default function AccountManager() {
                       {(tournament.events || []).map((eventNode: any) => {
                         const targetRole = permissionAccount.roles?.name || permissionAccount.role_id || 'VIEWER';
                         const grantedCount = getEventPermissionCount(eventNode.event_id);
+                        const grantedGroupCount = getEventPermissionGroupCount(eventNode.event_id);
                         const defaultChecked = isEventAdminDefaultChecked(eventNode.event_id);
                         const canUseEventAdminDefaults = targetRole === 'EVENT_ADMIN';
+                        const visiblePermissionGroups = targetRole === 'EVENT_ADMIN'
+                          ? EVENT_PERMISSION_GROUPS
+                          : [{ id: 'scores', label: 'Nhập điểm', permissionIds: ['view_event', 'enter_scores'] }];
                         return (
                           <div key={eventNode.event_id} className="grid gap-3 p-4 md:grid-cols-[240px_1fr]">
                             <div>
@@ -966,7 +1019,9 @@ export default function AccountManager() {
                                   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
                                   : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
                               }`}>
-                                {grantedCount}/{EVENT_PERMISSION_OPTIONS.length} quyền
+                                {targetRole === 'EVENT_ADMIN'
+                                  ? `${grantedGroupCount}/${EVENT_PERMISSION_GROUPS.length} nhóm`
+                                  : `${grantedCount}/${REFEREE_PERMISSION_IDS.size} quyền`}
                               </span>
                             </div>
                             <div className="space-y-3">
@@ -983,12 +1038,12 @@ export default function AccountManager() {
                                 </label>
                               )}
                               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                {EVENT_PERMISSION_OPTIONS.map((permission) => {
-                                  const allowed = isPermissionAllowed(eventNode, permission.id, targetRole);
-                                  const checked = selectedPermissions[eventNode.event_id]?.has(permission.id) || false;
+                                {visiblePermissionGroups.map((group) => {
+                                  const allowed = group.permissionIds.every((permissionId) => isPermissionAllowed(eventNode, permissionId, targetRole));
+                                  const checked = isPermissionGroupChecked(eventNode.event_id, group.permissionIds);
                                   return (
                                     <label
-                                      key={permission.id}
+                                      key={group.id}
                                       className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
                                         allowed
                                           ? 'border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'
@@ -999,10 +1054,10 @@ export default function AccountManager() {
                                         type="checkbox"
                                         checked={checked}
                                         disabled={!allowed || actionLoading}
-                                        onChange={() => togglePermission(eventNode.event_id, permission.id)}
+                                        onChange={(event) => togglePermissionGroup(eventNode.event_id, group.permissionIds, event.target.checked)}
                                         className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40"
                                       />
-                                      <span>{permission.label}</span>
+                                      <span>{group.label}</span>
                                     </label>
                                   );
                                 })}

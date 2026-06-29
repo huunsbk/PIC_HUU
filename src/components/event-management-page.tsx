@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Archive, CalendarDays, Copy, ExternalLink, Plus, Settings, ShieldAlert, ShieldCheck, Trash2, Users } from 'lucide-react';
+import { CalendarDays, Copy, ExternalLink, Plus, Settings, ShieldAlert, ShieldCheck, Trash2, Users } from 'lucide-react';
 import { useEventsQuery, useEventMembersQuery } from './use-events-query';
 import EventMembersManager from './event-members-manager';
 import CreateEventModal from './create-event-modal';
@@ -55,6 +55,8 @@ export default function EventManagementPage() {
   const activeTenantName = useTournamentStore((state) => state.activeTenantName);
   const tournament = useTournamentStore((state) => state.tournament);
   const activeTournamentId = useTournamentStore((state) => state.activeTournamentId);
+  const hasPermission = useTournamentStore((state) => state.hasPermission);
+  const canCreateEvents = hasPermission('create_events');
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ event, status }: { event: any; status: string }) => {
@@ -79,6 +81,7 @@ export default function EventManagementPage() {
   }
 
   const filteredEvents = (events || []).filter((event: any) => {
+    if ((event.status || 'active') === 'archived') return false;
     if (statusFilter === 'all') return true;
     return event.status === statusFilter;
   });
@@ -125,15 +128,16 @@ export default function EventManagementPage() {
             <option value="draft">Draft</option>
             <option value="active">Active</option>
             <option value="completed">Completed</option>
-            <option value="archived">Archived</option>
           </select>
-          <button
-            type="button"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-black text-white shadow-sm hover:bg-blue-700"
-          >
-            <Plus size={16} /> Tạo nội dung
-          </button>
+          {canCreateEvents && (
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-black text-white shadow-sm hover:bg-blue-700"
+            >
+              <Plus size={16} /> Tạo nội dung
+            </button>
+          )}
         </div>
       </header>
 
@@ -232,15 +236,6 @@ export default function EventManagementPage() {
                           title="Cấp quyền trọng tài"
                         >
                           <Users size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateStatusMutation.mutate({ event, status: event.status === 'archived' ? 'active' : 'archived' })}
-                          disabled={updateStatusMutation.isPending}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50"
-                          title={event.status === 'archived' ? 'Khôi phục' : 'Lưu trữ'}
-                        >
-                          <Archive size={15} />
                         </button>
                         <button
                           type="button"
