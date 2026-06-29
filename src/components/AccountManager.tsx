@@ -17,10 +17,21 @@ const EVENT_PERMISSION_OPTIONS = [
   { id: 'manage_standings', label: 'Xếp hạng' },
   { id: 'manage_knockout', label: 'Sơ đồ KO' },
   { id: 'manage_referees', label: 'Quản lý trọng tài' },
-  { id: 'manage_events', label: 'Toàn quyền nội dung' },
 ];
 
 const REFEREE_PERMISSION_IDS = new Set(['view_event', 'enter_scores']);
+const EVENT_ADMIN_DEFAULT_PERMISSION_IDS = [
+  'view_event',
+  'manage_event_config',
+  'manage_teams',
+  'manage_groups',
+  'manage_schedule',
+  'enter_scores',
+  'manage_standings',
+  'manage_knockout',
+  'manage_referees',
+];
+const EVENT_PERMISSION_LABELS = new Map(EVENT_PERMISSION_OPTIONS.map((permission) => [permission.id, permission.label]));
 
 export default function AccountManager() {
   const userRole = useTournamentStore((state) => state.userRole);
@@ -407,6 +418,27 @@ export default function AccountManager() {
     });
   };
 
+  const toggleEventAdminDefaults = (eventId: string, enabled: boolean) => {
+    setSelectedPermissions((current) => {
+      const next = { ...current };
+      const existing = new Set(next[eventId] || []);
+      EVENT_ADMIN_DEFAULT_PERMISSION_IDS.forEach((permissionId) => {
+        if (enabled) existing.add(permissionId);
+        else existing.delete(permissionId);
+      });
+      next[eventId] = existing;
+      return next;
+    });
+  };
+
+  const getEventPermissionCount = (eventId: string) => {
+    return EVENT_PERMISSION_OPTIONS.filter((permission) => selectedPermissions[eventId]?.has(permission.id)).length;
+  };
+
+  const isEventAdminDefaultChecked = (eventId: string) => {
+    return EVENT_ADMIN_DEFAULT_PERMISSION_IDS.every((permissionId) => selectedPermissions[eventId]?.has(permissionId));
+  };
+
   const savePermissionTree = async () => {
     if (!permissionAccount) return;
     setActionLoading(true);
@@ -467,21 +499,44 @@ export default function AccountManager() {
       return <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">Chưa cấp nội dung/giải cụ thể</span>;
     }
 
+    const grantsByEvent = grants.reduce((acc: Record<string, any>, grant: any) => {
+      const eventKey = grant.event_id || grant.event_name;
+      if (!acc[eventKey]) {
+        acc[eventKey] = {
+          event_id: grant.event_id,
+          event_name: grant.event_name,
+          tournament_name: grant.tournament_name,
+          permissions: [] as string[],
+        };
+      }
+      acc[eventKey].permissions.push(grant.permission || 'enter_scores');
+      return acc;
+    }, {});
+    const eventSummaries = Object.values(grantsByEvent);
+
     return (
-      <div className="max-w-md space-y-1">
+      <div className="max-w-md space-y-1.5">
         <p className="font-semibold text-zinc-800 dark:text-zinc-100">
           {tournamentNames.slice(0, 2).join(', ')}
           {tournamentNames.length > 2 ? ` +${tournamentNames.length - 2} giải` : ''}
         </p>
-        <div className="flex flex-wrap gap-1">
-          {grants.slice(0, 3).map((grant: any) => (
-            <span key={`${grant.event_id}-${grant.permission}`} className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+        <div className="flex flex-wrap gap-1.5">
+          {eventSummaries.slice(0, 3).map((event: any) => {
+            const permissionLabels = event.permissions
+              .filter((permission: string) => permission !== 'view_event')
+              .slice(0, 3)
+              .map((permission: string) => EVENT_PERMISSION_LABELS.get(permission) || permission);
+            return (
+            <span key={event.event_id} className="inline-flex max-w-full items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
               <KeyRound size={10} />
-              {grant.event_name} · {grant.permission === 'enter_scores' ? 'Nhập điểm' : 'Quản lý'}
+              <span className="truncate">
+                {event.event_name} · {permissionLabels.length > 0 ? permissionLabels.join(', ') : 'Chỉ xem'}
+                {event.permissions.length > permissionLabels.length + 1 ? ` +${event.permissions.length - permissionLabels.length - 1}` : ''}
+              </span>
             </span>
-          ))}
-          {grants.length > 3 && (
-            <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-[10px] font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">+{grants.length - 3}</span>
+          );})}
+          {eventSummaries.length > 3 && (
+            <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-[10px] font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">+{eventSummaries.length - 3} nội dung</span>
           )}
         </div>
       </div>
@@ -898,36 +953,60 @@ export default function AccountManager() {
                     <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
                       {(tournament.events || []).map((eventNode: any) => {
                         const targetRole = permissionAccount.roles?.name || permissionAccount.role_id || 'VIEWER';
+                        const grantedCount = getEventPermissionCount(eventNode.event_id);
+                        const defaultChecked = isEventAdminDefaultChecked(eventNode.event_id);
+                        const canUseEventAdminDefaults = targetRole === 'EVENT_ADMIN';
                         return (
-                          <div key={eventNode.event_id} className="grid gap-3 p-4 md:grid-cols-[220px_1fr]">
+                          <div key={eventNode.event_id} className="grid gap-3 p-4 md:grid-cols-[240px_1fr]">
                             <div>
                               <p className="font-bold text-zinc-900 dark:text-zinc-100">{eventNode.event_name}</p>
                               <p className="text-xs text-zinc-500">Nội dung thi đấu</p>
+                              <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                grantedCount > 0
+                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                  : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
+                              }`}>
+                                {grantedCount}/{EVENT_PERMISSION_OPTIONS.length} quyền
+                              </span>
                             </div>
-                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                              {EVENT_PERMISSION_OPTIONS.map((permission) => {
-                                const allowed = isPermissionAllowed(eventNode, permission.id, targetRole);
-                                const checked = selectedPermissions[eventNode.event_id]?.has(permission.id) || false;
-                                return (
-                                  <label
-                                    key={permission.id}
-                                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
-                                      allowed
-                                        ? 'border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'
-                                        : 'border-zinc-100 bg-zinc-50 text-zinc-300 dark:border-zinc-900 dark:bg-zinc-950 dark:text-zinc-700'
-                                    }`}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={checked}
-                                      disabled={!allowed || actionLoading}
-                                      onChange={() => togglePermission(eventNode.event_id, permission.id)}
-                                      className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40"
-                                    />
-                                    <span>{permission.label}</span>
-                                  </label>
-                                );
-                              })}
+                            <div className="space-y-3">
+                              {canUseEventAdminDefaults && (
+                                <label className="flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-800 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-200">
+                                  <span>Bộ quyền EVENT_ADMIN</span>
+                                  <input
+                                    type="checkbox"
+                                    checked={defaultChecked}
+                                    disabled={actionLoading}
+                                    onChange={(event) => toggleEventAdminDefaults(eventNode.event_id, event.target.checked)}
+                                    className="h-4 w-4 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                </label>
+                              )}
+                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                {EVENT_PERMISSION_OPTIONS.map((permission) => {
+                                  const allowed = isPermissionAllowed(eventNode, permission.id, targetRole);
+                                  const checked = selectedPermissions[eventNode.event_id]?.has(permission.id) || false;
+                                  return (
+                                    <label
+                                      key={permission.id}
+                                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
+                                        allowed
+                                          ? 'border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'
+                                          : 'border-zinc-100 bg-zinc-50 text-zinc-300 dark:border-zinc-900 dark:bg-zinc-950 dark:text-zinc-700'
+                                      }`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        disabled={!allowed || actionLoading}
+                                        onChange={() => togglePermission(eventNode.event_id, permission.id)}
+                                        className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40"
+                                      />
+                                      <span>{permission.label}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
                         );
