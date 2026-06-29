@@ -1979,7 +1979,10 @@ export const useTournamentStore = create<AppState>()(
           // --- BẢO ĐẢM AUTH STATE ĐƯỢC ĐỒNG BỘ TRƯỚC TIÊN ---
           try {
              // 1. Phục hồi session nếu trạng thái trong Zustand là guest nhưng thực tế có phiên đang hoạt động
-             const currentAuthUser = await supabase.auth.getUser();
+             const currentSession = await supabase.auth.getSession();
+             const currentAuthUser = currentSession.data?.session?.user
+               ? { data: { user: currentSession.data.session.user } }
+               : await supabase.auth.getUser();
              if (currentAuthUser.data?.user) {
                 // Đã đăng nhập, tiến hành đồng bộ profile
                 const { data: profileStr, error: accountError } = await supabase.rpc('get_current_profile');
@@ -2148,7 +2151,7 @@ export const useTournamentStore = create<AppState>()(
       name: 'pickleball-tournament-cache', // Khóa lưu trữ LocalStorage để đồng bộ giữa các tab
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => Object.fromEntries(
-        Object.entries(state).filter(([key]) => !['currentUser', 'currentEnterpriseUser', 'userRole', 'activeTenantId', 'permissions', 'isAdmin'].includes(key))
+        Object.entries(state).filter(([key]) => !['isAdmin'].includes(key))
       ),
     }
   )

@@ -3,7 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://ykckqcykxfhpfqptckxk.supabase.co";
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_2pfQHPjlGmtgOgGO0qaHXA_zGrwUZwT";
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: 'pic-huu-supabase-auth',
+  },
+});
 
 export async function checkSupabaseConnection(): Promise<boolean> {
   try {
