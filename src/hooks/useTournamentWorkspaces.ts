@@ -33,6 +33,12 @@ export function useTournamentWorkspaces(limit: number = 50) {
   return useInfiniteQuery({
     queryKey: ['tournaments_v1', activeTenantId, currentEnterpriseUser?.role, limit],
     queryFn: async (): Promise<InfiniteWorkspaceResponse> => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        await useTournamentStore.getState().logout();
+        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      }
+
       const tenantParam = currentEnterpriseUser?.role === 'SUPER_ADMIN' ? null : activeTenantId;
       const { data, error } = await supabase.rpc('list_accessible_workspaces_v1', {
         p_tenant_id: tenantParam
