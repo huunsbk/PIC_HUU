@@ -39,6 +39,7 @@ export default function TournamentWorkspaceListPage() {
       const tenantName = tour.tenant_name || tour.tenant_id || 'Chưa rõ đơn vị';
       const matchesTenant = tenantFilter === 'all' || tenantName === tenantFilter;
       const status = tour.status || 'active';
+      if (status === 'archived') return false;
       const matchesStatus = statusFilter === 'all' || status === statusFilter;
       const matchesSearch =
         !normalizedQuery ||
@@ -117,7 +118,6 @@ export default function TournamentWorkspaceListPage() {
             className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold dark:border-zinc-700 dark:bg-zinc-950"
           >
             <option value="active">Đang hoạt động</option>
-            <option value="archived">Đã lưu trữ</option>
             <option value="all">Tất cả trạng thái</option>
           </select>
         </label>
