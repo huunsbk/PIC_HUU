@@ -373,7 +373,14 @@ export const useTournamentStore = create<AppState>()(
               const eventPermissionMap = state.currentEnterpriseUser?.eventPermissionMap || {};
               const effectivePermissions = new Set(eventId ? eventPermissionMap[eventId] || [] : []);
               const aliases = EVENT_PERMISSION_ALIASES[permissionName] || [];
-              return effectivePermissions.has(permissionName) || aliases.some((alias) => effectivePermissions.has(alias));
+              const hasCurrentEventPermission =
+                effectivePermissions.has(permissionName) || aliases.some((alias) => effectivePermissions.has(alias));
+              if (hasCurrentEventPermission) return true;
+              if (eventId && eventPermissionMap[eventId]) return false;
+              return Object.values(eventPermissionMap).some((permissions: any) => {
+                const permissionSet = new Set(Array.isArray(permissions) ? permissions : []);
+                return permissionSet.has(permissionName) || aliases.some((alias) => permissionSet.has(alias));
+              });
             }
           }
           return state.permissions.includes(permissionName) || state.permissions.includes('*');
