@@ -703,10 +703,10 @@ function TournamentShell() {
     const allNavItems = [
       { id: 'workspaces', label: 'Giải đấu', icon: Layers, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'VIEWER'] },
       { id: 'dashboard', label: 'Tổng quan', icon: Trophy, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
-      { id: 'content', label: 'Nội dung thi đấu', icon: ListChecks, permission: 'manage_events', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
+      { id: 'content', label: 'Nội dung thi đấu', icon: ListChecks, permission: 'manage_event_config', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
       { id: 'operations', label: 'Điều hành trận đấu', icon: Gamepad2, permission: 'enter_scores', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
-      { id: 'rankings', label: 'Xếp hạng & KO', icon: Network, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
-      { id: 'live', label: 'Trình chiếu', icon: Presentation, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'guest'] },
+      { id: 'rankings', label: 'Xếp hạng & KO', icon: Network, permission: 'manage_standings', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },
+      { id: 'live', label: 'Trình chiếu', icon: Presentation, permission: 'view_event', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'guest'] },
       { id: 'admin', label: 'Quản trị', icon: Wrench, permission: 'manage_accounts', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
     ];
     

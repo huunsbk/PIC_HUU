@@ -133,7 +133,7 @@ export default function KnockoutBracket() {
   } = useTournamentRpcMutations();
   const matches = matchesData as any[];
 
-  const canManage = hasPermission("manage_matches");
+  const canManage = hasPermission("manage_knockout");
 
   const [sz, setSz] = useState<BracketSize>(4);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);

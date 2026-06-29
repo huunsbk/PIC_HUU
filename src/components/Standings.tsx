@@ -38,7 +38,7 @@ export default function Standings() {
   const tournament = useTournamentStore(state => state.tournament);
   const advanceSelectionMode = useTournamentStore(state => state.advanceSelectionMode);
   const manualQualifiedTeamIds = useTournamentStore(state => state.manualQualifiedTeamIds);
-  const canManage = useTournamentStore(state => state.hasPermission("manage_matches"));
+  const canManage = useTournamentStore(state => state.hasPermission("manage_standings"));
   const activeTenantId = useTournamentStore(state => state.activeTenantId);
   const currentEventId = useTournamentStore(state => state.currentEventId);
 

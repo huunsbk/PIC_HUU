@@ -89,6 +89,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     let fetchedPermissions = Array.from(new Set([...rp, ...ap, ...legacyPerms]));
     
     const eventIds = accountData.event_ids || [];
+    const eventPermissions = accountData.event_permissions || [];
 
     // Construct currentEnterpriseUser payload
     const enterpriseUser = {
@@ -98,7 +99,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       tenant_id: tenantIdStr,
       role_name: mappedRole,
       permissions: fetchedPermissions,
-      event_ids: eventIds
+      event_ids: eventIds,
+      event_permissions: eventPermissions,
+      eventPermissions
     };
 
     setSuccessMsg(`Đăng nhập thành công! Chào mừng đại diện ${accountData.display_name}.`);

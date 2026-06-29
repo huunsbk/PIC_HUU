@@ -44,6 +44,41 @@ const navigateToWorkspaceList = () => {
   window.dispatchEvent(new PopStateEvent('popstate'));
 };
 
+const EVENT_SCOPED_PERMISSIONS = new Set([
+  'view_event',
+  'manage_event_config',
+  'manage_events',
+  'manage_teams',
+  'manage_groups',
+  'manage_schedule',
+  'manage_matches',
+  'enter_scores',
+  'manage_standings',
+  'manage_knockout',
+  'manage_referees',
+]);
+
+const EVENT_PERMISSION_ALIASES: Record<string, string[]> = {
+  manage_events: ['manage_event_config'],
+  manage_matches: ['manage_schedule'],
+};
+
+const normalizeEventPermissionMap = (eventPermissions: any[] | undefined, eventIds: string[] | undefined) => {
+  const map: Record<string, string[]> = {};
+  (eventPermissions || []).forEach((row: any) => {
+    const eventId = row?.event_id || row?.eventId;
+    if (!eventId) return;
+    const permissions = Array.isArray(row.permissions) ? row.permissions : [];
+    map[eventId] = Array.from(new Set(permissions.filter(Boolean)));
+  });
+
+  (eventIds || []).forEach((eventId) => {
+    if (eventId && !map[eventId]) map[eventId] = ['view_event'];
+  });
+
+  return map;
+};
+
 export async function getCurrentTenantId() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -331,6 +366,16 @@ export const useTournamentStore = create<AppState>()(
         hasPermission: (permissionName) => {
           const state = get();
           if (state.userRole === 'SUPER_ADMIN' || state.userRole === 'TENANT_ADMIN') return true;
+          if (state.userRole === 'EVENT_ADMIN' || state.userRole === 'REFEREE') {
+            if (permissionName === '*') return false;
+            if (EVENT_SCOPED_PERMISSIONS.has(permissionName)) {
+              const eventId = state.currentEventId;
+              const eventPermissionMap = state.currentEnterpriseUser?.eventPermissionMap || {};
+              const effectivePermissions = new Set(eventId ? eventPermissionMap[eventId] || [] : []);
+              const aliases = EVENT_PERMISSION_ALIASES[permissionName] || [];
+              return effectivePermissions.has(permissionName) || aliases.some((alias) => effectivePermissions.has(alias));
+            }
+          }
           return state.permissions.includes(permissionName) || state.permissions.includes('*');
         },
         currentEventId: 'event-default',
@@ -355,6 +400,10 @@ export const useTournamentStore = create<AppState>()(
             role: enterpriseUser.role || role || enterpriseUser.role_name || 'guest',
             role_name: enterpriseUser.role_name || role || enterpriseUser.role || 'guest',
             permittedEventIds: enterpriseUser.permittedEventIds || enterpriseUser.event_ids || [],
+            eventPermissionMap: normalizeEventPermissionMap(
+              enterpriseUser.eventPermissions || enterpriseUser.event_permissions,
+              enterpriseUser.permittedEventIds || enterpriseUser.event_ids || []
+            ),
           } : null;
           
           originalSet({
@@ -1937,6 +1986,7 @@ export const useTournamentStore = create<AppState>()(
                       const legacyPerms = accountData.permissions || [];
                       let fetchedPermissions = Array.from(new Set([...rp, ...ap, ...legacyPerms]));
                       const eventIds = accountData.event_ids || [];
+                      const eventPermissions = accountData.event_permissions || [];
                       const restoredEnterpriseUser = {
                         id: accountData.account_id,
                         username: accountData.username,
@@ -1946,7 +1996,10 @@ export const useTournamentStore = create<AppState>()(
                         role_name: mappedRole,
                         permissions: fetchedPermissions,
                         event_ids: eventIds,
-                        permittedEventIds: eventIds
+                        permittedEventIds: eventIds,
+                        event_permissions: eventPermissions,
+                        eventPermissions,
+                        eventPermissionMap: normalizeEventPermissionMap(eventPermissions, eventIds)
                       };
 
                       const routeState = get();
@@ -1964,6 +2017,17 @@ export const useTournamentStore = create<AppState>()(
                       });
                    }
                 }
+             } else if (get().userRole !== 'guest' || get().currentEnterpriseUser) {
+                originalSet({
+                  currentUser: null,
+                  currentEnterpriseUser: null,
+                  userRole: 'guest',
+                  activeTenantId: 'default',
+                  activeTenantName: null,
+                  activeTournamentId: null,
+                  permissions: [],
+                  isAdmin: false,
+                });
              }
           } catch (err: any) {
              console.warn('Lỗi khi phục hồi session trước tiên.');
