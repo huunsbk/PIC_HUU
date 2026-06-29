@@ -44,6 +44,7 @@ export default function AccountManager() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<any>(null);
   const [permissionTree, setPermissionTree] = useState<any[]>([]);
+  const [permissionTreeTenantId, setPermissionTreeTenantId] = useState<string | null>(null);
   const [permissionAccount, setPermissionAccount] = useState<any>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<Record<string, Set<string>>>({});
   const [scopeLoading, setScopeLoading] = useState(false);
@@ -178,17 +179,20 @@ export default function AccountManager() {
     }
   };
 
-  const fetchPermissionTree = async () => {
+  const fetchPermissionTree = async (tenantIdOverride?: string | null) => {
     setScopeLoading(true);
     try {
+      const scopedTenantId = tenantIdOverride || (isSuperAdmin ? null : activeTenantId);
       const { data, error } = await supabase.rpc('list_permission_tree_v1', {
-        p_tenant_id: isSuperAdmin ? null : activeTenantId,
+        p_tenant_id: scopedTenantId,
       });
       if (error) throw error;
       setPermissionTree(Array.isArray(data) ? data : []);
+      setPermissionTreeTenantId(scopedTenantId || null);
     } catch (error) {
       setErrorMsg(normalizeRpcError(error).message);
       setPermissionTree([]);
+      setPermissionTreeTenantId(null);
     } finally {
       setScopeLoading(false);
     }
@@ -366,6 +370,8 @@ export default function AccountManager() {
 
   const openPermissionModal = async (acc: any) => {
     setPermissionAccount(acc);
+    setErrorMsg('');
+    setSuccessMsg('');
     const grants = accountScopes[acc.id]?.event_grants || [];
     const next: Record<string, Set<string>> = {};
     grants.forEach((grant: any) => {
@@ -373,11 +379,10 @@ export default function AccountManager() {
       next[grant.event_id].add(grant.permission || 'enter_scores');
     });
     setSelectedPermissions(next);
-    if (permissionTree.length === 0) {
-      await fetchPermissionTree();
+    const targetTenantId = acc.tenant_id || activeTenantId;
+    if (permissionTree.length === 0 || permissionTreeTenantId !== targetTenantId) {
+      await fetchPermissionTree(targetTenantId);
     }
-    setErrorMsg('');
-    setSuccessMsg('');
   };
 
   const isPermissionAllowed = (eventNode: any, permissionId: string, targetRole: string) => {
@@ -866,6 +871,16 @@ export default function AccountManager() {
             </div>
 
             <div className="flex-1 space-y-4 overflow-y-auto p-5">
+              {errorMsg && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+                  {errorMsg}
+                </div>
+              )}
+              {successMsg && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                  {successMsg}
+                </div>
+              )}
               {scopeLoading ? (
                 <div className="py-12 text-center text-sm font-semibold text-zinc-500">Đang tải cây phân quyền...</div>
               ) : permissionTree.length === 0 ? (
