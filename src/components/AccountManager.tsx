@@ -421,11 +421,6 @@ export default function AccountManager() {
         permissions.forEach((permission) => desiredKeys.add(`${eventId}::${permission}`));
       });
 
-      console.info('[AccountPermissions] saving event scope', {
-        currentCount: currentKeys.size,
-        desiredCount: desiredKeys.size,
-      });
-
       for (const key of desiredKeys) {
         if (!currentKeys.has(key)) {
           const [eventId, permission] = key.split('::');
