@@ -205,6 +205,36 @@ export const tournamentRpc = {
     });
   },
 
+  listArchivedTournaments(tenantId?: string | null) {
+    return callRpc<any[]>('list_archived_tournaments_v1', {
+      p_tenant_id: tenantId || null,
+    });
+  },
+
+  listArchivedEvents(tenantId?: string | null) {
+    return callRpc<any[]>('list_archived_events_v1', {
+      p_tenant_id: tenantId || null,
+    });
+  },
+
+  restoreTournament(tournamentId: string) {
+    return callRpc<TournamentRpcResult & { tournament?: any }>('restore_tournament_v1', {
+      p_tournament_id: tournamentId,
+    });
+  },
+
+  hardDeleteTournament(tournamentId: string) {
+    return callRpc<TournamentRpcResult & { deleted?: any }>('hard_delete_tournament_v1', {
+      p_tournament_id: tournamentId,
+    });
+  },
+
+  hardDeleteEvent(eventId: string) {
+    return callRpc<TournamentRpcResult & { deleted?: any }>('hard_delete_event_v1', {
+      p_event_id: eventId,
+    });
+  },
+
   listEventAccess(eventId: string) {
     return callRpc<EventAccessResult>('list_event_access_v1', {
       p_event_id: eventId,

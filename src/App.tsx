@@ -21,6 +21,7 @@ import AccountManager from './components/AccountManager';
 import EventManagementPage from './components/event-management-page';
 import TournamentWorkspaceListPage from './components/TournamentWorkspaceListPage';
 import TenantManagementPage from './components/TenantManagementPage';
+import DeletedItemsManager from './components/DeletedItemsManager';
 import EventSwitcher from './components/event-switcher';
 import { useEventsQuery } from './components/use-events-query';
 import { getAuthHashErrorMessage } from './lib/authRedirect';
@@ -45,7 +46,8 @@ import {
   Settings,
   Presentation,
   Wrench,
-  ListChecks
+  ListChecks,
+  Trash2
 } from 'lucide-react';
 
 function isRouteWorkspacePathname() {
@@ -72,6 +74,7 @@ const TAB_GROUP_ALIASES: Record<string, string> = {
   accounts: 'admin',
   logs: 'admin',
   export: 'admin',
+  deleted: 'admin',
 };
 
 const panelShellClass = 'rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900';
@@ -246,11 +249,13 @@ function AdminWorkspacePanel() {
   const canManageTenants = userRole === 'SUPER_ADMIN' && (hasPermission('*') || hasPermission('manage_tenants'));
   const canManageTournaments = hasPermission('*') || hasPermission('manage_tournaments');
   const canManageAccounts = hasPermission('*') || hasPermission('manage_accounts') || hasPermission('manage_referees');
+  const canManageDeleted = canManageTournaments || hasPermission('*') || hasPermission('manage_events');
   const canViewLogs = hasPermission('*') || hasPermission('view_audit_logs');
   const adminTabs = [
     { id: 'workspaces', label: 'Giải đấu', icon: Layers, disabled: !canManageTournaments },
     { id: 'tenants', label: 'Đơn vị', icon: Building2, disabled: !canManageTenants },
     { id: 'accounts', label: 'Tài khoản', icon: UserCog, disabled: !canManageAccounts },
+    { id: 'deleted', label: 'Đã xóa', icon: Trash2, disabled: !canManageDeleted },
     { id: 'logs', label: 'Nhật ký', icon: ClipboardList, disabled: !canViewLogs },
     { id: 'export', label: 'Xuất file', icon: FileDown, disabled: false },
   ];
@@ -280,6 +285,7 @@ function AdminWorkspacePanel() {
       {activeSubTab === 'tenants' && <TenantManagementPage />}
       {activeSubTab === 'workspaces' && <TournamentWorkspaceListPage />}
       {activeSubTab === 'accounts' && <AccountManager />}
+      {activeSubTab === 'deleted' && <DeletedItemsManager />}
       {activeSubTab === 'logs' && <AuditLogger />}
       {activeSubTab === 'export' && <ExportManager />}
     </div>
