@@ -1959,14 +1959,9 @@ export const useTournamentStore = create<AppState>()(
             supabase.auth.onAuthStateChange((event) => {
               if (event === 'SIGNED_OUT') {
                 const cur = get();
-                // Bỏ qua cho các tài khoản đang đăng nhập hợp lệ
-                if (!cur.currentEnterpriseUser) {
-                  if ((cur.hasPermission('*') || cur.permissions.length > 0) || cur.userRole !== 'guest' || cur.currentUser !== null) {
-                    console.log('[AuthState] Nhận sự kiện SIGNED_OUT cho tài khoản standard. Đang đăng xuất...');
-                    cur.logout();
-                  }
-                } else {
-                  console.log(`[AuthState] Bỏ qua sự kiện SIGNED_OUT của quản trị viên ảo "${cur.userRole}" để bảo toàn trạng thái LocalStorage.`);
+                if ((cur.hasPermission('*') || cur.permissions.length > 0) || cur.userRole !== 'guest' || cur.currentUser !== null || cur.currentEnterpriseUser) {
+                  console.log('[AuthState] Phiên Supabase đã hết hạn. Đang xóa trạng thái đăng nhập cục bộ...');
+                  cur.logout();
                 }
               } else if (event === 'SIGNED_IN') {
                  // Trigger background refresh 
