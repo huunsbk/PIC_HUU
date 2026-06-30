@@ -60,6 +60,10 @@ function requireBusinessContext(
   return eventId;
 }
 
+async function assertEventPermission(eventId: string, permission: string) {
+  await assertFreshEventPermission(eventId, permission);
+}
+
 export function useTournamentRpcMutations() {
   const { activeTenantId, activeTournamentId, tournamentId, currentEventId, invalidateEventScope } = useRpcInvalidation();
   const { data: eventsData = [] } = useEvents();
@@ -68,52 +72,83 @@ export function useTournamentRpcMutations() {
     requireBusinessContext(activeTenantId, activeTournamentId, tournamentId, eventId);
 
   const updateEventConfig = useMutation({
-    mutationFn: (input: EventConfigInput) => tournamentRpc.updateEventConfig(input),
+    mutationFn: async (input: EventConfigInput) => {
+      const eventId = requireEventId(input.eventId);
+      await assertEventPermission(eventId, 'manage_event_config');
+      return tournamentRpc.updateEventConfig(input);
+    },
     onSuccess: invalidateEventScope,
   });
 
   const createTeam = useMutation({
-    mutationFn: ({ name, seed = 'none', eventId = selectedEventId }: { eventId?: string | null; name: string; seed?: SeedType }) =>
-      tournamentRpc.createTeam(requireEventId(eventId), name, seed),
+    mutationFn: async ({ name, seed = 'none', eventId = selectedEventId }: { eventId?: string | null; name: string; seed?: SeedType }) => {
+      const requiredEventId = requireEventId(eventId);
+      await assertEventPermission(requiredEventId, 'manage_teams');
+      return tournamentRpc.createTeam(requiredEventId, name, seed);
+    },
     onSuccess: invalidateEventScope,
   });
 
   const updateTeam = useMutation({
-    mutationFn: ({ teamId, name, seed }: { teamId: string; name?: string; seed?: SeedType }) =>
-      tournamentRpc.updateTeam(teamId, { name, seed }),
+    mutationFn: async ({ teamId, name, seed }: { teamId: string; name?: string; seed?: SeedType }) => {
+      const eventId = requireEventId(selectedEventId);
+      await assertEventPermission(eventId, 'manage_teams');
+      return tournamentRpc.updateTeam(teamId, { name, seed });
+    },
     onSuccess: invalidateEventScope,
   });
 
   const archiveTeam = useMutation({
-    mutationFn: (teamId: string) => tournamentRpc.archiveTeam(teamId),
+    mutationFn: async (teamId: string) => {
+      const eventId = requireEventId(selectedEventId);
+      await assertEventPermission(eventId, 'manage_teams');
+      return tournamentRpc.archiveTeam(teamId);
+    },
     onSuccess: invalidateEventScope,
   });
 
   const importTeams = useMutation({
-    mutationFn: ({ eventId = selectedEventId, teams }: { eventId?: string | null; teams: TeamImportRow[] }) =>
-      tournamentRpc.importTeams(requireEventId(eventId), teams),
+    mutationFn: async ({ eventId = selectedEventId, teams }: { eventId?: string | null; teams: TeamImportRow[] }) => {
+      const requiredEventId = requireEventId(eventId);
+      await assertEventPermission(requiredEventId, 'manage_teams');
+      return tournamentRpc.importTeams(requiredEventId, teams);
+    },
     onSuccess: invalidateEventScope,
   });
 
   const setupGroups = useMutation({
-    mutationFn: ({ eventId = selectedEventId, groupCount, mode = 'balanced' }: { eventId?: string | null; groupCount: number; mode?: GroupMode }) =>
-      tournamentRpc.setupGroups(requireEventId(eventId), groupCount, mode),
+    mutationFn: async ({ eventId = selectedEventId, groupCount, mode = 'balanced' }: { eventId?: string | null; groupCount: number; mode?: GroupMode }) => {
+      const requiredEventId = requireEventId(eventId);
+      await assertEventPermission(requiredEventId, 'manage_groups');
+      return tournamentRpc.setupGroups(requiredEventId, groupCount, mode);
+    },
     onSuccess: invalidateEventScope,
   });
 
   const assignTeamToGroup = useMutation({
-    mutationFn: ({ teamId, groupId, beforeTeamId, force }: { teamId: string; groupId: string | null; beforeTeamId?: string | null; force?: boolean }) =>
-      tournamentRpc.assignTeamToGroup(teamId, groupId, beforeTeamId, !!force),
+    mutationFn: async ({ teamId, groupId, beforeTeamId, force }: { teamId: string; groupId: string | null; beforeTeamId?: string | null; force?: boolean }) => {
+      const eventId = requireEventId(selectedEventId);
+      await assertEventPermission(eventId, 'manage_groups');
+      return tournamentRpc.assignTeamToGroup(teamId, groupId, beforeTeamId, !!force);
+    },
     onSuccess: invalidateEventScope,
   });
 
   const dissolveGroups = useMutation({
-    mutationFn: (eventId: string | null = requireEventId(selectedEventId)) => tournamentRpc.dissolveGroups(requireEventId(eventId)),
+    mutationFn: async (eventId: string | null = requireEventId(selectedEventId)) => {
+      const requiredEventId = requireEventId(eventId);
+      await assertEventPermission(requiredEventId, 'manage_groups');
+      return tournamentRpc.dissolveGroups(requiredEventId);
+    },
     onSuccess: invalidateEventScope,
   });
 
   const generateSchedule = useMutation({
-    mutationFn: (eventId: string | null = requireEventId(selectedEventId)) => tournamentRpc.generateSchedule(requireEventId(eventId)),
+    mutationFn: async (eventId: string | null = requireEventId(selectedEventId)) => {
+      const requiredEventId = requireEventId(eventId);
+      await assertEventPermission(requiredEventId, 'manage_schedule');
+      return tournamentRpc.generateSchedule(requiredEventId);
+    },
     onSuccess: invalidateEventScope,
   });
 
@@ -157,7 +192,7 @@ export function useTournamentRpcMutations() {
   });
 
   const saveManualKnockoutBracket = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       eventId = selectedEventId,
       bracketSize,
       slots,
@@ -165,12 +200,20 @@ export function useTournamentRpcMutations() {
       eventId?: string | null;
       bracketSize: 4 | 8 | 16 | 32;
       slots: ManualKnockoutSlotInput[];
-    }) => tournamentRpc.saveManualKnockoutBracket(requireEventId(eventId), bracketSize, slots),
+    }) => {
+      const requiredEventId = requireEventId(eventId);
+      await assertEventPermission(requiredEventId, 'manage_knockout');
+      return tournamentRpc.saveManualKnockoutBracket(requiredEventId, bracketSize, slots);
+    },
     onSuccess: invalidateEventScope,
   });
 
   const clearKnockoutBracket = useMutation({
-    mutationFn: (eventId: string | null = requireEventId(selectedEventId)) => tournamentRpc.clearKnockoutBracket(requireEventId(eventId)),
+    mutationFn: async (eventId: string | null = requireEventId(selectedEventId)) => {
+      const requiredEventId = requireEventId(eventId);
+      await assertEventPermission(requiredEventId, 'manage_knockout');
+      return tournamentRpc.clearKnockoutBracket(requiredEventId);
+    },
     onSuccess: invalidateEventScope,
   });
 

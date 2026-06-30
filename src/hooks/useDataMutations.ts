@@ -64,6 +64,7 @@ export function useTeamMutations() {
         throw new Error('Tên đội không được để trống.');
       }
       const eventId = requireTenantContext();
+      await assertFreshEventPermission(eventId, 'manage_teams');
 
       return tournamentRpc.createTeam(eventId, trimmedName, seed as SeedType);
     },
@@ -75,6 +76,8 @@ export function useTeamMutations() {
 
   const updateTeam = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string, name?: string, seed?: string, group_id?: string | null }) => {
+      const eventId = requireTenantContext();
+      await assertFreshEventPermission(eventId, 'manage_teams');
       return tournamentRpc.updateTeam(id, {
         name: updates.name,
         seed: updates.seed as SeedType | undefined,
@@ -88,7 +91,8 @@ export function useTeamMutations() {
 
   const deleteTeam = useMutation({
     mutationFn: async (id: string) => {
-      requireTenantContext();
+      const eventId = requireTenantContext();
+      await assertFreshEventPermission(eventId, 'manage_teams');
       return tournamentRpc.archiveTeam(id);
     },
     onSuccess: () => {
@@ -130,6 +134,7 @@ export function useTeamMutations() {
       }
 
       const eventId = requireTenantContext();
+      await assertFreshEventPermission(eventId, 'manage_teams');
 
       const result = await tournamentRpc.importTeams(eventId, imports);
       return result.imported_count ?? imports.length;
@@ -171,6 +176,7 @@ export function useGroupMutations() {
 
   const setupGroupsContract = async (numGroups: number, mode: GroupingMode = 'balanced') => {
     const eventId = requireTenantContext();
+    await assertFreshEventPermission(eventId, 'manage_groups');
 
     return tournamentRpc.setupGroups(eventId, numGroups, mode) as Promise<{
       success?: boolean;
@@ -186,6 +192,7 @@ export function useGroupMutations() {
   const clearAllGroups = useMutation({
      mutationFn: async () => {
        const eventId = requireTenantContext();
+       await assertFreshEventPermission(eventId, 'manage_groups');
        return tournamentRpc.dissolveGroups(eventId) as Promise<{
          success?: boolean;
          event_id?: string;
@@ -229,7 +236,8 @@ export function useGroupMutations() {
 
   const moveTeamToGroup = useMutation({
     mutationFn: async ({ teamId, toGroupId, beforeTeamId, force }: { teamId: string, toGroupId: string | null, beforeTeamId?: string | null, force?: boolean }) => {
-      requireTenantContext();
+      const eventId = requireTenantContext();
+      await assertFreshEventPermission(eventId, 'manage_groups');
       const dbGroupId = toGroupId === 'unassigned' ? null : toGroupId;
       return tournamentRpc.assignTeamToGroup(teamId, dbGroupId, beforeTeamId, !!force);
     },
@@ -300,6 +308,7 @@ export function useMatchMutations() {
   const generateForGroup = useMutation({
     mutationFn: async (_params: { groupId: string, teamIds: string[] }) => {
       const eventId = requireBusinessContext();
+      await assertFreshEventPermission(eventId, 'manage_schedule');
       return tournamentRpc.generateSchedule(eventId);
     },
     onSuccess: () => {
@@ -311,6 +320,7 @@ export function useMatchMutations() {
   const generateAllSchedules = useMutation({
     mutationFn: async (_groups: any[]) => {
       const eventId = requireBusinessContext();
+      await assertFreshEventPermission(eventId, 'manage_schedule');
       return tournamentRpc.generateSchedule(eventId);
     },
     onSuccess: () => {
