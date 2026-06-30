@@ -10,6 +10,13 @@ export interface TournamentSettings {
   capScore: number;       // Điểm trần tối đa, ví dụ chạm tối đa 17 (mặc định: 17)
   advanceCount: number;   // Số đội mỗi bảng đi tiếp (1 hoặc 2 hoặc 3)
   numBestThirds?: number; // Số đội đứng thứ ba xuất sắc nhất
+  liveAnnouncement?: {
+    text: string;
+    fontSize: number;
+    fontFamily: string;
+    color: string;
+    textAlign: 'left' | 'center' | 'right';
+  };
 }
 
 export type MatchSetMode = 'single' | 'best_of_3';

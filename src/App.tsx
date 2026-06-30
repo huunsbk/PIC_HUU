@@ -703,7 +703,7 @@ function TournamentShell() {
 
   const navItems = React.useMemo(() => {
     const allNavItems = [
-      { id: 'workspaces', label: 'Giải đấu', icon: Layers, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'VIEWER'] },
+      { id: 'workspaces', label: 'Giải đấu', icon: Layers, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'VIEWER'] },
       { id: 'dashboard', label: 'Tổng quan', icon: Trophy, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
       { id: 'content', label: 'Nội dung thi đấu', icon: ListChecks, permission: 'manage_event_config', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
       { id: 'operations', label: 'Điều hành trận đấu', icon: Gamepad2, permission: 'enter_scores', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE'] },

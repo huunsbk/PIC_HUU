@@ -567,25 +567,28 @@ export const useTournamentStore = create<AppState>()(
             current_event_id: state.currentEventId,
           };
 
-          const { data, error } = await supabase
-            .from('tournament')
-            .update(payload)
-            .eq('id', state.tournament.id)
-            .select('id, name, organization, location, date, settings, current_event_id')
-            .single();
+          const { data, error } = await supabase.rpc('update_tournament_v1', {
+            p_tournament_id: state.tournament.id,
+            p_name: payload.name,
+            p_slug: null,
+            p_location: payload.location,
+            p_start_date: payload.date || null,
+            p_status: null,
+          });
 
           if (error) throw error;
+          if (!data) throw new Error('Không nhận được dữ liệu giải đấu sau khi cập nhật.');
 
           set({
             tournament: {
               id: data.id,
               name: data.name,
-              organization: data.organization,
+              organization: payload.organization,
               location: data.location,
               date: data.date,
-              settings: data.settings || DEFAULT_SETTINGS,
+              settings: state.tournament.settings,
             },
-            currentEventId: data.current_event_id || state.currentEventId,
+            currentEventId: state.currentEventId,
           });
           logToStore('Cấu hình Giải', `Cập nhật thông tin tổng quan của giải đấu.`);
         },

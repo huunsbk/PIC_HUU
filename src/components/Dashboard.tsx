@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { useTournamentStore } from '../store';
 import { supabase } from '../supabaseClient';
-import { Trophy, Users, Layers, Calendar, Play, Download, Upload, Trash2, Check, AlertCircle, MapPin, CalendarDays, PlusCircle, LayoutGrid, Award, Sparkles, FileText, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { Trophy, Users, Layers, Calendar, Play, Download, Upload, Trash2, Check, AlertCircle, MapPin, CalendarDays, Award, FileText, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { useTeams } from '../hooks/useTeams';
 import { useGroups } from '../hooks/useGroups';
 import { useMatches } from '../hooks/useMatches';
@@ -23,7 +23,6 @@ export default function Dashboard() {
     updateSettings,
     resetAll,
     addLog,
-    setSelectedTab,
     supabaseConnected,
     supabaseSyncError,
     checkConnection,
@@ -936,54 +935,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-      </div>
-
-      {/* THAO TÁC QUẢN LÝ NHANH MẪU GIAO DIỆN CHUẨN */}
-      <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-xs">
-        <h3 className="text-xs font-extrabold text-[#111c30] dark:text-zinc-100 uppercase tracking-tight flex items-center gap-1.5">
-          <LayoutGrid size={15} className="text-blue-600" />
-          Lối Tắt Điều Hành Nhanh
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <button
-            onClick={() => setSelectedTab('teams')}
-            className="p-3 bg-blue-50 hover:bg-blue-105 dark:bg-blue-950/20 text-blue-700 dark:text-blue-300 font-extrabold text-xs rounded-xl border border-blue-200/40 dark:border-blue-900/35 cursor-pointer text-left flex items-center justify-between"
-          >
-            <span>+ Đăng ký đấu thủ</span>
-            <PlusCircle size={14} />
-          </button>
-          <button
-            onClick={() => setSelectedTab('groups')}
-            className="p-3 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-850 dark:text-zinc-300 dark:hover:bg-zinc-800 text-zinc-800 font-extrabold text-xs rounded-xl border border-zinc-200/80 dark:border-zinc-800 cursor-pointer text-left flex items-center justify-between"
-          >
-            <span>Chia bảng đấu</span>
-            <Layers size={14} />
-          </button>
-          <button
-            onClick={() => {
-              generateAllSchedules();
-              showToast('Khởi tạo nhanh toàn bộ lịch vòng bảng tất cả nội dung thành công!');
-            }}
-            className="p-3 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 font-extrabold text-xs rounded-xl border border-emerald-200/40 dark:border-emerald-900/40 cursor-pointer text-left flex items-center justify-between col-span-2 md:col-span-1"
-          >
-            <span>Khởi tạo nhanh lịch</span>
-            <Sparkles size={14} className="text-emerald-500 animate-pulse" />
-          </button>
-          <button
-            onClick={handleExportDataJson}
-            className="p-3 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-850 dark:text-zinc-300 dark:hover:bg-zinc-800 text-zinc-800 font-extrabold text-xs rounded-xl border border-zinc-200/80 dark:border-zinc-800 cursor-pointer text-left flex items-center justify-between"
-          >
-            <span>Xuất sao lưu giải</span>
-            <Download size={14} />
-          </button>
-          <button
-            onClick={() => setShowResetConfirm(true)}
-            className="p-3 bg-red-50 hover:bg-red-105/90 dark:bg-red-955/10 text-red-650 font-extrabold text-xs rounded-xl border border-red-200/45 dark:border-red-900/35 cursor-pointer text-left flex items-center justify-between"
-          >
-            <span>Xóa hệ thống</span>
-            <Trash2 size={14} />
-          </button>
-        </div>
       </div>
 
       {/* BIỂU MẪU SỐ HÓA THÔNG TIN & THIẾT LẬP */}

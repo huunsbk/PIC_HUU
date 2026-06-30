@@ -380,9 +380,10 @@ const getRouteSlug = () => {
 export default function LiveDashboard() {
   const { data: eventsData = [] } = useEvents();
   const tournament = useTournamentStore(state => state.tournament);
+  const updateSettings = useTournamentStore(state => state.updateSettings);
+  const hasPermission = useTournamentStore(state => state.hasPermission);
   const activeTenantId = useTournamentStore(state => state.activeTenantId);
   const userRole = useTournamentStore(state => state.userRole);
-  const canManage = useTournamentStore(state => state.hasPermission("manage_matches"));
   const addLog = useTournamentStore(state => state.addLog);
   const publicSlug = React.useMemo(() => getRouteSlug(), []);
   const usePublicSnapshot = userRole === 'guest' && isPublicViewerRoute() && !!publicSlug;
@@ -568,6 +569,54 @@ export default function LiveDashboard() {
   const [currentTime, setCurrentTime] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [shareMessage, setShareMessage] = useState<string>('');
+  const canEditAnnouncement = !usePublicSnapshot && (
+    hasPermission('*') ||
+    hasPermission('manage_tournaments') ||
+    hasPermission('manage_event_config') ||
+    userRole === 'SUPER_ADMIN' ||
+    userRole === 'TENANT_ADMIN'
+  );
+  const liveAnnouncement = (effectiveTournament.settings as any)?.liveAnnouncement || {};
+  const [announcementDraft, setAnnouncementDraft] = useState({
+    text: '',
+    fontSize: 36,
+    fontFamily: 'Arial, sans-serif',
+    color: '#111827',
+    textAlign: 'center' as 'left' | 'center' | 'right',
+  });
+
+  React.useEffect(() => {
+    setAnnouncementDraft({
+      text: String(liveAnnouncement.text || ''),
+      fontSize: Number(liveAnnouncement.fontSize || 36),
+      fontFamily: String(liveAnnouncement.fontFamily || 'Arial, sans-serif'),
+      color: String(liveAnnouncement.color || '#111827'),
+      textAlign: (['left', 'center', 'right'].includes(liveAnnouncement.textAlign) ? liveAnnouncement.textAlign : 'center') as 'left' | 'center' | 'right',
+    });
+  }, [
+    liveAnnouncement.text,
+    liveAnnouncement.fontSize,
+    liveAnnouncement.fontFamily,
+    liveAnnouncement.color,
+    liveAnnouncement.textAlign,
+  ]);
+
+  const handleSaveAnnouncement = async () => {
+    try {
+      await updateSettings({
+        ...(effectiveTournament.settings as any),
+        liveAnnouncement: announcementDraft,
+      } as any);
+      setShareMessage('Đã lưu thông báo trình chiếu.');
+      window.setTimeout(() => setShareMessage(''), 2500);
+      if (addLog) {
+        addLog('Trình chiếu', 'Cập nhật thông báo cho khán giả.');
+      }
+    } catch (error) {
+      setShareMessage(error instanceof Error ? error.message : 'Không lưu được thông báo.');
+      window.setTimeout(() => setShareMessage(''), 3500);
+    }
+  };
 
   const publicTournamentUrl = React.useMemo(() => {
     if (typeof window === 'undefined') return '';
@@ -962,6 +1011,16 @@ export default function LiveDashboard() {
           >
             Tất cả nội dung
           </button>
+          <button
+            onClick={() => setSelectedEventFilter('announcement')}
+            className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all cursor-pointer select-none ${
+              selectedEventFilter === 'announcement'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-zinc-650 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-amber-200'
+            }`}
+          >
+            Thông Báo
+          </button>
           {eventList.map((evt) => (
             <button
               key={evt.id}
@@ -1000,6 +1059,108 @@ export default function LiveDashboard() {
       {liveDataLoading ? (
         <div className="py-16 text-center text-sm font-bold text-zinc-500">
           Đang tải dữ liệu Bảng trình chiếu TV...
+        </div>
+      ) : selectedEventFilter === 'announcement' ? (
+        <div className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 md:p-6">
+          <div className="mb-4 flex flex-col gap-3 border-b border-zinc-150 pb-4 dark:border-zinc-800 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h3 className="text-base font-black uppercase tracking-tight text-zinc-900 dark:text-zinc-50">
+                Thông Báo Khán Giả
+              </h3>
+              <p className="mt-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Nội dung này hiển thị trên màn hình trình chiếu và link khán giả.
+              </p>
+            </div>
+            {canEditAnnouncement && (
+              <button
+                type="button"
+                onClick={handleSaveAnnouncement}
+                className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-blue-500"
+              >
+                Lưu thông báo
+              </button>
+            )}
+          </div>
+
+          {canEditAnnouncement && (
+            <div className="mb-5 grid gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950 lg:grid-cols-[1fr_150px_180px_140px_180px]">
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-zinc-500">Cỡ chữ</span>
+                <input
+                  type="number"
+                  min={18}
+                  max={120}
+                  value={announcementDraft.fontSize}
+                  onChange={(event) => setAnnouncementDraft((prev) => ({ ...prev, fontSize: Math.max(18, Number(event.target.value) || 36) }))}
+                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-bold dark:border-zinc-700 dark:bg-zinc-900"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-zinc-500">Màu chữ</span>
+                <input
+                  type="color"
+                  value={announcementDraft.color}
+                  onChange={(event) => setAnnouncementDraft((prev) => ({ ...prev, color: event.target.value }))}
+                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white p-1 dark:border-zinc-700 dark:bg-zinc-900"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-zinc-500">Phông chữ</span>
+                <select
+                  value={announcementDraft.fontFamily}
+                  onChange={(event) => setAnnouncementDraft((prev) => ({ ...prev, fontFamily: event.target.value }))}
+                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-bold dark:border-zinc-700 dark:bg-zinc-900"
+                >
+                  <option value="Arial, sans-serif">Arial</option>
+                  <option value="'Times New Roman', serif">Times New Roman</option>
+                  <option value="Tahoma, sans-serif">Tahoma</option>
+                  <option value="'Roboto', Arial, sans-serif">Roboto</option>
+                  <option value="'Courier New', monospace">Courier New</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-zinc-500">Căn chữ</span>
+                <select
+                  value={announcementDraft.textAlign}
+                  onChange={(event) => setAnnouncementDraft((prev) => ({ ...prev, textAlign: event.target.value as 'left' | 'center' | 'right' }))}
+                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-bold dark:border-zinc-700 dark:bg-zinc-900"
+                >
+                  <option value="left">Trái</option>
+                  <option value="center">Giữa</option>
+                  <option value="right">Phải</option>
+                </select>
+              </label>
+            </div>
+          )}
+
+          {canEditAnnouncement && (
+            <textarea
+              value={announcementDraft.text}
+              onChange={(event) => setAnnouncementDraft((prev) => ({ ...prev, text: event.target.value }))}
+              placeholder="Nhập hoặc paste nội dung thông báo cho khán giả..."
+              className="mb-5 min-h-[220px] w-full rounded-2xl border border-zinc-200 bg-white p-4 text-base font-semibold leading-relaxed outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-950"
+            />
+          )}
+
+          <div className="flex min-h-[420px] items-center justify-center rounded-3xl border border-zinc-150 bg-zinc-50 p-6 dark:border-zinc-800 dark:bg-zinc-950">
+            {announcementDraft.text.trim() ? (
+              <div
+                className="w-full whitespace-pre-wrap break-words font-black leading-tight"
+                style={{
+                  color: announcementDraft.color,
+                  fontFamily: announcementDraft.fontFamily,
+                  fontSize: `${announcementDraft.fontSize}px`,
+                  textAlign: announcementDraft.textAlign,
+                }}
+              >
+                {announcementDraft.text}
+              </div>
+            ) : (
+              <div className="text-center text-sm font-bold text-zinc-400">
+                Chưa có thông báo.
+              </div>
+            )}
+          </div>
         </div>
       ) : selectedEventFilter === 'all' ? (
         <div className="space-y-8" id="tv-all-events-view">
