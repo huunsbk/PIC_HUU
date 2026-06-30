@@ -969,41 +969,41 @@ export function getBracketDisplayName(slotKey: string | null | undefined, groups
   const legacyThird = normalized.match(/^(?:ba\s+(?:bảng\s+)?xuất\s+sắc|ba\s+xs|hạng\s+ba\s+xuất\s+sắc)\s*(\d*)$/i);
   if (legacyThird) return `Hạng 3 xuất sắc ${legacyThird[1] || ''}`.trim();
 
-  // Chuyển đổi mã kỹ thuật của các trận/vòng trước thành mô tả thuần Việt
-  if (upper === 'W-QF1' || upper === 'W_QF1' || upper === 'THẮNG TỨ KẾT 1') return 'Thắng Tứ Kết 1';
-  if (upper === 'W-QF2' || upper === 'W_QF2' || upper === 'THẮNG TỨ KẾT 2') return 'Thắng Tứ Kết 2';
-  if (upper === 'W-QF3' || upper === 'W_QF3' || upper === 'THẮNG TỨ KẾT 3') return 'Thắng Tứ Kết 3';
-  if (upper === 'W-QF4' || upper === 'W_QF4' || upper === 'THẮNG TỨ KẾT 4') return 'Thắng Tứ Kết 4';
+  // Compact knockout source labels for TV/bracket cards.
+  if (upper === 'W-QF1' || upper === 'W_QF1' || upper === 'THẮNG TỨ KẾT 1') return 'W TK 1';
+  if (upper === 'W-QF2' || upper === 'W_QF2' || upper === 'THẮNG TỨ KẾT 2') return 'W TK 2';
+  if (upper === 'W-QF3' || upper === 'W_QF3' || upper === 'THẮNG TỨ KẾT 3') return 'W TK 3';
+  if (upper === 'W-QF4' || upper === 'W_QF4' || upper === 'THẮNG TỨ KẾT 4') return 'W TK 4';
 
-  if (upper === 'W-SF1' || upper === 'W_SF1' || upper === 'THẮNG BÁN KẾT 1') return 'Thắng Bán Kết 1';
-  if (upper === 'W-SF2' || upper === 'W_SF2' || upper === 'THẮNG BÁN KẾT 2') return 'Thắng Bán Kết 2';
+  if (upper === 'W-SF1' || upper === 'W_SF1' || upper === 'THẮNG BÁN KẾT 1') return 'W BK 1';
+  if (upper === 'W-SF2' || upper === 'W_SF2' || upper === 'THẮNG BÁN KẾT 2') return 'W BK 2';
 
-  if (upper === 'L-SF1' || upper === 'L_SF1' || upper === 'THUA BÁN KẾT 1') return 'Thua Bán Kết 1';
-  if (upper === 'L-SF2' || upper === 'L_SF2' || upper === 'THUA BÁN KẾT 2') return 'Thua Bán Kết 2';
+  if (upper === 'L-SF1' || upper === 'L_SF1' || upper === 'THUA BÁN KẾT 1') return 'L BK 1';
+  if (upper === 'L-SF2' || upper === 'L_SF2' || upper === 'THUA BÁN KẾT 2') return 'L BK 2';
 
   const qfWinnerMatch = upper.match(/THẮNG TỨ KẾT (\d+)/) || upper.match(/W-QF(\d+)/) || upper.match(/W_QF(\d+)/);
   if (qfWinnerMatch) {
-    return `Thắng Tứ Kết ${qfWinnerMatch[1]}`;
+    return `W TK ${qfWinnerMatch[1]}`;
   }
 
   const sfWinnerMatch = upper.match(/THẮNG BÁN KẾT (\d+)/) || upper.match(/W-SF(\d+)/) || upper.match(/W_SF(\d+)/);
   if (sfWinnerMatch) {
-    return `Thắng Bán Kết ${sfWinnerMatch[1]}`;
+    return `W BK ${sfWinnerMatch[1]}`;
   }
 
   const sfLoserMatch = upper.match(/THUA BÁN KẾT (\d+)/) || upper.match(/L-SF(\d+)/) || upper.match(/L_SF(\d+)/);
   if (sfLoserMatch) {
-    return `Thua Bán Kết ${sfLoserMatch[1]}`;
+    return `L BK ${sfLoserMatch[1]}`;
   }
 
   const r16WinnerMatch = upper.match(/THẮNG VÒNG 16 \(TRẬN (\d+)\)/) || upper.match(/THANG VONG 16 \(TRAN (\d+)\)/) || normalized.match(/Thắng Vòng 1\/8 \(Trận (\d+)\)/i) || normalized.match(/Thắng Vòng 16 \(Trận (\d+)\)/i) || upper.match(/W16 \(TRẬN (\d+)\)/);
   if (r16WinnerMatch) {
-    return `Thắng Trận ${r16WinnerMatch[1]}`;
+    return `W ${r16WinnerMatch[1]}`;
   }
 
   const r32WinnerMatch = upper.match(/THẮNG VÒNG 32 \(TRẬN (\d+)\)/) || upper.match(/THANG VONG 32 \(TRAN (\d+)\)/) || normalized.match(/Thắng Vòng 32 \(Trận (\d+)\)/i) || upper.match(/W32 \(TRẬN (\d+)\)/);
   if (r32WinnerMatch) {
-    return `Thắng Trận ${r32WinnerMatch[1]}`;
+    return `W ${r32WinnerMatch[1]}`;
   }
 
   return normalized;
@@ -1252,55 +1252,55 @@ export function getReadableTeamName(teamName: string, groups?: Record<string, an
   const nameUpper = clean.toUpperCase().trim();
 
   // Handle QF winners / losers
-  if (nameUpper === 'W-QF1' || nameUpper === 'W_QF1') return 'W-QF1 (Thắng Tứ Kết 1)';
-  if (nameUpper === 'W-QF2' || nameUpper === 'W_QF2') return 'W-QF2 (Thắng Tứ Kết 2)';
-  if (nameUpper === 'W-QF3' || nameUpper === 'W_QF3') return 'W-QF3 (Thắng Tứ Kết 3)';
-  if (nameUpper === 'W-QF4' || nameUpper === 'W_QF4') return 'W-QF4 (Thắng Tứ Kết 4)';
+  if (nameUpper === 'W-QF1' || nameUpper === 'W_QF1') return 'W TK 1';
+  if (nameUpper === 'W-QF2' || nameUpper === 'W_QF2') return 'W TK 2';
+  if (nameUpper === 'W-QF3' || nameUpper === 'W_QF3') return 'W TK 3';
+  if (nameUpper === 'W-QF4' || nameUpper === 'W_QF4') return 'W TK 4';
 
-  if (nameUpper === 'L-SF1' || nameUpper === 'L_SF1') return 'L-SF1 (Thua Bán Kết 1)';
-  if (nameUpper === 'L-SF2' || nameUpper === 'L_SF2') return 'L-SF2 (Thua Bán Kết 2)';
+  if (nameUpper === 'L-SF1' || nameUpper === 'L_SF1') return 'L BK 1';
+  if (nameUpper === 'L-SF2' || nameUpper === 'L_SF2') return 'L BK 2';
   
-  if (nameUpper === 'W-SF1' || nameUpper === 'W_SF1') return 'W-SF1 (Thắng Bán Kết 1)';
-  if (nameUpper === 'W-SF2' || nameUpper === 'W_SF2') return 'W-SF2 (Thắng Bán Kết 2)';
+  if (nameUpper === 'W-SF1' || nameUpper === 'W_SF1') return 'W BK 1';
+  if (nameUpper === 'W-SF2' || nameUpper === 'W_SF2') return 'W BK 2';
 
-  if (nameUpper === 'THẮNG BÁN KẾT 1' || nameUpper === 'THANG BAN KET 1') return 'W-SF1 (Thắng Bán Kết 1)';
-  if (nameUpper === 'THẮNG BÁN KẾT 2' || nameUpper === 'THANG BAN KET 2') return 'W-SF2 (Thắng Bán Kết 2)';
-  if (nameUpper === 'THUA BÁN KẾT 1' || nameUpper === 'THUA BAN KET 1') return 'L-SF1 (Thua Bán Kết 1)';
-  if (nameUpper === 'THUA BÁN KẾT 2' || nameUpper === 'THUA BAN KET 2') return 'L-SF2 (Thua Bán Kết 2)';
+  if (nameUpper === 'THẮNG BÁN KẾT 1' || nameUpper === 'THANG BAN KET 1') return 'W BK 1';
+  if (nameUpper === 'THẮNG BÁN KẾT 2' || nameUpper === 'THANG BAN KET 2') return 'W BK 2';
+  if (nameUpper === 'THUA BÁN KẾT 1' || nameUpper === 'THUA BAN KET 1') return 'L BK 1';
+  if (nameUpper === 'THUA BÁN KẾT 2' || nameUpper === 'THUA BAN KET 2') return 'L BK 2';
 
-  if (nameUpper === 'THẮNG TỨ KẾT 1' || nameUpper === 'THANG TU KET 1') return 'W-QF1 (Thắng Tứ Kết 1)';
-  if (nameUpper === 'THẮNG TỨ KẾT 2' || nameUpper === 'THANG TU KET 2') return 'W-QF2 (Thắng Tứ Kết 2)';
-  if (nameUpper === 'THẮNG TỨ KẾT 3' || nameUpper === 'THANG TU KET 3') return 'W-QF3 (Thắng Tứ Kết 3)';
-  if (nameUpper === 'THẮNG TỨ KẾT 4' || nameUpper === 'THANG TU KET 4') return 'W-QF4 (Thắng Tứ Kết 4)';
+  if (nameUpper === 'THẮNG TỨ KẾT 1' || nameUpper === 'THANG TU KET 1') return 'W TK 1';
+  if (nameUpper === 'THẮNG TỨ KẾT 2' || nameUpper === 'THANG TU KET 2') return 'W TK 2';
+  if (nameUpper === 'THẮNG TỨ KẾT 3' || nameUpper === 'THANG TU KET 3') return 'W TK 3';
+  if (nameUpper === 'THẮNG TỨ KẾT 4' || nameUpper === 'THANG TU KET 4') return 'W TK 4';
 
   const r16WinnerMatch = nameUpper.match(/THẮNG VÒNG 16 \(TRẬN (\d+)\)/) || nameUpper.match(/THANG VONG 16 \(TRAN (\d+)\)/) || clean.match(/Thắng Vòng 1\/8 \(Trận (\d+)\)/i) || clean.match(/Thắng Vòng 16 \(Trận (\d+)\)/i);
   if (r16WinnerMatch) {
     const num = r16WinnerMatch[1];
-    return `W16 (Trận ${num})`;
+    return `W ${num}`;
   }
 
   const r32WinnerMatch = nameUpper.match(/THẮNG VÒNG 32 \(TRẬN (\d+)\)/) || nameUpper.match(/THANG VONG 32 \(TRAN (\d+)\)/) || clean.match(/Thắng Vòng 32 \(Trận (\d+)\)/i);
   if (r32WinnerMatch) {
     const num = r32WinnerMatch[1];
-    return `W32 (Trận ${num})`;
+    return `W ${num}`;
   }
 
   const qfWinnerMatch = nameUpper.match(/THẮNG TỨ KẾT (\d+)/) || nameUpper.match(/THANG TU KET (\d+)/) || clean.match(/Thắng Tứ Kết (\d+)/i) || nameUpper.match(/W-QF(\d+)/) || nameUpper.match(/W_QF(\d+)/);
   if (qfWinnerMatch) {
      const num = qfWinnerMatch[1];
-     return `W Tứ Kết (Trận ${num})`;
+     return `W TK ${num}`;
   }
 
   const sfWinnerMatch = nameUpper.match(/THẮNG BÁN KẾT (\d+)/) || nameUpper.match(/THANG BAN KET (\d+)/) || clean.match(/Thắng Bán Kết (\d+)/i) || nameUpper.match(/W-SF(\d+)/) || nameUpper.match(/W_SF(\d+)/);
   if (sfWinnerMatch) {
      const num = sfWinnerMatch[1];
-     return `W Bán Kết (Trận ${num})`;
+     return `W BK ${num}`;
   }
 
   const sfLoserMatch = nameUpper.match(/THUA BÁN KẾT (\d+)/) || nameUpper.match(/THUA BAN KET (\d+)/) || clean.match(/Thua Bán Kết (\d+)/i) || nameUpper.match(/L-SF(\d+)/) || nameUpper.match(/L_SF(\d+)/);
   if (sfLoserMatch) {
      const num = sfLoserMatch[1];
-     return `L Bán Kết (Trận ${num})`;
+     return `L BK ${num}`;
   }
 
   // Handle placeholders like Hạng 1 Bảng A, Hạng 2 Bảng B and legacy rank labels.

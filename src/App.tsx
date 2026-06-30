@@ -114,12 +114,12 @@ function WorkspaceTabs({
   );
 }
 
-function SectionHeader({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
+function SectionHeader({ eyebrow, title, description }: { eyebrow: string; title?: string; description?: string }) {
   return (
     <div className="flex flex-col gap-1">
       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">{eyebrow}</p>
-      <h1 className="text-xl font-black tracking-tight text-zinc-950 dark:text-zinc-50">{title}</h1>
-      <p className="max-w-3xl text-sm font-medium text-zinc-500 dark:text-zinc-400">{description}</p>
+      {title && <h1 className="text-xl font-black tracking-tight text-zinc-950 dark:text-zinc-50">{title}</h1>}
+      {description && <p className="max-w-3xl text-sm font-medium text-zinc-500 dark:text-zinc-400">{description}</p>}
     </div>
   );
 }
@@ -142,8 +142,6 @@ function ContentWorkspace() {
         <div className="space-y-4 p-4">
           <SectionHeader
             eyebrow="Thiết lập nội dung"
-            title="Nội dung thi đấu"
-            description="Quản lý cấu hình nội dung, danh sách đội, chia bảng và lịch vòng bảng trong cùng một luồng."
           />
           <WorkspaceTabs
             activeTab={activeSubTab}
@@ -181,11 +179,10 @@ function OperationsWorkspace() {
   return (
     <div className="space-y-4">
       <div className={panelShellClass}>
-        <div className="space-y-4 p-4">
+        <div className="space-y-3 p-3">
           <SectionHeader
             eyebrow="Vận hành thi đấu"
-            title="Điều hành trận đấu"
-            description="Theo dõi trận chờ đấu, trận đang đấu, nhập điểm và kiểm tra kết quả theo nội dung hiện tại."
+            title=""
           />
           <WorkspaceTabs
             activeTab={activeSubTab}
@@ -195,7 +192,6 @@ function OperationsWorkspace() {
               { id: 'matches', label: 'Lịch & kết quả', icon: CalendarDays },
             ]}
           />
-          <EventBar />
         </div>
       </div>
       {activeSubTab === 'scoreEntry' && <ScoreEntry />}
@@ -791,13 +787,13 @@ function TournamentShell() {
         </aside>
 
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="sticky top-0 z-30 bg-white/95 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80 px-3 sm:px-5 py-2 sm:py-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-start sm:justify-between gap-2 sm:gap-0 shadow-xs print:hidden">
+          <header className="sticky top-0 z-30 bg-white/95 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80 px-3 sm:px-5 py-1 sm:py-1.5 flex flex-col sm:flex-row items-start sm:items-center justify-start sm:justify-between gap-1.5 sm:gap-0 shadow-xs print:hidden">
             <div className="space-y-0.5">
               <p className="text-[8px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest leading-none">Cổng Điều Hành Trực Tuyến</p>
-              <h2 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 max-w-full sm:max-w-2xl whitespace-normal break-words">
+              <h2 className="text-[13px] font-extrabold text-zinc-900 dark:text-zinc-100 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 max-w-full sm:max-w-2xl whitespace-normal break-words leading-tight">
                 {tournament.name || 'HỆ THỐNG QUẢN LÝ GIẢI ĐẤU PICKLEBALL'}
               </h2>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-bold text-zinc-500 dark:text-zinc-400">
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-bold text-zinc-500 dark:text-zinc-400 leading-tight">
                 <span>Đơn vị: {activeTenantName || currentEnterpriseUser?.tenant?.name || activeTenantId || 'Chưa chọn'}</span>
                 <span>Giải: {tournament.name || 'Chưa chọn'}</span>
                 <span>Nội dung thi đấu: {currentHeaderEvent?.name || 'Chưa chọn'}</span>
@@ -807,7 +803,7 @@ function TournamentShell() {
             <div className="flex flex-wrap items-center justify-end gap-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                {isAuthenticated ? (
                 <div className="flex flex-wrap items-center justify-end gap-2 text-xs">
-                  <div className="flex max-w-[260px] items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-left shadow-xs dark:border-zinc-800 dark:bg-zinc-950/70">
+                  <div className="flex max-w-[260px] items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-left shadow-xs dark:border-zinc-800 dark:bg-zinc-950/70">
                     <UserCircle size={18} className="shrink-0 text-blue-600 dark:text-blue-400" />
                     <div className="min-w-0 leading-tight">
                       <p className="truncate text-[11px] font-black text-zinc-900 dark:text-zinc-100">{profileName}</p>

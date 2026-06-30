@@ -307,12 +307,12 @@ const KoRoundCard = React.memo(({
               <div className="text-[8px] font-black text-zinc-450 border-b border-zinc-200/30 dark:border-zinc-805 pb-0.5 mb-1 select-none" style={{ fontSize: '13px', color: '#992371' }}>
                 {getReadableKoMatchName(m.knockoutMatchId || '')}
               </div>
-              <div className="flex justify-between items-center">
-                <span className={`font-bold truncate max-w-[85%] ${m.winnerId === m.teamAId ? 'text-blue-600 font-extrabold' : 'text-zinc-500'}`} style={{ fontSize: '15px' }}>{teamAName}</span>
+              <div className="flex justify-between items-center gap-2">
+                <span className={`font-bold max-w-[85%] whitespace-normal break-words leading-tight ${m.winnerId === m.teamAId ? 'text-blue-600 font-extrabold' : 'text-zinc-500'}`} style={{ fontSize: '15px' }}>{teamAName}</span>
                 <strong className="font-mono text-zinc-650 dark:text-zinc-350 shrink-0">{m.status === 'finished' ? m.scoreA : '-'}</strong>
               </div>
-              <div className="flex justify-between items-center">
-                <span className={`font-bold truncate max-w-[85%] ${m.winnerId === m.teamBId ? 'text-blue-600 font-extrabold' : 'text-zinc-500'}`} style={{ fontSize: '15px' }}>{teamBName}</span>
+              <div className="flex justify-between items-center gap-2">
+                <span className={`font-bold max-w-[85%] whitespace-normal break-words leading-tight ${m.winnerId === m.teamBId ? 'text-blue-600 font-extrabold' : 'text-zinc-500'}`} style={{ fontSize: '15px' }}>{teamBName}</span>
                 <strong className="font-mono text-zinc-650 dark:text-zinc-350 shrink-0">{m.status === 'finished' ? m.scoreB : '-'}</strong>
               </div>
             </div>

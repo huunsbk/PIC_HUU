@@ -503,13 +503,14 @@ export default function KnockoutBracket() {
           )}
 
           {/* Bracket Tree Layout bằng CSS Flexbox Columns nối tiếp */}
-          <div className={isEditMode ? "flex-1 h-full relative" : "relative bg-white dark:bg-zinc-900 rounded-3xl border border-solid border-zinc-200 dark:border-zinc-805 shadow-md overflow-hidden min-h-[700px] mt-4"} style={!isEditMode ? { borderStyle: 'solid' } : undefined} id="bracket-view-wrapper">
+          <div className={isEditMode ? "flex-1 h-full relative" : "relative bg-white dark:bg-zinc-900 rounded-3xl border border-solid border-zinc-200 dark:border-zinc-805 shadow-md overflow-hidden min-h-[78vh] mt-4"} style={!isEditMode ? { borderStyle: 'solid' } : undefined} id="bracket-view-wrapper">
             <TransformWrapper
               initialScale={1}
-              minScale={0.3}
-              maxScale={2}
+              minScale={0.2}
+              maxScale={2.5}
               centerOnInit={false}
-              wheel={{ step: 0.1 }}
+              limitToBounds={false}
+              wheel={{ step: 0.035 }}
               panning={{ disabled: false }}
             >
               {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => (
@@ -533,8 +534,8 @@ export default function KnockoutBracket() {
                       <Maximize size={18} />
                     </button>
                   </div>
-                  <TransformComponent wrapperClass="w-full h-full" wrapperStyle={{ width: '100%', height: isEditMode ? '100%' : '700px' }} contentStyle={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: '32px' }}>
-                    <div className="flex gap-10 min-w-[900px] justify-between items-center relative py-10" style={{ marginTop: '-30px' }}>
+                  <TransformComponent wrapperClass="w-full h-full" wrapperStyle={{ width: '100%', height: isEditMode ? '100%' : '78vh' }} contentStyle={{ minWidth: '100%', minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '120px 160px 180px 80px' }}>
+                    <div className="flex gap-10 min-w-[1100px] justify-between items-center relative py-10">
                       {roundsKeys.map((roundIdx) => {
                 const roundMatches = roundsMap[roundIdx];
                 const roundName = roundMatches[0]?.knockoutRoundName || `Vòng đấu ${roundIdx}`;
@@ -559,7 +560,7 @@ export default function KnockoutBracket() {
                     </div>
 
                     {/* Danh sách trận đấu dọc */}
-                    <div className="flex flex-col justify-around gap-6 h-[600px] relative">
+                    <div className="flex flex-col justify-around gap-6 min-h-[680px] relative">
                       {roundMatches.map((m) => {
                         const isFinished = m.status === 'finished';
                         

@@ -263,17 +263,14 @@ export default function ScoreEntry() {
 
       if (maxSetCount === 1) {
         return (
-          <div key={setNumber} className="grid grid-cols-[minmax(0,1fr)_72px_22px_72px_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-950">
-            <span className="truncate text-sm font-black text-zinc-900 dark:text-zinc-100" title={getTeamName(match, 'A')}>
-              {getTeamName(match, 'A')}
-            </span>
+          <div key={setNumber} className="grid grid-cols-[72px_18px_72px_auto] items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 dark:border-zinc-800 dark:bg-zinc-950">
             <input
               type="text"
               inputMode="numeric"
               value={setScore.a}
               onChange={(event) => handleSetScoreChange(match.id, setNumber, 'a', event.target.value)}
               disabled={disabled}
-              className="h-9 w-full rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
+              className="h-8 w-full rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
             />
             <span className="text-center text-xs font-black text-zinc-300">-</span>
             <input
@@ -282,16 +279,13 @@ export default function ScoreEntry() {
               value={setScore.b}
               onChange={(event) => handleSetScoreChange(match.id, setNumber, 'b', event.target.value)}
               disabled={disabled}
-              className="h-9 w-full rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
+              className="h-8 w-full rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
             />
-            <span className="truncate text-right text-sm font-black text-zinc-900 dark:text-zinc-100" title={getTeamName(match, 'B')}>
-              {getTeamName(match, 'B')}
-            </span>
             <button
               type="button"
               onClick={() => saveSetScore(match.id, setNumber)}
               disabled={disabled || updateMatchSetScore.isPending}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400"
               title="Lưu điểm"
             >
               <Save size={15} />
@@ -301,7 +295,7 @@ export default function ScoreEntry() {
       }
 
       return (
-        <div key={setNumber} className="grid grid-cols-[70px_1fr_38px_1fr_auto] items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-950">
+        <div key={setNumber} className="grid grid-cols-[52px_1fr_20px_1fr_auto] items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 dark:border-zinc-800 dark:bg-zinc-950">
           <span className="text-[10px] font-black uppercase text-zinc-500">Séc {setNumber}</span>
           <input
             type="text"
@@ -309,7 +303,7 @@ export default function ScoreEntry() {
             value={setScore.a}
             onChange={(event) => handleSetScoreChange(match.id, setNumber, 'a', event.target.value)}
             disabled={disabled}
-            className="h-9 w-full rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
+            className="h-8 w-full rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
           />
           <span className="text-center text-xs font-black text-zinc-300">-</span>
           <input
@@ -318,13 +312,13 @@ export default function ScoreEntry() {
             value={setScore.b}
             onChange={(event) => handleSetScoreChange(match.id, setNumber, 'b', event.target.value)}
             disabled={disabled}
-            className="h-9 w-full rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
+            className="h-8 w-full rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
           />
           <button
             type="button"
             onClick={() => saveSetScore(match.id, setNumber)}
             disabled={disabled || updateMatchSetScore.isPending}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400"
             title={`Lưu séc ${setNumber}`}
           >
             <Save size={15} />
@@ -338,8 +332,8 @@ export default function ScoreEntry() {
     const isReviewingFinished = match.status === 'finished';
 
     return (
-    <div key={match.id} className="space-y-3 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="flex items-start justify-between gap-3 border-b border-zinc-200 pb-3 dark:border-zinc-800">
+    <div key={match.id} className="space-y-2 rounded-xl border border-zinc-200 bg-white p-2.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="flex items-start justify-between gap-3 border-b border-zinc-200 pb-2 dark:border-zinc-800">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">{getGroupLabel(match)}</p>
@@ -347,16 +341,15 @@ export default function ScoreEntry() {
               {getStatusLabel(match.status)}
             </span>
           </div>
-          <h3 className="mt-1 truncate text-base font-black text-zinc-900 dark:text-zinc-100">
+          <h3 className="mt-1 text-sm font-black leading-tight text-zinc-900 dark:text-zinc-100">
             {getTeamName(match, 'A')} vs {getTeamName(match, 'B')}
           </h3>
-          <p className="mt-1 text-[11px] font-bold text-zinc-500">{getMatchResultLabel(match, getTeamName(match, 'A'), getTeamName(match, 'B'))}</p>
         </div>
         <button
           type="button"
           onClick={() => handleCloseMatch(match)}
           disabled={updateMatchStatus.isPending || (!isReviewingFinished && hasSavedSetScores(match.id))}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
           title={!isReviewingFinished && hasSavedSetScores(match.id) ? 'Reset điểm trước khi thoát trận về chờ đấu' : 'Thoát panel nhập điểm'}
         >
           <X size={18} />
@@ -364,23 +357,23 @@ export default function ScoreEntry() {
       </div>
 
       {isReviewingFinished ? (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-bold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
           Trận đã chốt. Có thể reset nếu cần nhập lại kết quả.
         </div>
       ) : hasSavedSetScores(match.id) ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] font-bold text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
           Trận đã có điểm séc. Muốn bấm X để trả về chờ đấu, hãy reset điểm trước.
         </div>
       ) : null}
 
       <div className="space-y-2">{renderSetInputs(match)}</div>
 
-      <div className="flex items-center justify-between gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+      <div className="flex items-center justify-between gap-2 border-t border-zinc-200 pt-2 dark:border-zinc-800">
         <button
           type="button"
           onClick={() => handleResetMatch(match.id)}
           disabled={resetMatchScore.isPending}
-          className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300"
+          className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-black text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300"
         >
           <RotateCcw size={15} /> Reset
         </button>
@@ -388,7 +381,7 @@ export default function ScoreEntry() {
           type="button"
           onClick={() => handleFinalizeMatch(match.id)}
           disabled={match.status === 'finished' || finalizeMatchScore.isPending}
-          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Check size={16} /> Chốt trận
         </button>
@@ -443,7 +436,7 @@ export default function ScoreEntry() {
               Chưa có lịch thi đấu. Hãy chia bảng và sinh lịch trước.
             </div>
           ) : (
-            <div className="grid max-h-[calc(100vh-260px)] grid-cols-1 gap-2 overflow-y-auto p-3">
+            <div className="grid max-h-[calc(100vh-230px)] grid-cols-1 gap-2 overflow-y-auto p-2.5">
               {eventMatches.map((match, index) => {
                 const teamA = getTeamName(match, 'A');
                 const teamB = getTeamName(match, 'B');
@@ -454,22 +447,19 @@ export default function ScoreEntry() {
                 return (
                   <article
                     key={match.id}
-                    className={`rounded-lg border p-3 transition-colors ${
+                    className={`rounded-lg border p-2.5 transition-colors ${
                       isActive
                         ? 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/25'
                         : 'border-zinc-200 bg-white hover:border-blue-200 hover:bg-blue-50/40 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-900 dark:hover:bg-blue-950/15'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-lg bg-zinc-900 px-2 text-[11px] font-black text-white dark:bg-zinc-100 dark:text-zinc-950">
+                          <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-zinc-900 px-1.5 text-[10px] font-black text-white dark:bg-zinc-100 dark:text-zinc-950">
                             {index + 1}
                           </span>
-                          <span className={`rounded-full border px-2 py-1 text-[10px] font-black uppercase ${getStatusClassName(match.status)}`}>
-                            {getStatusLabel(match.status)}
-                          </span>
-                          <span className="rounded-full border border-zinc-200 px-2 py-1 text-[10px] font-black uppercase text-zinc-500 dark:border-zinc-800">
+                          <span className="rounded-full border border-zinc-200 px-2 py-0.5 text-[10px] font-black uppercase text-zinc-500 dark:border-zinc-800">
                             {getGroupLabel(match)}
                           </span>
                         </div>
@@ -478,7 +468,7 @@ export default function ScoreEntry() {
                         type="button"
                         onClick={() => handleOpenMatch(match)}
                         disabled={!isPermitted || updateMatchStatus.isPending}
-                        className={`inline-flex shrink-0 items-center gap-1 rounded-lg px-3 py-2 text-[11px] font-black disabled:cursor-not-allowed disabled:opacity-50 ${
+                        className={`inline-flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-[11px] font-black disabled:cursor-not-allowed disabled:opacity-50 ${
                           match.status === 'playing'
                             ? 'bg-blue-600 text-white hover:bg-blue-500'
                             : match.status === 'finished'
@@ -491,15 +481,13 @@ export default function ScoreEntry() {
                       </button>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-lg bg-zinc-50 p-2 dark:bg-zinc-950">
-                      <p className="truncate text-sm font-black text-zinc-900 dark:text-zinc-100" title={teamA}>{teamA}</p>
+                    <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_minmax(116px,168px)] items-center gap-2 rounded-lg bg-zinc-50 p-2 dark:bg-zinc-950 max-sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+                      <p className="min-w-0 whitespace-normal break-words text-sm font-black leading-tight text-zinc-900 dark:text-zinc-100" title={teamA}>{teamA}</p>
                       <span className="text-[10px] font-black text-zinc-400">VS</span>
-                      <p className="truncate text-right text-sm font-black text-zinc-900 dark:text-zinc-100" title={teamB}>{teamB}</p>
-                    </div>
-
-                    <div className="mt-2 grid gap-2">
+                      <p className="min-w-0 whitespace-normal break-words text-right text-sm font-black leading-tight text-zinc-900 dark:text-zinc-100" title={teamB}>{teamB}</p>
+                      <div className="grid gap-1 max-sm:col-span-3">
                       {maxSetCount === 1 ? (
-                        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg border border-zinc-100 px-2 py-1.5 text-xs dark:border-zinc-800">
+                        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg border border-zinc-100 px-2 py-1 text-xs dark:border-zinc-800">
                           <span className="rounded bg-blue-50 px-2 py-1 text-center font-mono font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
                             {getSetCell(match, 1, 'A') || '-'}
                           </span>
@@ -510,7 +498,7 @@ export default function ScoreEntry() {
                         </div>
                       ) : (
                         setNumbers.map((setNumber) => (
-                          <div key={setNumber} className="grid grid-cols-[56px_1fr_auto_1fr] items-center gap-2 rounded-lg border border-zinc-100 px-2 py-1.5 text-xs dark:border-zinc-800">
+                          <div key={setNumber} className="grid grid-cols-[42px_1fr_auto_1fr] items-center gap-1.5 rounded-lg border border-zinc-100 px-2 py-1 text-xs dark:border-zinc-800">
                             <span className="text-[10px] font-black uppercase text-zinc-500">Séc {setNumber}</span>
                             <span className="rounded bg-blue-50 px-2 py-1 text-center font-mono font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
                               {getSetCell(match, setNumber, 'A') || '-'}
@@ -522,6 +510,7 @@ export default function ScoreEntry() {
                           </div>
                         ))
                       )}
+                      </div>
                     </div>
                   </article>
                 );
@@ -545,16 +534,15 @@ export default function ScoreEntry() {
             </div>
           ) : (
             <div className="space-y-3 p-3">
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
                 <div>
                   <p className="text-sm font-black uppercase text-zinc-900 dark:text-zinc-100">
                     {reviewMatch ? 'Trận đang đấu / xem lại' : 'Trận đang đấu'}
                   </p>
-                  <p className="text-[11px] font-bold text-zinc-500">Nhập điểm hoặc xem lại kết quả cần sửa.</p>
                 </div>
-                <span className="rounded-full bg-blue-600 px-3 py-1 text-[11px] font-black text-white">{panelMatches.length} trận</span>
+                <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-blue-600 px-2 text-[13px] font-black text-white">{panelMatches.length}</span>
               </div>
-              <div className="max-h-[calc(100vh-260px)] space-y-3 overflow-y-auto pr-1">
+              <div className="max-h-[calc(100vh-230px)] space-y-2 overflow-y-auto pr-1">
                 {panelMatches.map(renderPlayingMatchPanel)}
               </div>
             </div>

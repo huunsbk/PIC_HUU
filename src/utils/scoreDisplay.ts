@@ -71,6 +71,22 @@ export function getSeedLabel(match: Partial<Match>, slot: 'A' | 'B', fallback: s
 
 function normalizeSeedLabel(label: string) {
   const clean = label.trim();
+  const upper = clean.toUpperCase();
+
+  const qfWinner = upper.match(/^(?:W[-_ ]?QF|THẮNG TỨ KẾT |THANG TU KET )(\d+)$/);
+  if (qfWinner) return `W TK ${qfWinner[1]}`;
+
+  const sfWinner = upper.match(/^(?:W[-_ ]?SF|THẮNG BÁN KẾT |THANG BAN KET )(\d+)$/);
+  if (sfWinner) return `W BK ${sfWinner[1]}`;
+
+  const sfLoser = upper.match(/^(?:L[-_ ]?SF|THUA BÁN KẾT |THUA BAN KET )(\d+)$/);
+  if (sfLoser) return `L BK ${sfLoser[1]}`;
+
+  const roundWinner = upper.match(/^THẮNG VÒNG (?:16|32|1\/8) \(TRẬN (\d+)\)$/) || upper.match(/^THANG VONG (?:16|32|1\/8) \(TRAN (\d+)\)$/);
+  if (roundWinner) return `W ${roundWinner[1]}`;
+
+  const roundLoser = upper.match(/^THUA VÒNG (?:16|32|1\/8) \(TRẬN (\d+)\)$/) || upper.match(/^THUA VONG (?:16|32|1\/8) \(TRAN (\d+)\)$/);
+  if (roundLoser) return `L ${roundLoser[1]}`;
 
   const first = clean.match(/^nhất\s+(?:bảng\s+)?(.+)$/i);
   if (first) return `Hạng 1 bảng ${first[1].trim()}`;

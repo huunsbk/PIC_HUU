@@ -21,22 +21,67 @@ function EventRefereeSummary({ eventId }: { eventId: string }) {
     return <span className="text-[11px] font-bold text-amber-600">Chưa cấp quyền</span>;
   }
 
+  const permissionLabels: Record<string, string> = {
+    view_event: 'Xem nội dung',
+    create_events: 'Tạo nội dung',
+    manage_event_config: 'Cấu hình nội dung',
+    manage_teams: 'Quản lý đội',
+    manage_groups: 'Chia bảng',
+    manage_schedule: 'Tạo lịch',
+    enter_scores: 'Nhập điểm',
+    manage_standings: 'Xếp hạng',
+    manage_knockout: 'Sơ đồ KO',
+    manage_referees: 'Quản lý trọng tài',
+    manage_events: 'Cấu hình nội dung',
+  };
+
+  const roleLabels: Record<string, string> = {
+    EVENT_ADMIN: 'Event Admin',
+    REFEREE: 'Trọng tài',
+    VIEWER: 'Viewer',
+  };
+
+  const grouped = Object.values(
+    grants.reduce((acc: Record<string, any>, grant: any) => {
+      const key = grant.account_id;
+      if (!acc[key]) {
+        acc[key] = {
+          accountId: grant.account_id,
+          name: grant.display_name || grant.username,
+          username: grant.username,
+          roleName: grant.role_name,
+          permissions: new Set<string>(),
+        };
+      }
+      acc[key].permissions.add(grant.permission || 'enter_scores');
+      return acc;
+    }, {})
+  );
+
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {grants.slice(0, 3).map((grant) => (
-        <span
-          key={`${grant.account_id}-${grant.permission}`}
-          className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
-        >
-          <ShieldCheck size={12} />
-          {grant.display_name || grant.username}
-        </span>
-      ))}
-      {grants.length > 3 && (
-        <span className="rounded-md bg-zinc-100 px-2 py-1 text-[10px] font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-          +{grants.length - 3}
-        </span>
-      )}
+    <div className="space-y-1.5">
+      {grouped.map((account: any) => {
+        const permissionText = Array.from(account.permissions)
+          .map((permission) => permissionLabels[String(permission)] || String(permission))
+          .join(', ');
+        return (
+          <div
+            key={account.accountId}
+            className="rounded-lg border border-emerald-100 bg-emerald-50 px-2 py-1.5 text-[10px] font-bold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
+          >
+            <div className="flex items-center gap-1 font-black">
+              <ShieldCheck size={12} />
+              <span>
+                {roleLabels[account.roleName] || account.roleName || 'Tài khoản'}: {account.name}
+                {account.username && account.username !== account.name ? ` (${account.username})` : ''}
+              </span>
+            </div>
+            <div className="mt-0.5 pl-4 text-[9px] leading-snug text-emerald-700 dark:text-emerald-300">
+              Quyền: {permissionText}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -114,8 +159,6 @@ export default function EventManagementPage() {
       <header className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Quản lý theo cây</p>
-          <h1 className="text-xl font-black text-zinc-900 dark:text-zinc-100">Nội dung thi đấu</h1>
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Đơn vị &gt; Giải đấu &gt; Nội dung &gt; Trọng tài</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -193,7 +236,6 @@ export default function EventManagementPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="font-black text-zinc-900 dark:text-zinc-100">{event.name}</div>
-                      <div className="mt-1 font-mono text-[10px] font-bold text-zinc-400">{event.id}</div>
                     </td>
                     <td className="px-4 py-4">
                       <span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-black uppercase ${getStatusClass(event.status)}`}>
