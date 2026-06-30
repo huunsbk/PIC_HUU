@@ -4,6 +4,7 @@ import { CreateTeamSchema } from '../lib/validation/schemas';
 import { tournamentRpc, type TeamImportRow } from '../lib/api/tournamentRpc';
 import type { SeedType } from '../types';
 import { isUsableEventId, useEvents } from './useEvents';
+import { assertFreshEventPermission } from '../lib/auth/livePermissions';
 
 const SELECT_TENANT_MESSAGE = 'Vui lòng chọn hoặc tạo đơn vị trước.';
 const SELECT_TOURNAMENT_MESSAGE = 'Vui lòng chọn hoặc tạo giải đấu trước.';
@@ -268,7 +269,8 @@ export function useMatchMutations() {
   };
   const updateMatchScore = useMutation({
     mutationFn: async ({ matchId, scoreA, scoreB }: { matchId: string, scoreA: number | null, scoreB: number | null }) => {
-      requireBusinessContext();
+      const eventId = requireBusinessContext();
+      await assertFreshEventPermission(eventId, 'enter_scores');
       if (scoreA !== null && scoreB !== null) {
          return tournamentRpc.updateMatchScore(matchId, scoreA, scoreB);
       } else {
@@ -284,7 +286,8 @@ export function useMatchMutations() {
 
   const resetMatchScore = useMutation({
     mutationFn: async (matchId: string) => {
-      requireBusinessContext();
+      const eventId = requireBusinessContext();
+      await assertFreshEventPermission(eventId, 'enter_scores');
       return tournamentRpc.resetMatchScore(matchId);
     },
     onSuccess: () => {
@@ -318,7 +321,8 @@ export function useMatchMutations() {
 
   const updateMatchStatus = useMutation({
     mutationFn: async ({ matchId, status }: { matchId: string, status: 'pending' | 'playing' | 'finished' }) => {
-      requireBusinessContext();
+      const eventId = requireBusinessContext();
+      await assertFreshEventPermission(eventId, 'enter_scores');
       if (status === 'pending' || status === 'playing') {
         return tournamentRpc.updateMatchStatus(matchId, status);
       }
@@ -333,7 +337,8 @@ export function useMatchMutations() {
 
   const updateMatchSetScore = useMutation({
     mutationFn: async ({ matchId, setNumber, scoreA, scoreB }: { matchId: string, setNumber: 1 | 2 | 3, scoreA: number, scoreB: number }) => {
-      requireBusinessContext();
+      const eventId = requireBusinessContext();
+      await assertFreshEventPermission(eventId, 'enter_scores');
       return tournamentRpc.updateMatchSetScore(matchId, setNumber, scoreA, scoreB);
     },
     onSuccess: () => {
@@ -345,7 +350,8 @@ export function useMatchMutations() {
 
   const finalizeMatchScore = useMutation({
     mutationFn: async (matchId: string) => {
-      requireBusinessContext();
+      const eventId = requireBusinessContext();
+      await assertFreshEventPermission(eventId, 'enter_scores');
       return tournamentRpc.finalizeMatchScore(matchId);
     },
     onSuccess: () => {

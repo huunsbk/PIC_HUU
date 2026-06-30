@@ -8,6 +8,7 @@ import {
 import { useTournamentStore } from '../store';
 import type { SeedType } from '../types';
 import { isUsableEventId, useEvents } from './useEvents';
+import { assertFreshEventPermission } from '../lib/auth/livePermissions';
 
 type GroupMode = 'balanced' | 'random' | 'seed' | 'empty';
 
@@ -117,35 +118,39 @@ export function useTournamentRpcMutations() {
   });
 
   const updateMatchScore = useMutation({
-    mutationFn: ({ matchId, scoreA, scoreB }: { matchId: string; scoreA: number; scoreB: number }) =>
+    mutationFn: async ({ matchId, scoreA, scoreB }: { matchId: string; scoreA: number; scoreB: number }) =>
       {
-        requireEventId(selectedEventId);
+        const eventId = requireEventId(selectedEventId);
+        await assertFreshEventPermission(eventId, 'enter_scores');
         return tournamentRpc.updateMatchScore(matchId, scoreA, scoreB);
       },
     onSuccess: invalidateEventScope,
   });
 
   const updateMatchSetScore = useMutation({
-    mutationFn: ({ matchId, setNumber, scoreA, scoreB }: { matchId: string; setNumber: 1 | 2 | 3; scoreA: number; scoreB: number }) =>
+    mutationFn: async ({ matchId, setNumber, scoreA, scoreB }: { matchId: string; setNumber: 1 | 2 | 3; scoreA: number; scoreB: number }) =>
       {
-        requireEventId(selectedEventId);
+        const eventId = requireEventId(selectedEventId);
+        await assertFreshEventPermission(eventId, 'enter_scores');
         return tournamentRpc.updateMatchSetScore(matchId, setNumber, scoreA, scoreB);
       },
     onSuccess: invalidateEventScope,
   });
 
   const finalizeMatchScore = useMutation({
-    mutationFn: ({ matchId }: { matchId: string }) =>
+    mutationFn: async ({ matchId }: { matchId: string }) =>
       {
-        requireEventId(selectedEventId);
+        const eventId = requireEventId(selectedEventId);
+        await assertFreshEventPermission(eventId, 'enter_scores');
         return tournamentRpc.finalizeMatchScore(matchId);
       },
     onSuccess: invalidateEventScope,
   });
 
   const resetMatchScore = useMutation({
-    mutationFn: (matchId: string) => {
-      requireEventId(selectedEventId);
+    mutationFn: async (matchId: string) => {
+      const eventId = requireEventId(selectedEventId);
+      await assertFreshEventPermission(eventId, 'enter_scores');
       return tournamentRpc.resetMatchScore(matchId);
     },
     onSuccess: invalidateEventScope,
