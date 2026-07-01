@@ -132,7 +132,7 @@ export default function CreateEventModal({ onClose }: { onClose: () => void }) {
               </select>
             </div>
             <div className="sm:col-span-2 rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs font-semibold text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-200">
-              Nội dung mới sẽ lấy luật mặc định từ Tổng quan: thắng {defaultSettings.winPoint ?? 2} điểm, thua {defaultSettings.lossPoint ?? 1} điểm, set chạm {defaultSettings.maxScore ?? 15}, cap {defaultSettings.capScore ?? 17}.
+              Nội dung mới sẽ lấy luật mặc định từ Tổng quan: thắng {defaultSettings.winPoint ?? 2} điểm, thua {defaultSettings.lossPoint ?? 1} điểm, điểm chạm đến {defaultSettings.maxScore ?? 15}, cap {defaultSettings.capScore ?? 17}.
             </div>
             <div>
               <label className="block text-xs font-bold text-zinc-500 mb-1 uppercase">Số bảng</label>

@@ -14,6 +14,7 @@ import { useEvents } from '../hooks/useEvents';
 import { useMatchSets } from '../hooks/useMatchSets';
 import { calculateGroupStandings, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
 import { attachMatchSets, getMatchResultLabel, getSetScoreText, getSingleSetScoreValue } from '../utils/scoreDisplay';
+import { getMaxSetCountForMatch } from '../lib/eventSettings';
 import { 
   Printer, 
   RefreshCw, 
@@ -65,8 +66,10 @@ export default function SchedulerAndScoreKeeper() {
 
   const { updateMatchScore, updateMatchSetScore, finalizeMatchScore, resetMatchScore, generateForGroup, generateAllSchedules } = useMatchMutations();
   const currentEvent = currentEventId ? events[currentEventId] : null;
-  const matchSetMode = currentEvent?.scoring_config?.matchSetMode || 'single';
-  const isBestOf3 = matchSetMode === 'best_of_3';
+  const getMatchMaxSetCount = (match: any) => {
+    const event = events[match.event_id || currentEvent?.id || ''] || currentEvent;
+    return getMaxSetCountForMatch(match, event?.scoring_config || {});
+  };
 
   const canManage = hasPermission('manage_matches');
 
@@ -627,6 +630,8 @@ export default function SchedulerAndScoreKeeper() {
                           const scoreBVal = localScores[match.id]?.scoreB ?? '';
 
                           const isFinished = match.status === 'finished';
+                          const maxSetCount = getMatchMaxSetCount(match);
+                          const isBestOf3Match = maxSetCount === 3;
                           const isTwoZeroSetLead = ((match.scoreA === 2 && match.scoreB === 0) || (match.scoreA === 0 && match.scoreB === 2));
                           const resultLabel = getMatchResultLabel(match, displayedTeamAName, displayedTeamBName);
 
@@ -664,7 +669,7 @@ export default function SchedulerAndScoreKeeper() {
 
                                 {/* CENTER CONTROL: real set points, aggregate result is display-only */}
                                 <div className="shrink-0 min-w-[185px]">
-                                  {!isBestOf3 ? (
+                                  {!isBestOf3Match ? (
                                     <div className="space-y-1">
                                       <div className="text-center text-[9px] font-black uppercase tracking-widest text-zinc-400">Điểm từng séc</div>
                                       <div className="flex items-center gap-2 h-8 justify-center">
@@ -697,7 +702,7 @@ export default function SchedulerAndScoreKeeper() {
                                   ) : (
                                     <div className="space-y-1">
                                       <div className="text-center text-[9px] font-black uppercase tracking-widest text-zinc-400">Điểm từng séc</div>
-                                      {([1, 2, 3] as const).map((setNumber) => {
+                                      {([1, 2, 3] as const).slice(0, maxSetCount).map((setNumber) => {
                                         const setScore = getSetScoreValue(match.id, setNumber);
                                         const isSetLocked = isFinished || (setNumber === 3 && isTwoZeroSetLead);
                                         return (

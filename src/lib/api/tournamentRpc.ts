@@ -110,6 +110,11 @@ const ERROR_TRANSLATIONS: Array<[RegExp, string]> = [
   [/GROUP_STAGE_INCOMPLETE/i, 'Vòng bảng chưa hoàn tất. Chỉ có thể xác nhận đội vào vòng trong khi mọi trận vòng bảng đã chốt kết quả.'],
   [/Match is not ready to finalize/i, 'Trận chưa đủ điều kiện chốt. Vui lòng lưu đủ séc thắng theo cấu hình trước.'],
   [/No saved set score found/i, 'Chưa có điểm séc nào được lưu cho trận này.'],
+  [/Winner score must reach maxScore/i, 'Điểm thắng chưa đạt điểm chạm đến của vòng đấu này.'],
+  [/Winner must lead by two before capScore/i, 'Điểm thắng phải cách 2 điểm khi chưa tới điểm kịch trần.'],
+  [/Winner must lead at capScore/i, 'Khi tới điểm kịch trần, đội thắng phải hơn ít nhất 1 điểm.'],
+  [/Score exceeds capScore/i, 'Điểm nhập vượt quá điểm kịch trần của vòng đấu này.'],
+  [/ROUND_SCORING_RULE_LOCKED|ROUND_SET_MODE_LOCKED/i, 'Vòng này đã có kết quả. Hãy reset điểm vòng đó trước khi đổi số séc, điểm chạm đến hoặc điểm kịch trần.'],
   [/Match participants are not resolved/i, 'Trận chưa đủ hai đội thi đấu. Vui lòng kiểm tra lại sơ đồ hoặc lịch đấu.'],
   [/Cannot set match back to pending while saved set scores exist/i, 'Trận đã có điểm séc. Vui lòng reset điểm trước khi đưa trận về chờ đấu.'],
   [/Finished match status cannot be changed here/i, 'Trận đã chốt kết quả, không thể đổi trạng thái tại đây.'],
@@ -214,6 +219,22 @@ export const tournamentRpc = {
   listArchivedEvents(tenantId?: string | null) {
     return callRpc<any[]>('list_archived_events_v1', {
       p_tenant_id: tenantId || null,
+    });
+  },
+
+  listArchivedTenants() {
+    return callRpc<any[]>('list_archived_tenants_v1', {});
+  },
+
+  restoreTenant(tenantId: string) {
+    return callRpc<TournamentRpcResult & { tenant?: any }>('restore_tenant_v1', {
+      p_tenant_id: tenantId,
+    });
+  },
+
+  hardDeleteTenant(tenantId: string) {
+    return callRpc<TournamentRpcResult & { deleted?: any }>('hard_delete_tenant_v1', {
+      p_tenant_id: tenantId,
     });
   },
 

@@ -20,8 +20,15 @@ export interface TournamentSettings {
 }
 
 export type MatchSetMode = 'single' | 'best_of_3';
+export type MatchRoundKey = 'group' | 'r32' | 'r16' | 'r8' | 'qf' | 'sf' | 'final';
 export type EventFormatType = 'round_robin_only' | 'knockout_only' | 'group_then_knockout';
 export type CompetitionType = 'singles' | 'doubles' | 'team' | 'individual_time' | 'custom';
+
+export interface RoundScoringRule {
+  matchSetMode: MatchSetMode;
+  maxScore: number;
+  capScore: number;
+}
 
 export interface ScoringConfig {
   matchSetMode: MatchSetMode;
@@ -31,6 +38,8 @@ export interface ScoringConfig {
   capScore: number;
   winByTwo: boolean;
   allowDraw?: boolean;
+  roundSetModes?: Partial<Record<MatchRoundKey, MatchSetMode>>;
+  roundScoringRules?: Partial<Record<MatchRoundKey, RoundScoringRule>>;
 }
 
 export interface RankingConfig {

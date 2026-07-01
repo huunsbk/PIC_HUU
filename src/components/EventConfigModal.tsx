@@ -3,8 +3,8 @@ import { Save, X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTournamentStore } from '../store';
 import { tournamentRpc } from '../lib/api/tournamentRpc';
-import { buildDefaultEventRankingConfig, buildDefaultEventScoringConfig, getEventConfigDefaults } from '../lib/eventSettings';
-import type { CompetitionType, EventFormatType, MatchSetMode } from '../types';
+import { ROUND_SET_MODE_KEYS, ROUND_SET_MODE_LABELS, buildDefaultEventRankingConfig, buildDefaultEventScoringConfig, getEventConfigDefaults } from '../lib/eventSettings';
+import type { CompetitionType, EventFormatType, MatchRoundKey, MatchSetMode, RoundScoringRule } from '../types';
 
 export default function EventConfigModal({ event, onClose }: { event: any; onClose: () => void }) {
   const tournamentSettings = useTournamentStore((state) => state.tournament.settings);
@@ -13,8 +13,9 @@ export default function EventConfigModal({ event, onClose }: { event: any; onClo
   const [competitionType, setCompetitionType] = useState<CompetitionType>(defaults.competitionType);
   const [formatType, setFormatType] = useState<EventFormatType>(defaults.formatType);
   const [matchSetMode, setMatchSetMode] = useState<MatchSetMode>(defaults.matchSetMode);
-  const [maxScore, setMaxScore] = useState(defaults.maxScore);
-  const [capScore, setCapScore] = useState(defaults.capScore);
+  const [roundScoringRules, setRoundScoringRules] = useState<Record<MatchRoundKey, RoundScoringRule>>(defaults.roundScoringRules);
+  const [maxScore] = useState(defaults.maxScore);
+  const [capScore] = useState(defaults.capScore);
   const [winPoint, setWinPoint] = useState(defaults.winPoint);
   const [lossPoint, setLossPoint] = useState(defaults.lossPoint);
   const [topPerGroup, setTopPerGroup] = useState(defaults.topPerGroup);
@@ -29,25 +30,37 @@ export default function EventConfigModal({ event, onClose }: { event: any; onClo
     submitEvent.preventDefault();
     if (isSubmitting) return;
 
-    if (capScore < maxScore) {
-      alert('Điểm kịch trần phải lớn hơn hoặc bằng Set chạm đến.');
+    const invalidRound = ROUND_SET_MODE_KEYS.find((roundKey) => {
+      const rule = roundScoringRules[roundKey];
+      return rule.capScore < rule.maxScore;
+    });
+    if (invalidRound) {
+      alert(`${ROUND_SET_MODE_LABELS[invalidRound]}: Điểm kịch trần phải lớn hơn hoặc bằng điểm chạm đến.`);
       return;
     }
 
     setIsSubmitting(true);
     try {
+      const primaryRule = roundScoringRules.group || { matchSetMode, maxScore, capScore };
+      const roundSetModes = ROUND_SET_MODE_KEYS.reduce((acc, key) => {
+        acc[key] = roundScoringRules[key].matchSetMode;
+        return acc;
+      }, {} as Record<MatchRoundKey, MatchSetMode>);
+
       await tournamentRpc.updateEventConfig({
         eventId: event.id,
         sportId,
         competitionType,
         formatType,
         scoringConfig: {
-          ...buildDefaultEventScoringConfig({ maxScore, capScore }, matchSetMode),
+          ...buildDefaultEventScoringConfig({ maxScore: primaryRule.maxScore, capScore: primaryRule.capScore }, primaryRule.matchSetMode),
+          roundSetModes,
+          roundScoringRules,
           winByTwo: event.scoring_config?.winByTwo ?? true,
           allowDraw: event.scoring_config?.allowDraw ?? false,
         },
         rankingConfig: buildDefaultEventRankingConfig(
-          { winPoint, lossPoint, maxScore, capScore, advanceCount: topPerGroup, numBestThirds: bestThirdCount },
+          { winPoint, lossPoint, maxScore: primaryRule.maxScore, capScore: primaryRule.capScore, advanceCount: topPerGroup, numBestThirds: bestThirdCount },
           {
             groupCount,
             top_per_group: topPerGroup,
@@ -111,11 +124,99 @@ export default function EventConfigModal({ event, onClose }: { event: any; onClo
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-bold uppercase text-zinc-500">Số séc</label>
-              <select value={matchSetMode} onChange={(e) => setMatchSetMode(e.target.value as MatchSetMode)} className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800">
+              <label className="mb-1 block text-xs font-bold uppercase text-zinc-500">Số séc mặc định</label>
+              <select
+                value={matchSetMode}
+                onChange={(e) => {
+                  const nextMode = e.target.value as MatchSetMode;
+                  setMatchSetMode(nextMode);
+                  setRoundScoringRules((prev) => ROUND_SET_MODE_KEYS.reduce((acc, key) => {
+                    acc[key] = { ...prev[key], matchSetMode: nextMode };
+                    return acc;
+                  }, {} as Record<MatchRoundKey, RoundScoringRule>));
+                }}
+                className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+              >
                 <option value="single">Một séc</option>
                 <option value="best_of_3">Best of 3</option>
               </select>
+            </div>
+            <div className="sm:col-span-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase text-zinc-700 dark:text-zinc-200">Luật điểm theo từng vòng</p>
+                  <p className="text-[11px] font-semibold text-zinc-500">Lấy mặc định từ Luật & Điểm Thi Đấu và số séc mặc định. Nếu vòng đã có kết quả, hệ thống sẽ yêu cầu reset điểm trước khi đổi.</p>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                {ROUND_SET_MODE_KEYS.map((roundKey) => {
+                  const rule = roundScoringRules[roundKey];
+                  return (
+                    <div key={roundKey} className="grid gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900 sm:grid-cols-[120px_minmax(145px,1fr)_120px_120px] sm:items-center">
+                      <span className="text-xs font-black text-zinc-700 dark:text-zinc-200">{ROUND_SET_MODE_LABELS[roundKey]}</span>
+                      <div className="flex items-center gap-2 text-[11px] font-bold text-zinc-600 dark:text-zinc-300">
+                        <label className="inline-flex items-center gap-1">
+                          <input
+                            type="radio"
+                            name={`round-mode-${roundKey}`}
+                            checked={rule.matchSetMode === 'single'}
+                            onChange={() => setRoundScoringRules((prev) => ({ ...prev, [roundKey]: { ...prev[roundKey], matchSetMode: 'single' } }))}
+                          />
+                          1 séc
+                        </label>
+                        <label className="inline-flex items-center gap-1">
+                          <input
+                            type="radio"
+                            name={`round-mode-${roundKey}`}
+                            checked={rule.matchSetMode === 'best_of_3'}
+                            onChange={() => setRoundScoringRules((prev) => ({ ...prev, [roundKey]: { ...prev[roundKey], matchSetMode: 'best_of_3' } }))}
+                          />
+                          3 séc
+                        </label>
+                      </div>
+                      <label className="grid gap-1">
+                        <span className="text-[10px] font-black uppercase text-zinc-500">Điểm chạm đến</span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={rule.maxScore}
+                          onChange={(e) => {
+                            const nextMax = Math.max(1, Number(e.target.value) || 1);
+                            setRoundScoringRules((prev) => ({
+                              ...prev,
+                              [roundKey]: {
+                                ...prev[roundKey],
+                                maxScore: nextMax,
+                                capScore: Math.max(nextMax, prev[roundKey].capScore),
+                              },
+                            }));
+                          }}
+                          className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+                        />
+                      </label>
+                      <label className="grid gap-1">
+                        <span className="text-[10px] font-black uppercase text-zinc-500">Điểm kịch trần</span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={rule.capScore}
+                          onChange={(e) => {
+                            const nextCap = Math.max(1, Number(e.target.value) || 1);
+                            setRoundScoringRules((prev) => ({
+                              ...prev,
+                              [roundKey]: {
+                                ...prev[roundKey],
+                                capScore: nextCap,
+                              },
+                            }));
+                          }}
+                          className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+                        />
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-xs font-bold uppercase text-zinc-500">Tỉ số thắng</label>
@@ -124,14 +225,6 @@ export default function EventConfigModal({ event, onClose }: { event: any; onClo
             <div>
               <label className="mb-1 block text-xs font-bold uppercase text-zinc-500">Tỉ số thua</label>
               <input type="number" min={0} value={lossPoint} onChange={(e) => setLossPoint(Number(e.target.value) || 0)} className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-bold uppercase text-zinc-500">Set chạm đến</label>
-              <input type="number" min={1} value={maxScore} onChange={(e) => setMaxScore(Math.max(1, Number(e.target.value) || 1))} className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-bold uppercase text-zinc-500">Điểm kịch trần (Cap)</label>
-              <input type="number" min={1} value={capScore} onChange={(e) => setCapScore(Math.max(1, Number(e.target.value) || 1))} className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-bold uppercase text-zinc-500">Top mỗi bảng</label>
@@ -156,7 +249,7 @@ export default function EventConfigModal({ event, onClose }: { event: any; onClo
           </div>
 
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
-            Lưu cấu hình này chỉ áp dụng cho nội dung hiện tại. Trận đã có điểm có thể cần kiểm tra lại nếu đổi số séc, set chạm đến hoặc cap.
+            Lưu cấu hình này chỉ áp dụng cho nội dung hiện tại. Trận đã có điểm cần reset trước khi đổi số séc, điểm chạm đến hoặc điểm kịch trần của vòng đó.
           </div>
 
           <div className="flex gap-3 pt-2">

@@ -9,6 +9,7 @@ import { useMatchSets } from '../hooks/useMatchSets';
 import { useMatchMutations } from '../hooks/useDataMutations';
 import { balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
 import { attachMatchSets, getMatchResultLabel } from '../utils/scoreDisplay';
+import { getMaxSetCountForMatch } from '../lib/eventSettings';
 import type { Match, MatchSet } from '../types';
 
 type SetScoreDraft = { a: string; b: string };
@@ -38,8 +39,10 @@ export default function ScoreEntry() {
   const matches = useMemo(() => attachMatchSets(matchesData as Match[], matchSetsData), [matchesData, matchSetsData]);
 
   const currentEvent = currentEventId && events[currentEventId] ? events[currentEventId] : eventsData[0];
-  const matchSetMode = currentEvent?.scoring_config?.matchSetMode || 'single';
-  const maxSetCount = matchSetMode === 'best_of_3' ? 3 : 1;
+  const getMatchMaxSetCount = (match: Match) => {
+    const event = events[match.event_id || currentEvent?.id || ''] || currentEvent;
+    return getMaxSetCountForMatch(match, event?.scoring_config || {});
+  };
 
   const isPermitted = useMemo(() => {
     if (hasPermission('*') || hasPermission('enter_scores') || hasPermission('manage_matches')) return true;
@@ -115,6 +118,7 @@ export default function ScoreEntry() {
   };
 
   const getSetCell = (match: Match, setNumber: 1 | 2 | 3, side: 'A' | 'B') => {
+    const maxSetCount = getMatchMaxSetCount(match);
     if (setNumber > maxSetCount) return '-';
     const set = getStoredSet(match.id, setNumber);
     const value = side === 'A' ? set?.score_a : set?.score_b;
@@ -165,6 +169,8 @@ export default function ScoreEntry() {
   const saveSetScore = async (matchId: string, setNumber: 1 | 2 | 3) => {
     const scores = getSetScoreValue(matchId, setNumber);
     if (scores.a === '' || scores.b === '') {
+      const match = eventMatches.find((item) => item.id === matchId);
+      const maxSetCount = match ? getMatchMaxSetCount(match) : 1;
       triggerError(maxSetCount === 1 ? 'Vui lòng nhập đủ điểm.' : `Vui lòng nhập đủ điểm cho séc ${setNumber}.`);
       return;
     }
@@ -176,8 +182,12 @@ export default function ScoreEntry() {
         scoreA: parseInt(scores.a, 10),
         scoreB: parseInt(scores.b, 10),
       });
+      const match = eventMatches.find((item) => item.id === matchId);
+      const maxSetCount = match ? getMatchMaxSetCount(match) : 1;
       triggerSuccess(maxSetCount === 1 ? 'Đã lưu điểm.' : `Đã lưu séc ${setNumber}.`);
     } catch (err) {
+      const match = eventMatches.find((item) => item.id === matchId);
+      const maxSetCount = match ? getMatchMaxSetCount(match) : 1;
       triggerError(err instanceof Error ? err.message : maxSetCount === 1 ? 'Không lưu được điểm.' : `Không lưu được điểm séc ${setNumber}.`);
     }
   };
@@ -255,6 +265,7 @@ export default function ScoreEntry() {
   const renderSetInputs = (match: Match) => {
     const winCounts = getSetWinCounts(match.id);
     const matchFinished = match.status === 'finished';
+    const maxSetCount = getMatchMaxSetCount(match);
 
     return ([1, 2, 3] as const).slice(0, maxSetCount).map((setNumber) => {
       const setScore = getSetScoreValue(match.id, setNumber);
@@ -442,6 +453,7 @@ export default function ScoreEntry() {
                 const teamB = getTeamName(match, 'B');
                 const isActive = activeMatchId === match.id;
                 const actionLabel = match.status === 'finished' ? 'Xem' : match.status === 'playing' ? 'Đang đấu' : 'Chờ';
+                const maxSetCount = getMatchMaxSetCount(match);
                 const setNumbers = ([1, 2, 3] as const).slice(0, maxSetCount);
 
                 return (

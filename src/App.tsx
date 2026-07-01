@@ -248,8 +248,8 @@ function AdminWorkspacePanel() {
   const canManageDeleted = canManageTournaments || hasPermission('*') || hasPermission('manage_events');
   const canViewLogs = hasPermission('*') || hasPermission('view_audit_logs');
   const adminTabs = [
-    { id: 'workspaces', label: 'Giải đấu', icon: Layers, disabled: !canManageTournaments },
     { id: 'tenants', label: 'Đơn vị', icon: Building2, disabled: !canManageTenants },
+    { id: 'workspaces', label: 'Giải đấu', icon: Layers, disabled: !canManageTournaments },
     { id: 'accounts', label: 'Tài khoản', icon: UserCog, disabled: !canManageAccounts },
     { id: 'deleted', label: 'Đã xóa', icon: Trash2, disabled: !canManageDeleted },
     { id: 'logs', label: 'Nhật ký', icon: ClipboardList, disabled: !canViewLogs },
