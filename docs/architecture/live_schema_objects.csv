@@ -1,0 +1,297 @@
+type,name
+function,archive_event_v1
+function,archive_team_v1
+function,archive_tenant_v1
+function,archive_tournament_v1
+function,archive_tournament_workspace_v6
+function,assert_round_set_modes_change_allowed_v1
+function,assign_team_to_group_v1
+function,assign_team_to_group_v2
+function,audit_matches_changes_safe_v4
+function,can_create_event
+function,can_create_team
+function,can_create_user
+function,clear_knockout_bracket_v1
+function,confirm_knockout_teams_v1
+function,create_event_admin
+function,create_event_v1
+function,create_team_v1
+function,create_tenant_v1
+function,create_tournament_v1
+function,create_tournament_workspace_v6
+function,current_account_id
+function,current_role
+function,current_role_name
+function,current_tenant_id
+function,dissolve_groups_v2
+function,dissolve_groups_v4
+function,ensure_manage_event_access_v1
+function,ensure_manage_event_for_tournament_v1
+function,ensure_manage_tenants_v1
+function,ensure_manage_tournaments_v1
+function,event_admin_default_permissions_v1
+function,expire_trial_subscriptions
+function,finalize_match_score_v1
+function,generate_knockout_bracket_v1
+function,generate_monthly_invoices
+function,generate_round_robin_schedule
+function,generate_schedule_v1
+function,get_current_profile
+function,get_match_round_key_v1
+function,get_match_scoring_rule_v1
+function,get_match_set_mode_v1
+function,get_public_tournament_snapshot_v1
+function,get_tournament_owner
+function,get_tournament_workspace_dashboard_v6
+function,get_workspace_context_v1
+function,grant_event_access_v1
+function,hard_delete_event_v1
+function,hard_delete_tenant_v1
+function,hard_delete_tournament_v1
+function,has_event_access
+function,has_event_permission
+function,has_feature
+function,has_permission
+function,import_teams_v1
+function,invalidate_account_sessions_v1
+function,list_accessible_workspaces_v1
+function,list_account_access_summary_v1
+function,list_archived_events_v1
+function,list_archived_tenants_v1
+function,list_archived_tournaments_v1
+function,list_event_access_v1
+function,list_events_by_tournament_v1
+function,list_permission_tree_v1
+function,list_tenants_v1
+function,list_tournaments_v1
+function,log_audit_event_v1
+function,normalize_round_scoring_rules_v1
+function,normalize_round_set_modes_v1
+function,p06_group_label
+function,p06_require_event_admin_v1
+function,p10_core_reset_match_score_v1
+function,p10_core_update_match_score_v1
+function,p10_core_update_match_set_score_v1
+function,p10_has_event_permission_v1
+function,p10_require_event_admin_v1
+function,p10_require_match_score_context_v1
+function,p10_validate_event_context_v1
+function,p12_knockout_seed_label_v1
+function,p12_propagate_knockout_winner_v1
+function,p12_rank_label_v1
+function,p12_reset_knockout_downstream_v1
+function,p12_short_ko_label_v1
+function,p22_assert_group_stage_change_allowed_v1
+function,p22_sync_knockout_after_group_stage_change_v1
+function,prepare_knockout_candidates_v1
+function,record_login_session_v1
+function,reset_match_score_v1
+function,resolve_knockout_slots_v1
+function,restore_event_v1
+function,restore_tenant_v1
+function,restore_tournament_v1
+function,revoke_event_access_v1
+function,save_manual_knockout_bracket_v1
+function,setup_groups_v2
+function,setup_groups_v3
+function,setup_groups_v4
+function,touch_updated_at
+function,transfer_tournament_owner_v6
+function,trg_auto_advance_winner
+function,trg_check_event_quota
+function,trg_check_team_quota
+function,trg_matches_cascade_on_group_delete
+function,trg_matches_cascade_on_team_delete
+function,trigger_auto_assign_event
+function,update_event_config_v1
+function,update_event_v1
+function,update_match_score_v1
+function,update_match_set_score_v1
+function,update_match_status_v1
+function,update_modified_column
+function,update_team_v1
+function,update_tenant_v1
+function,update_tournament_v1
+function,validate_event_config_v1
+index,account_event_permissions_active_permission_uidx
+index,account_event_permissions_pkey
+index,account_permissions_account_id_permission_id_key
+index,account_permissions_pkey
+index,accounts_pkey
+index,accounts_user_id_key
+index,accounts_username_key
+index,active_sessions_pkey
+index,active_sessions_session_token_key
+index,audit_logs_pkey
+index,event_knockout_selections_event_seed_active_idx
+index,event_knockout_selections_event_team_active_idx
+index,event_knockout_selections_pkey
+index,events_pkey
+index,groups_pkey
+index,idx_account_event_permissions_account_active
+index,idx_account_event_permissions_event_active
+index,idx_account_event_perms_account_id
+index,idx_account_event_perms_event_id
+index,idx_accounts_tenant_id
+index,idx_accounts_user_id
+index,idx_acct_event_perms_account
+index,idx_acct_perms_account
+index,idx_active_sessions_account
+index,idx_events_slug
+index,idx_events_sport_id
+index,idx_events_status
+index,idx_events_tenant_id
+index,idx_events_tenant_status
+index,idx_events_tournament_id
+index,idx_events_tournament_name_active
+index,idx_events_tournament_status
+index,idx_groups_event_id
+index,idx_groups_event_id_partial
+index,idx_groups_tenant_id
+index,idx_invoice_date
+index,idx_invoice_status
+index,idx_invoice_tenant
+index,idx_knockout_slots_event_active
+index,idx_login_logs_account
+index,idx_login_logs_created_at
+index,idx_match_sets_event_id
+index,idx_match_sets_event_id_partial
+index,idx_match_sets_match_id
+index,idx_matches_event_display_order
+index,idx_matches_event_id
+index,idx_matches_event_id_partial
+index,idx_matches_tenant_id
+index,idx_payment_status
+index,idx_subscription_tenant
+index,idx_subscriptions_end_date
+index,idx_subscriptions_status
+index,idx_teams_event_id
+index,idx_teams_event_id_partial
+index,idx_teams_group_id
+index,idx_teams_tenant_id
+index,idx_tenants_slug
+index,idx_tenants_status
+index,idx_tournament_admins_account
+index,idx_tournament_admins_tournament
+index,idx_tournament_slug
+index,idx_tournament_slug_unique
+index,idx_tournament_status
+index,idx_tournament_tenant_id
+index,idx_tournament_tenant_slug
+index,invoices_invoice_number_key
+index,invoices_pkey
+index,knockout_slots_pkey
+index,login_logs_pkey
+index,match_sets_pkey
+index,matches_pkey
+index,payments_pkey
+index,permissions_name_key
+index,permissions_pkey
+index,plan_features_pkey
+index,plan_features_plan_id_feature_key_key
+index,role_permissions_pkey
+index,roles_name_key
+index,roles_pkey
+index,sports_pkey
+index,sports_slug_key
+index,subscription_plans_name_key
+index,subscription_plans_pkey
+index,teams_pkey
+index,tenant_subscriptions_pkey
+index,tenants_pkey
+index,tenants_slug_key
+index,tenants_slug_unique_idx
+index,tournament_admins_account_id_key
+index,tournament_admins_pkey
+index,tournament_admins_tournament_id_key
+index,tournament_owners_pkey
+index,tournament_pkey
+index,tournament_tenant_slug_unique_idx
+index,uq_invoice_period
+index,uq_match_set_number
+index,ux_knockout_slots_active_match_slot
+policy,account_event_permissions_rls on account_event_permissions
+policy,account_permissions_rls on account_permissions
+policy,accounts_delete on accounts
+policy,accounts_insert on accounts
+policy,accounts_select on accounts
+policy,accounts_update on accounts
+policy,active_sessions_rls on active_sessions
+policy,audit_logs_rls on audit_logs
+policy,event_knockout_selections_select_scoped on event_knockout_selections
+policy,events_delete on events
+policy,events_insert on events
+policy,events_select on events
+policy,events_update on events
+policy,groups_delete on groups
+policy,groups_insert on groups
+policy,groups_select on groups
+policy,groups_update on groups
+policy,invoices_all on invoices
+policy,invoices_select on invoices
+policy,knockout_slots_select_tenant_or_super on knockout_slots
+policy,login_logs_insert on login_logs
+policy,loginlogs_insert on login_logs
+policy,loginlogs_isolation on login_logs
+policy,match_sets_select_scoped on match_sets
+policy,matches_delete on matches
+policy,matches_insert on matches
+policy,matches_select on matches
+policy,matches_update on matches
+policy,payments_all on payments
+policy,payments_select on payments
+policy,permissions_read on permissions
+policy,plan_features_all on plan_features
+policy,plan_features_select on plan_features
+policy,plans_all on subscription_plans
+policy,plans_select on subscription_plans
+policy,roles_read on roles
+policy,sports_admin_write on sports
+policy,sports_select_active_authenticated on sports
+policy,subscriptions_all on tenant_subscriptions
+policy,subscriptions_select on tenant_subscriptions
+policy,teams_delete on teams
+policy,teams_insert on teams
+policy,teams_select on teams
+policy,teams_update on teams
+policy,tenants_read on tenants
+policy,tournament_rls on tournament
+table,account_event_permissions
+table,account_permissions
+table,accounts
+table,active_sessions
+table,audit_logs
+table,event_knockout_selections
+table,events
+table,groups
+table,invoices
+table,knockout_slots
+table,login_logs
+table,match_sets
+table,matches
+table,payments
+table,permissions
+table,plan_features
+table,role_permissions
+table,roles
+table,sports
+table,subscription_plans
+table,teams
+table,tenant_subscriptions
+table,tenants
+table,tournament
+table,tournament_admins
+table,tournament_owners
+trigger,chk_event_quota
+trigger,chk_team_quota
+trigger,trg_audit_matches_safe_v4
+trigger,trg_auto_advance_winner_trigger
+trigger,trg_auto_assign_event_after_insert
+trigger,trg_subscription_updated_at
+trigger,trigger_delete_matches_on_group_delete
+trigger,trigger_delete_matches_on_team_delete
+trigger,update_accounts_modtime
+trigger,update_roles_modtime
+trigger,update_tenants_modtime
+view,saas_metrics
+view,tenant_usage

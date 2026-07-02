@@ -1,0 +1,492 @@
+file,type,name,live_match
+ENTERPRISE_ACCOUNT_SQL.sql,function,update_modified_column,yes
+ENTERPRISE_ACCOUNT_SQL.sql,table,tenants,yes
+ENTERPRISE_ACCOUNT_SQL.sql,table,roles,yes
+ENTERPRISE_ACCOUNT_SQL.sql,table,permissions,yes
+ENTERPRISE_ACCOUNT_SQL.sql,table,accounts,yes
+ENTERPRISE_ACCOUNT_SQL.sql,table,account_permissions,yes
+ENTERPRISE_ACCOUNT_SQL.sql,table,account_event_permissions,yes
+ENTERPRISE_ACCOUNT_SQL.sql,table,active_sessions,yes
+ENTERPRISE_ACCOUNT_SQL.sql,table,login_logs,yes
+ENTERPRISE_ACCOUNT_SQL.sql,trigger,update_tenants_modtime,yes
+ENTERPRISE_ACCOUNT_SQL.sql,trigger,update_roles_modtime,yes
+ENTERPRISE_ACCOUNT_SQL.sql,trigger,update_accounts_modtime,yes
+ENTERPRISE_ACCOUNT_SQL.sql,index,idx_tenants_slug,yes
+ENTERPRISE_ACCOUNT_SQL.sql,index,idx_accounts_tenant_id,yes
+ENTERPRISE_ACCOUNT_SQL.sql,index,idx_accounts_user_id,yes
+ENTERPRISE_ACCOUNT_SQL.sql,index,idx_acct_perms_account,yes
+ENTERPRISE_ACCOUNT_SQL.sql,index,idx_acct_event_perms_account,yes
+ENTERPRISE_ACCOUNT_SQL.sql,index,idx_active_sessions_account,yes
+ENTERPRISE_ACCOUNT_SQL.sql,index,idx_login_logs_account,yes
+ENTERPRISE_ACCOUNT_SQL.sql,index,idx_login_logs_created_at,yes
+ENTERPRISE_ACCOUNT_SQL.sql,drop,table:login_logs,no
+ENTERPRISE_ACCOUNT_SQL.sql,drop,table:active_sessions,no
+ENTERPRISE_ACCOUNT_SQL.sql,drop,table:account_event_permissions,no
+ENTERPRISE_ACCOUNT_SQL.sql,drop,table:account_permissions,no
+ENTERPRISE_ACCOUNT_SQL.sql,drop,table:accounts,no
+ENTERPRISE_ACCOUNT_SQL.sql,drop,table:permissions,no
+ENTERPRISE_ACCOUNT_SQL.sql,drop,table:roles,no
+ENTERPRISE_ACCOUNT_SQL.sql,drop,table:tenants,no
+ENTERPRISE_ACCOUNT_SQL_v2.sql,function,update_modified_column,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,table,tenants,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,table,roles,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,table,permissions,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,table,accounts,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,table,account_permissions,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,table,account_event_permissions,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,table,active_sessions,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,table,login_logs,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,trigger,update_tenants_modtime,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,trigger,update_roles_modtime,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,trigger,update_accounts_modtime,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,index,idx_tenants_slug,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,index,idx_accounts_tenant_id,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,index,idx_accounts_user_id,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,index,idx_acct_perms_account,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,index,idx_acct_event_perms_account,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,index,idx_active_sessions_account,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,index,idx_login_logs_account,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,index,idx_login_logs_created_at,yes
+ENTERPRISE_ACCOUNT_SQL_v2.sql,drop,trigger:update_tenants_modtime,no
+ENTERPRISE_ACCOUNT_SQL_v2.sql,drop,trigger:update_roles_modtime,no
+ENTERPRISE_ACCOUNT_SQL_v2.sql,drop,trigger:update_accounts_modtime,no
+ENTERPRISE_ACCOUNT_SQL_v2.sql,drop,table:login_logs,no
+ENTERPRISE_ACCOUNT_SQL_v2.sql,drop,table:active_sessions,no
+ENTERPRISE_ACCOUNT_SQL_v2.sql,drop,table:account_event_permissions,no
+ENTERPRISE_ACCOUNT_SQL_v2.sql,drop,table:account_permissions,no
+ENTERPRISE_ACCOUNT_SQL_v2.sql,drop,table:accounts,no
+ENTERPRISE_ACCOUNT_SQL_v2.sql,drop,table:permissions,no
+ENTERPRISE_ACCOUNT_SQL_v2.sql,drop,table:roles,no
+ENTERPRISE_ACCOUNT_SQL_v2.sql,drop,table:tenants,no
+ENTERPRISE_RLS_FINAL.sql,function,get_auth_account_id,no
+ENTERPRISE_RLS_FINAL.sql,function,get_auth_account_tenant_id,no
+ENTERPRISE_RLS_FINAL.sql,function,get_auth_account_role,no
+ENTERPRISE_RLS_FINAL.sql,policy,accounts_isolation on accounts,no
+ENTERPRISE_RLS_FINAL.sql,policy,activesessions_isolation on active_sessions,no
+ENTERPRISE_RLS_FINAL.sql,policy,loginlogs_isolation on login_logs,yes
+ENTERPRISE_RLS_FINAL.sql,policy,groups_isolation on groups,no
+ENTERPRISE_RLS_FINAL.sql,policy,teams_isolation on teams,no
+ENTERPRISE_RLS_FINAL.sql,policy,matches_isolation on matches,no
+ENTERPRISE_RLS_FINAL.sql,policy,acctperms_isolation on account_permissions,no
+ENTERPRISE_RLS_FINAL.sql,policy,acctevtperms_isolation on account_event_permissions,no
+ENTERPRISE_RLS_FINAL.sql,policy,tournament_isolation on tournament,no
+ENTERPRISE_RLS_FINAL.sql,alter_table,accounts,yes
+ENTERPRISE_RLS_FINAL.sql,alter_table,active_sessions,yes
+ENTERPRISE_RLS_FINAL.sql,alter_table,login_logs,yes
+ENTERPRISE_RLS_FINAL.sql,alter_table,groups,yes
+ENTERPRISE_RLS_FINAL.sql,alter_table,teams,yes
+ENTERPRISE_RLS_FINAL.sql,alter_table,matches,yes
+ENTERPRISE_RLS_FINAL.sql,alter_table,account_permissions,yes
+ENTERPRISE_RLS_FINAL.sql,alter_table,account_event_permissions,yes
+ENTERPRISE_RLS_FINAL.sql,alter_table,tournament,yes
+ENTERPRISE_RLS_FINAL.sql,drop,policy:if,no
+PHASE_1_SAFE_FIXES.sql,function,current_tenant_id,yes
+PHASE_1_SAFE_FIXES.sql,function,current_role,yes
+PHASE_1_SAFE_FIXES.sql,index,idx_active_sessions_token,no
+PHASE_1_SAFE_FIXES.sql,index,idx_accounts_username,no
+PHASE_1_SAFE_FIXES.sql,index,idx_acct_evt_event_id,no
+PHASE_1_SAFE_FIXES.sql,alter_table,tenants,yes
+PHASE_1_SAFE_FIXES.sql,alter_table,roles,yes
+PHASE_1_SAFE_FIXES.sql,alter_table,permissions,yes
+PHASE_1_SAFE_FIXES.sql,alter_table,accounts,yes
+PHASE_1_SAFE_FIXES.sql,alter_table,account_permissions,yes
+PHASE_1_SAFE_FIXES.sql,alter_table,account_event_permissions,yes
+PHASE_1_SAFE_FIXES.sql,alter_table,active_sessions,yes
+PHASE_1_SAFE_FIXES.sql,alter_table,login_logs,yes
+PHASE_2_TENANT_ISOLATION.sql,policy,tenant_isolation_events on events,no
+PHASE_2_TENANT_ISOLATION.sql,policy,tenant_isolation_teams on teams,no
+PHASE_2_TENANT_ISOLATION.sql,policy,tenant_isolation_groups on groups,no
+PHASE_2_TENANT_ISOLATION.sql,policy,tenant_isolation_matches on matches,no
+PHASE_2_TENANT_ISOLATION.sql,policy,tenant_isolation_tournament on tournament,no
+PHASE_2_TENANT_ISOLATION.sql,drop,policy:if,no
+PHASE_3_PERMISSION_HARDENING.sql,policy,roles_read_only on roles,no
+PHASE_3_PERMISSION_HARDENING.sql,policy,permissions_read_only on permissions,no
+PHASE_3_PERMISSION_HARDENING.sql,policy,tenants_read_only on tenants,no
+PHASE_3_PERMISSION_HARDENING.sql,policy,accounts_select on accounts,yes
+PHASE_3_PERMISSION_HARDENING.sql,policy,accounts_insert on accounts,yes
+PHASE_3_PERMISSION_HARDENING.sql,policy,accounts_update on accounts,yes
+PHASE_3_PERMISSION_HARDENING.sql,policy,sessions_select_self on active_sessions,no
+PHASE_3_PERMISSION_HARDENING.sql,policy,accounteventperms_select on account_event_permissions,no
+PHASE_3_PERMISSION_HARDENING.sql,policy,accounteventperms_modify on account_event_permissions,no
+PHASE_3_PERMISSION_HARDENING.sql,drop,policy:if,no
+PHASE_4_PRODUCTION_LOCKDOWN.sql,function,system_audit_trigger,no
+PHASE_4_PRODUCTION_LOCKDOWN.sql,policy,auditlogs_select on audit_logs,no
+PHASE_4_PRODUCTION_LOCKDOWN.sql,trigger,audit_accounts,no
+PHASE_4_PRODUCTION_LOCKDOWN.sql,alter_table,tournament,yes
+PHASE_4_PRODUCTION_LOCKDOWN.sql,alter_table,events,yes
+PHASE_4_PRODUCTION_LOCKDOWN.sql,alter_table,teams,yes
+PHASE_4_PRODUCTION_LOCKDOWN.sql,alter_table,groups,yes
+PHASE_4_PRODUCTION_LOCKDOWN.sql,alter_table,matches,yes
+PHASE_4_PRODUCTION_LOCKDOWN.sql,alter_table,audit_logs,yes
+PHASE_4_PRODUCTION_LOCKDOWN.sql,alter_table,accounts,yes
+PHASE_4_PRODUCTION_LOCKDOWN.sql,alter_table,roles,yes
+PHASE_4_PRODUCTION_LOCKDOWN.sql,alter_table,permissions,yes
+PHASE_4_PRODUCTION_LOCKDOWN.sql,alter_table,account_permissions,yes
+PHASE_4_PRODUCTION_LOCKDOWN.sql,alter_table,account_event_permissions,yes
+PHASE_4_PRODUCTION_LOCKDOWN.sql,alter_table,active_sessions,yes
+PHASE_4_PRODUCTION_LOCKDOWN.sql,alter_table,login_logs,yes
+PHASE_4_PRODUCTION_LOCKDOWN.sql,alter_table,tenants,yes
+PHASE_4_PRODUCTION_LOCKDOWN.sql,drop,trigger:audit_accounts,no
+RLS_DEPLOYMENT_SQL.sql,table,backup_tournament,no
+RLS_DEPLOYMENT_SQL.sql,table,backup_events,no
+RLS_DEPLOYMENT_SQL.sql,table,backup_groups,no
+RLS_DEPLOYMENT_SQL.sql,table,backup_teams,no
+RLS_DEPLOYMENT_SQL.sql,table,backup_matches,no
+RLS_DEPLOYMENT_SQL.sql,table,backup_audit_logs,no
+RLS_DEPLOYMENT_SQL.sql,policy,public_select_tournament on tournament,no
+RLS_DEPLOYMENT_SQL.sql,policy,admin1_full_tournament on tournament,no
+RLS_DEPLOYMENT_SQL.sql,policy,admin2_tenant_tournament on tournament,no
+RLS_DEPLOYMENT_SQL.sql,policy,public_select_events on events,no
+RLS_DEPLOYMENT_SQL.sql,policy,public_select_groups on groups,no
+RLS_DEPLOYMENT_SQL.sql,policy,public_select_teams on teams,no
+RLS_DEPLOYMENT_SQL.sql,policy,admin1_full_events on events,no
+RLS_DEPLOYMENT_SQL.sql,policy,admin1_full_groups on groups,no
+RLS_DEPLOYMENT_SQL.sql,policy,admin1_full_teams on teams,no
+RLS_DEPLOYMENT_SQL.sql,policy,admin2_tenant_events on events,no
+RLS_DEPLOYMENT_SQL.sql,policy,admin2_tenant_groups on groups,no
+RLS_DEPLOYMENT_SQL.sql,policy,admin2_tenant_teams on teams,no
+RLS_DEPLOYMENT_SQL.sql,policy,public_select_matches on matches,no
+RLS_DEPLOYMENT_SQL.sql,policy,admin1_full_matches on matches,no
+RLS_DEPLOYMENT_SQL.sql,policy,admin2_tenant_matches on matches,no
+RLS_DEPLOYMENT_SQL.sql,policy,admin3_restricted_matches on matches,no
+RLS_DEPLOYMENT_SQL.sql,policy,admin1_full_audit on audit_logs,no
+RLS_DEPLOYMENT_SQL.sql,policy,admin2_tenant_audit on audit_logs,no
+RLS_DEPLOYMENT_SQL.sql,policy,admins_insert_audit on audit_logs,no
+RLS_DEPLOYMENT_SQL.sql,policy,users_read_own_account on accounts,no
+RLS_DEPLOYMENT_SQL.sql,policy,users_manage_own_sessions on active_sessions,no
+RLS_DEPLOYMENT_SQL.sql,policy,users_read_own_login_logs on login_logs,no
+RLS_DEPLOYMENT_SQL.sql,alter_table,tournament,yes
+RLS_DEPLOYMENT_SQL.sql,alter_table,events,yes
+RLS_DEPLOYMENT_SQL.sql,alter_table,groups,yes
+RLS_DEPLOYMENT_SQL.sql,alter_table,teams,yes
+RLS_DEPLOYMENT_SQL.sql,alter_table,matches,yes
+RLS_DEPLOYMENT_SQL.sql,alter_table,audit_logs,yes
+RLS_DEPLOYMENT_SQL.sql,drop,policy:if,no
+SUPABASE_SCHEMA_REFERENCE.sql,table,tournament,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,events,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,teams,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,groups,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,matches,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,audit_logs,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,tenants,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,roles,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,permissions,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,accounts,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,account_permissions,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,account_event_permissions,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,active_sessions,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,login_logs,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,subscription_plans,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,tenant_subscriptions,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,invoices,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,payments,yes
+SUPABASE_SCHEMA_REFERENCE.sql,table,plan_features,yes
+enterprise_v4.sql,function,current_account_id,yes
+enterprise_v4.sql,function,current_tenant_id,yes
+enterprise_v4.sql,function,current_role_name,yes
+enterprise_v4.sql,function,has_permission,yes
+enterprise_v4.sql,function,has_event_access,yes
+enterprise_v4.sql,function,trigger_auto_assign_event,yes
+enterprise_v4.sql,function,audit_matches_changes_v4,no
+enterprise_v4.sql,policy,events_select on events,yes
+enterprise_v4.sql,policy,events_insert on events,yes
+enterprise_v4.sql,policy,events_update on events,yes
+enterprise_v4.sql,policy,events_delete on events,yes
+enterprise_v4.sql,policy,teams_select on teams,yes
+enterprise_v4.sql,policy,teams_insert on teams,yes
+enterprise_v4.sql,policy,teams_update on teams,yes
+enterprise_v4.sql,policy,teams_delete on teams,yes
+enterprise_v4.sql,policy,groups_select on groups,yes
+enterprise_v4.sql,policy,groups_insert on groups,yes
+enterprise_v4.sql,policy,groups_update on groups,yes
+enterprise_v4.sql,policy,groups_delete on groups,yes
+enterprise_v4.sql,policy,matches_select on matches,yes
+enterprise_v4.sql,policy,matches_insert on matches,yes
+enterprise_v4.sql,policy,matches_update on matches,yes
+enterprise_v4.sql,policy,matches_delete on matches,yes
+enterprise_v4.sql,trigger,trg_auto_assign_event_after_insert,yes
+enterprise_v4.sql,trigger,trg_audit_matches_v4,no
+enterprise_v4.sql,index,idx_events_tenant_id,yes
+enterprise_v4.sql,index,idx_teams_event_id,yes
+enterprise_v4.sql,index,idx_teams_tenant_id,yes
+enterprise_v4.sql,index,idx_groups_event_id,yes
+enterprise_v4.sql,index,idx_groups_tenant_id,yes
+enterprise_v4.sql,index,idx_matches_event_id,yes
+enterprise_v4.sql,index,idx_matches_tenant_id,yes
+enterprise_v4.sql,index,idx_account_event_perms_account_id,yes
+enterprise_v4.sql,index,idx_account_event_perms_event_id,yes
+enterprise_v4.sql,alter_table,events,yes
+enterprise_v4.sql,alter_table,teams,yes
+enterprise_v4.sql,alter_table,groups,yes
+enterprise_v4.sql,alter_table,matches,yes
+enterprise_v4.sql,drop,trigger:trg_auto_assign_event_after_insert,no
+enterprise_v4.sql,drop,trigger:trg_audit_matches_v4,no
+enterprise_v4.sql,drop,policy:if,no
+enterprise_v5_tournament_manager.sql,function,create_event_admin_tournament,no
+enterprise_v5_tournament_manager.sql,index,idx_tournament_slug_unique,yes
+final_architecture_updates.sql,function,get_bootstrap_context,no
+final_architecture_updates.sql,function,audit_matches_changes,no
+final_architecture_updates.sql,policy,matches_select on matches,yes
+final_architecture_updates.sql,policy,matches_insert on matches,yes
+final_architecture_updates.sql,policy,matches_update on matches,yes
+final_architecture_updates.sql,policy,matches_delete on matches,yes
+final_architecture_updates.sql,policy,events_select on events,yes
+final_architecture_updates.sql,policy,events_insert on events,yes
+final_architecture_updates.sql,policy,events_update on events,yes
+final_architecture_updates.sql,policy,events_delete on events,yes
+final_architecture_updates.sql,trigger,trg_audit_matches,no
+final_architecture_updates.sql,drop,trigger:trg_audit_matches,no
+final_architecture_updates.sql,drop,policy:if,no
+migration.sql,function,current_tenant_id,yes
+migration.sql,function,current_role_name,yes
+migration.sql,policy,events_rls on events,no
+migration.sql,policy,groups_rls on groups,no
+migration.sql,policy,teams_rls on teams,no
+migration.sql,policy,matches_rls on matches,no
+migration.sql,policy,audit_logs_rls on audit_logs,yes
+migration.sql,policy,accounts_select on accounts,yes
+migration.sql,policy,accounts_insert on accounts,yes
+migration.sql,policy,accounts_update on accounts,yes
+migration.sql,policy,accounts_delete on accounts,yes
+migration.sql,policy,account_permissions_rls on account_permissions,yes
+migration.sql,policy,account_event_permissions_rls on account_event_permissions,yes
+migration.sql,policy,active_sessions_rls on active_sessions,yes
+migration.sql,policy,login_logs_rls on login_logs,no
+migration.sql,policy,roles_read on roles,yes
+migration.sql,policy,permissions_read on permissions,yes
+migration.sql,policy,tenants_read on tenants,yes
+migration.sql,alter_table,accounts,yes
+migration.sql,alter_table,account_permissions,yes
+migration.sql,alter_table,account_event_permissions,yes
+migration.sql,alter_table,active_sessions,yes
+migration.sql,alter_table,audit_logs,yes
+migration.sql,alter_table,events,yes
+migration.sql,alter_table,groups,yes
+migration.sql,alter_table,matches,yes
+migration.sql,alter_table,teams,yes
+migration.sql,alter_table,login_logs,yes
+migration.sql,alter_table,roles,yes
+migration.sql,alter_table,permissions,yes
+migration.sql,alter_table,tenants,yes
+migration.sql,drop,policy:if,no
+migration_event_management.sql,index,idx_events_slug,yes
+migration_event_management.sql,index,idx_events_status,yes
+migration_event_management.sql,index,idx_events_tenant_status,yes
+migration_event_management.sql,alter_table,events,yes
+migration_phase4.sql,function,touch_updated_at,yes
+migration_phase4.sql,table,subscription_plans,yes
+migration_phase4.sql,table,tenant_subscriptions,yes
+migration_phase4.sql,table,invoices,yes
+migration_phase4.sql,table,payments,yes
+migration_phase4.sql,policy,plans_select on subscription_plans,yes
+migration_phase4.sql,policy,subscriptions_select on tenant_subscriptions,yes
+migration_phase4.sql,policy,invoices_select on invoices,yes
+migration_phase4.sql,policy,payments_select on payments,yes
+migration_phase4.sql,trigger,trg_subscription_updated_at,yes
+migration_phase4.sql,index,idx_subscription_tenant,yes
+migration_phase4.sql,index,idx_subscriptions_status,yes
+migration_phase4.sql,index,idx_subscriptions_end_date,yes
+migration_phase4.sql,index,idx_invoice_tenant,yes
+migration_phase4.sql,index,idx_invoice_status,yes
+migration_phase4.sql,index,idx_invoice_date,yes
+migration_phase4.sql,index,idx_payment_status,yes
+migration_phase4.sql,index,uq_invoice_period,yes
+migration_phase4.sql,alter_table,tenant_subscriptions,yes
+migration_phase4.sql,alter_table,invoices,yes
+migration_phase4.sql,alter_table,payments,yes
+migration_phase4.sql,alter_table,subscription_plans,yes
+migration_phase4.sql,drop,trigger:trg_subscription_updated_at,no
+migration_phase4.sql,drop,policy:plans_select,no
+migration_phase4.sql,drop,policy:subscriptions_select,no
+migration_phase4.sql,drop,policy:invoices_select,no
+migration_phase4.sql,drop,policy:payments_select,no
+migration_phase5.sql,function,can_create_user,yes
+migration_phase5.sql,function,can_create_event,yes
+migration_phase5.sql,function,can_create_team,yes
+migration_phase5.sql,function,has_feature,yes
+migration_phase5.sql,function,trg_check_user_quota,no
+migration_phase5.sql,function,trg_check_event_quota,yes
+migration_phase5.sql,function,trg_check_team_quota,yes
+migration_phase5.sql,function,expire_trial_subscriptions,yes
+migration_phase5.sql,function,generate_monthly_invoices,yes
+migration_phase5.sql,table,plan_features,yes
+migration_phase5.sql,view,tenant_usage,yes
+migration_phase5.sql,view,saas_metrics,yes
+migration_phase5.sql,policy,plan_features_select on plan_features,yes
+migration_phase5.sql,policy,plan_features_all on plan_features,yes
+migration_phase5.sql,policy,plans_all on subscription_plans,yes
+migration_phase5.sql,policy,subscriptions_select on tenant_subscriptions,yes
+migration_phase5.sql,policy,subscriptions_all on tenant_subscriptions,yes
+migration_phase5.sql,policy,invoices_select on invoices,yes
+migration_phase5.sql,policy,invoices_all on invoices,yes
+migration_phase5.sql,policy,payments_select on payments,yes
+migration_phase5.sql,policy,payments_all on payments,yes
+migration_phase5.sql,trigger,chk_user_quota,no
+migration_phase5.sql,trigger,chk_event_quota,yes
+migration_phase5.sql,trigger,chk_team_quota,yes
+migration_phase5.sql,alter_table,plan_features,yes
+migration_phase5.sql,drop,trigger:chk_user_quota,no
+migration_phase5.sql,drop,trigger:chk_event_quota,no
+migration_phase5.sql,drop,trigger:chk_team_quota,no
+migration_phase5.sql,drop,policy:plan_features_select,no
+migration_phase5.sql,drop,policy:plan_features_all,no
+migration_phase5.sql,drop,policy:plans_all,no
+migration_phase5.sql,drop,policy:subscriptions_select,no
+migration_phase5.sql,drop,policy:subscriptions_all,no
+migration_phase5.sql,drop,policy:invoices_select,no
+migration_phase5.sql,drop,policy:invoices_all,no
+migration_phase5.sql,drop,policy:payments_select,no
+migration_phase5.sql,drop,policy:payments_all,no
+migration_rbac.sql,function,get_current_profile,yes
+migration_rbac.sql,table,role_permissions,yes
+migration_rbac.sql,table,account_event_permissions,yes
+migration_rls_enterprise.sql,function,current_account_id,yes
+migration_rls_enterprise.sql,function,current_tenant_id,yes
+migration_rls_enterprise.sql,function,current_role_name,yes
+migration_rls_enterprise.sql,function,has_event_access,yes
+migration_rls_enterprise.sql,policy,events_rls on events,no
+migration_rls_enterprise.sql,policy,teams_rls on teams,no
+migration_rls_enterprise.sql,policy,groups_rls on groups,no
+migration_rls_enterprise.sql,policy,matches_rls on matches,no
+migration_rls_enterprise.sql,drop,function:auth,no
+migration_rls_enterprise.sql,drop,policy:if,no
+migration_rls_perms.sql,function,has_permission,yes
+migration_rls_perms.sql,policy,events_rls on events,no
+migration_rls_perms.sql,policy,teams_rls on teams,no
+migration_rls_perms.sql,policy,groups_rls on groups,no
+migration_rls_perms.sql,policy,matches_rls on matches,no
+migration_rls_perms.sql,drop,policy:if,no
+migration_safe_v4.sql,function,trigger_auto_assign_event,yes
+migration_safe_v4.sql,function,audit_matches_changes_safe_v4,yes
+migration_safe_v4.sql,policy,events_select on events,yes
+migration_safe_v4.sql,policy,events_insert on events,yes
+migration_safe_v4.sql,policy,events_update on events,yes
+migration_safe_v4.sql,policy,events_delete on events,yes
+migration_safe_v4.sql,policy,teams_select on teams,yes
+migration_safe_v4.sql,policy,teams_insert on teams,yes
+migration_safe_v4.sql,policy,teams_update on teams,yes
+migration_safe_v4.sql,policy,teams_delete on teams,yes
+migration_safe_v4.sql,policy,groups_select on groups,yes
+migration_safe_v4.sql,policy,groups_insert on groups,yes
+migration_safe_v4.sql,policy,groups_update on groups,yes
+migration_safe_v4.sql,policy,groups_delete on groups,yes
+migration_safe_v4.sql,policy,matches_select on matches,yes
+migration_safe_v4.sql,policy,matches_insert on matches,yes
+migration_safe_v4.sql,policy,matches_update on matches,yes
+migration_safe_v4.sql,policy,matches_delete on matches,yes
+migration_safe_v4.sql,trigger,trg_auto_assign_event_after_insert,yes
+migration_safe_v4.sql,trigger,trg_audit_matches_safe_v4,yes
+migration_safe_v4.sql,index,idx_events_tenant_id,yes
+migration_safe_v4.sql,index,idx_teams_event_id,yes
+migration_safe_v4.sql,index,idx_teams_tenant_id,yes
+migration_safe_v4.sql,index,idx_groups_event_id,yes
+migration_safe_v4.sql,index,idx_groups_tenant_id,yes
+migration_safe_v4.sql,index,idx_matches_event_id,yes
+migration_safe_v4.sql,index,idx_matches_tenant_id,yes
+migration_safe_v4.sql,index,idx_account_event_perms_account_id,yes
+migration_safe_v4.sql,index,idx_account_event_perms_event_id,yes
+migration_safe_v4.sql,alter_table,events,yes
+migration_safe_v4.sql,alter_table,teams,yes
+migration_safe_v4.sql,alter_table,groups,yes
+migration_safe_v4.sql,alter_table,matches,yes
+migration_safe_v4.sql,drop,trigger:trg_auto_assign_event_after_insert,no
+migration_safe_v4.sql,drop,trigger:trg_audit_matches_safe_v4,no
+migration_safe_v4.sql,drop,policy:if,no
+migration_v5_2.sql,function,audit_tournament_changes,no
+migration_v5_2.sql,function,create_tournament_workspace,no
+migration_v5_2.sql,function,archive_tournament_workspace,no
+migration_v5_2.sql,function,transfer_tournament_admin,no
+migration_v5_2.sql,function,get_tournament_workspace_dashboard,no
+migration_v5_2.sql,policy,super_admin full access to tournament_admins on tournament_admins,no
+migration_v5_2.sql,policy,owner access to own tournament_admins on tournament_admins,no
+migration_v5_2.sql,trigger,trg_audit_tournament,no
+migration_v5_2.sql,index,idx_tournament_slug,yes
+migration_v5_2.sql,index,idx_tournament_tenant_id,yes
+migration_v5_2.sql,index,idx_tournament_admins_account_id,no
+migration_v5_2.sql,index,idx_tournament_admins_tournament_id,no
+migration_v5_2.sql,index,idx_events_tournament_id,yes
+migration_v5_2.sql,index,idx_teams_tournament_id,no
+migration_v5_2.sql,index,idx_matches_tournament_id,no
+migration_v5_2.sql,alter_table,tournament_admins,yes
+migration_v5_2.sql,drop,policy:if,no
+migration_v5_2.sql,drop,trigger:trg_audit_tournament,no
+migration_v5_3.sql,function,create_tournament_workspace_v3,no
+migration_v5_3.sql,function,archive_tournament_workspace_v3,no
+migration_v5_3.sql,function,transfer_tournament_owner_v3,no
+migration_v5_3.sql,function,get_tournament_workspace_dashboard_v3,no
+migration_v5_3.sql,index,idx_tournament_slug_unique_v3,no
+migration_v5_4.sql,function,create_tournament_workspace_v4,no
+migration_v5_4.sql,function,get_tournament_workspace_dashboard_v4,no
+migration_v5_4.sql,function,transfer_tournament_owner_v4,no
+migration_v5_4.sql,function,archive_tournament_workspace_v4,no
+migration_v5_4.sql,index,for,no
+migration_v5_4.sql,index,idx_tournament_tenant_deleted_created,no
+migration_v5_4.sql,index,idx_events_tournament_id_deleted,no
+migration_v5_4.sql,index,idx_teams_tournament_id_deleted,no
+migration_v5_4.sql,index,idx_matches_tournament_id_deleted,no
+migration_v5_5.sql,function,create_tournament_workspace_v5,no
+migration_v5_5.sql,function,get_tournament_workspace_dashboard_v5,no
+migration_v5_5.sql,function,transfer_tournament_owner_v5,no
+migration_v5_5.sql,function,archive_tournament_workspace_v5,no
+migration_v5_5.sql,index,idx_tournament_dashboard_v5,no
+migration_v5_5.sql,alter_table,tournament,yes
+migration_v5_5.sql,alter_table,account_event_permissions,yes
+migration_v5_6.sql,function,get_tournament_owner,yes
+migration_v5_6.sql,function,transfer_tournament_owner_v6,yes
+migration_v5_6.sql,function,get_tournament_workspace_dashboard_v6,yes
+migration_v5_6.sql,function,create_tournament_workspace_v6,yes
+migration_v5_6.sql,function,archive_tournament_workspace_v6,yes
+migration_v5_6.sql,alter_table,tournament,yes
+rpc_create_event_admin.sql,function,create_event_admin,yes
+rpc_record_login.sql,function,record_login_session,no
+supabase_fk_cascade.sql,alter_table,matches,yes
+supabase_fk_cascade.sql,alter_table,teams,yes
+supabase_rpc.sql,function,generate_round_robin_schedule,yes
+supabase_setup.sql,table,accounts,yes
+supabase_setup.sql,table,tournament,yes
+supabase_setup.sql,table,events,yes
+supabase_setup.sql,table,teams,yes
+supabase_setup.sql,table,groups,yes
+supabase_setup.sql,table,matches,yes
+supabase_setup.sql,table,audit_logs,yes
+supabase_setup.sql,policy,cho phép mọi người xem thông tin giải đấu on tournament,no
+supabase_setup.sql,policy,cho phép mọi người xem nội dung thi đấu on events,no
+supabase_setup.sql,policy,cho phép mọi người xem danh sách đội bóng on teams,no
+supabase_setup.sql,policy,cho phép mọi người xem danh sách bảng đấu on groups,no
+supabase_setup.sql,policy,cho phép mọi người xem lịch và kết quả trận on matches,no
+supabase_setup.sql,policy,cho phép mọi người xem nhật ký hoạt động on audit_logs,no
+supabase_setup.sql,policy,cho phép mọi người xem danh sách tài khoản on accounts,no
+supabase_setup.sql,policy,cho phép ghi tự do cho anon và authenticated on tournament,no
+supabase_setup.sql,policy,cho phép ghi tự do cho anon và authenticated on events,no
+supabase_setup.sql,policy,cho phép ghi tự do cho anon và authenticated on teams,no
+supabase_setup.sql,policy,cho phép ghi tự do cho anon và authenticated on groups,no
+supabase_setup.sql,policy,cho phép ghi tự do cho anon và authenticated on matches,no
+supabase_setup.sql,policy,cho phép ghi tự do cho anon và authenticated on audit_logs,no
+supabase_setup.sql,policy,cho phép ghi tự do cho accounts on accounts,no
+supabase_setup.sql,index,idx_tournament_tenant_id,yes
+supabase_setup.sql,index,idx_events_tenant_id,yes
+supabase_setup.sql,index,idx_teams_event_id,yes
+supabase_setup.sql,index,idx_teams_tenant_id,yes
+supabase_setup.sql,index,idx_groups_event_id,yes
+supabase_setup.sql,index,idx_groups_tenant_id,yes
+supabase_setup.sql,index,idx_matches_event_id,yes
+supabase_setup.sql,index,idx_matches_tenant_id,yes
+supabase_setup.sql,index,idx_audit_logs_tenant_id,no
+supabase_setup.sql,alter_table,tournament,yes
+supabase_setup.sql,alter_table,events,yes
+supabase_setup.sql,alter_table,teams,yes
+supabase_setup.sql,alter_table,groups,yes
+supabase_setup.sql,alter_table,matches,yes
+supabase_setup.sql,alter_table,audit_logs,yes
+supabase_setup.sql,alter_table,accounts,yes
+supabase_setup.sql,drop,table:matches,no
+supabase_setup.sql,drop,table:groups,no
+supabase_setup.sql,drop,table:teams,no
+supabase_setup.sql,drop,table:events,no
+supabase_setup.sql,drop,table:tournament,no
+supabase_setup.sql,drop,table:audit_logs,no
+supabase_setup.sql,drop,table:accounts,no
+supabase_trigger_knockout.sql,function,trg_auto_advance_winner,yes
+supabase_trigger_knockout.sql,trigger,trg_auto_advance_winner_trigger,yes
+supabase_trigger_knockout.sql,drop,trigger:trg_auto_advance_winner_trigger,no
+supabase_view_standings.sql,view,view_team_standings,no
