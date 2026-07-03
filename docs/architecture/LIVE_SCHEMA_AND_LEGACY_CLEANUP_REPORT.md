@@ -68,7 +68,15 @@ Reason: extracted SQL objects from these files had a 100% match against live Sup
 
 ## SQL Still Kept At Root
 
-These remain because live-schema match is incomplete, or because RLS/policy semantics need manual review:
+After the final cleanup pass, no SQL files remain at repository root.
+
+The files below were moved to:
+
+```text
+docs/archive/legacy-sql/pending-manual-review/
+```
+
+They are not deleted, and they are not marked as fully superseded. They are archived only to prevent accidental production execution from the repository root.
 
 - `ENTERPRISE_ACCOUNT_SQL.sql`
 - `ENTERPRISE_ACCOUNT_SQL_v2.sql`
@@ -95,6 +103,15 @@ These remain because live-schema match is incomplete, or because RLS/policy sema
 - `supabase_setup.sql`
 - `supabase_trigger_knockout.sql`
 - `supabase_view_standings.sql`
+
+## Root SQL Final State
+
+Final state:
+
+- Root `.sql` files: 0
+- Official migrations remain untouched under `supabase/migrations/`
+- Supabase functions remain untouched under `supabase/functions/`
+- Unverified historical SQL is preserved under `docs/archive/legacy-sql/pending-manual-review/`
 
 ## Legacy Dependency Cleanup
 
