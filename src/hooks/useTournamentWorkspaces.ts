@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '../supabaseClient';
 import { useTournamentStore } from '../store';
+import { normalizeTenantIdForRpc } from '../lib/auth/workspaceAccessService';
 
 export interface TournamentWorkspaceStat {
   tournament_id: string;
@@ -29,9 +30,10 @@ export interface InfiniteWorkspaceResponse {
 export function useTournamentWorkspaces(limit: number = 50) {
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
+  const scopedTenantId = normalizeTenantIdForRpc(currentEnterpriseUser?.tenant_id || activeTenantId);
 
   return useInfiniteQuery({
-    queryKey: ['tournaments_v1', activeTenantId, currentEnterpriseUser?.role, limit],
+    queryKey: ['tournaments_v1', scopedTenantId, currentEnterpriseUser?.role, limit],
     queryFn: async (): Promise<InfiniteWorkspaceResponse> => {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
@@ -39,7 +41,7 @@ export function useTournamentWorkspaces(limit: number = 50) {
         throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
       }
 
-      const tenantParam = currentEnterpriseUser?.role === 'SUPER_ADMIN' ? null : activeTenantId;
+      const tenantParam = currentEnterpriseUser?.role === 'SUPER_ADMIN' ? null : scopedTenantId;
       const { data, error } = await supabase.rpc('list_accessible_workspaces_v1', {
         p_tenant_id: tenantParam
       });
@@ -59,7 +61,7 @@ export function useTournamentWorkspaces(limit: number = 50) {
     },
     getNextPageParam: (lastPage) => lastPage.has_more ? lastPage.next_cursor : undefined,
     initialPageParam: null as string | null,
-    enabled: !!activeTenantId && !!currentEnterpriseUser,
+    enabled: !!currentEnterpriseUser,
   });
 }
 

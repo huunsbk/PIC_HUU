@@ -32,8 +32,11 @@ export const isPrivilegedWorkspaceRole = (role?: string | null) =>
 
 export const isSuperAdmin = (role?: string | null) => role === 'SUPER_ADMIN';
 
+export const normalizeTenantIdForRpc = (tenantId?: string | null) =>
+  tenantId && tenantId !== 'default' ? tenantId : null;
+
 export async function listAccessibleWorkspacesForUser(role?: string | null, tenantId?: string | null) {
-  const tenantParam = role === 'SUPER_ADMIN' ? null : tenantId && tenantId !== 'default' ? tenantId : null;
+  const tenantParam = role === 'SUPER_ADMIN' ? null : normalizeTenantIdForRpc(tenantId);
   const { data, error } = await supabase.rpc('list_accessible_workspaces_v1', {
     p_tenant_id: tenantParam,
   });
@@ -184,4 +187,3 @@ export function getWorkspaceDirectoryUrl() {
   const normalizedBase = basePath.endsWith('/') ? basePath : `${basePath}/`;
   return `${normalizedBase}admin/workspaces`;
 }
-
