@@ -59,11 +59,14 @@ export default async function handler(req, res) {
       .from('accounts')
       .select('id, user_id, tenant_id, username, status, deleted_at, created_by_account_id, roles(name)')
       .eq('id', accountId)
-      .not('deleted_at', 'is', null)
       .maybeSingle();
 
     if (targetError) throw apiError(`Không thể kiểm tra tài khoản: ${targetError.message}`, 500);
-    if (!target) throw apiError('Không tìm thấy tài khoản đã lưu trữ.', 404);
+    if (!target) throw apiError('Không tìm thấy tài khoản.', 404);
+    const isAlreadyRestored = !target.deleted_at && target.status === 'active';
+    if (!target.deleted_at && !isAlreadyRestored) {
+      throw apiError('Tài khoản chưa bị lưu trữ nên không thể khôi phục bằng luồng này.', 400);
+    }
 
     const targetRoleName = getRoleName(target.roles);
     ensureCanRestoreAccount(actor, target, targetRoleName);
@@ -101,35 +104,67 @@ export default async function handler(req, res) {
       throw apiError('Username này đã được dùng bởi tài khoản active khác. Không thể khôi phục.', 409);
     }
 
-    const now = new Date().toISOString();
-    const { error: restoreAccountError } = await admin
-      .from('accounts')
-      .update({
-        status: 'active',
-        deleted_at: null,
-        updated_at: now,
-      })
-      .eq('id', accountId)
-      .not('deleted_at', 'is', null);
+    if (!isAlreadyRestored) {
+      const now = new Date().toISOString();
+      const { error: restoreAccountError } = await admin
+        .from('accounts')
+        .update({
+          status: 'active',
+          deleted_at: null,
+          updated_at: now,
+        })
+        .eq('id', accountId)
+        .not('deleted_at', 'is', null);
 
-    if (restoreAccountError) {
-      throw apiError(`Không thể khôi phục tài khoản: ${restoreAccountError.message}`, 500);
+      if (restoreAccountError) {
+        throw apiError(`Không thể khôi phục tài khoản: ${restoreAccountError.message}`, 500);
+      }
     }
 
-    const { error: restoreEventPermissionsError } = await admin
+    const { data: deletedEventPermissions, error: deletedPermissionsError } = await admin
       .from('account_event_permissions')
-      .update({ deleted_at: null })
+      .select('id, event_id, permission')
       .eq('account_id', accountId)
       .not('deleted_at', 'is', null);
 
-    if (restoreEventPermissionsError) {
-      throw apiError(`Tài khoản đã khôi phục nhưng phân quyền event chưa khôi phục được: ${restoreEventPermissionsError.message}`, 500);
+    if (deletedPermissionsError) {
+      throw apiError(`Không thể đọc phân quyền event đã lưu trữ: ${deletedPermissionsError.message}`, 500);
+    }
+
+    const { data: activeEventPermissions, error: activePermissionsError } = await admin
+      .from('account_event_permissions')
+      .select('event_id, permission')
+      .eq('account_id', accountId)
+      .is('deleted_at', null);
+
+    if (activePermissionsError) {
+      throw apiError(`Không thể đọc phân quyền event active: ${activePermissionsError.message}`, 500);
+    }
+
+    const activePermissionKeys = new Set(
+      (activeEventPermissions || []).map((permissionRow) => `${permissionRow.event_id}:${permissionRow.permission}`),
+    );
+    const permissionsToRestore = (deletedEventPermissions || []).filter(
+      (permissionRow) => !activePermissionKeys.has(`${permissionRow.event_id}:${permissionRow.permission}`),
+    );
+
+    if (permissionsToRestore.length > 0) {
+      const { error: restoreEventPermissionsError } = await admin
+        .from('account_event_permissions')
+        .update({ deleted_at: null })
+        .in('id', permissionsToRestore.map((permissionRow) => permissionRow.id));
+
+      if (restoreEventPermissionsError) {
+        throw apiError(`Tài khoản đã khôi phục nhưng phân quyền event chưa khôi phục được: ${restoreEventPermissionsError.message}`, 500);
+      }
     }
 
     await audit(admin, target.tenant_id, 'account.restore', JSON.stringify({
       actor_account_id: actor.id,
       target_account_id: target.id,
       target_role: targetRoleName,
+      restored_event_permissions: permissionsToRestore.length,
+      skipped_duplicate_event_permissions: (deletedEventPermissions || []).length - permissionsToRestore.length,
       result: 'allow',
     }));
 
