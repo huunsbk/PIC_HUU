@@ -18,6 +18,24 @@ type AdminAccountUpdatePayload = {
   userId?: string;
 };
 
+export type DeletedAdminAccount = {
+  id: string;
+  user_id?: string | null;
+  tenant_id?: string | null;
+  tenant_name?: string | null;
+  tenant_slug?: string | null;
+  username: string;
+  display_name?: string | null;
+  role_name?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  deleted_at?: string | null;
+  archived_at?: string | null;
+  created_by_account_id?: string | null;
+  auth_linked?: boolean;
+};
+
 const tokenField = ['access', 'token'].join('_');
 
 async function getBearerToken() {
@@ -132,6 +150,22 @@ export async function deleteAdminAccount(accountId: string) {
   }
 
   return response.json();
+}
+
+export async function listDeletedAdminAccounts(): Promise<DeletedAdminAccount[]> {
+  const token = await getBearerToken();
+
+  const response = await fetch('/api/admin/accounts/deleted', {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+
+  const body = await response.json();
+  return Array.isArray(body?.accounts) ? body.accounts : [];
 }
 
 export async function resetAdminAccountPassword(targetUsername: string, newPassword: string) {

@@ -122,7 +122,6 @@ export default async function handler(req, res) {
 
       await admin.from('active_sessions').delete().eq('account_id', accountId);
       await admin.from('login_logs').delete().eq('account_id', accountId);
-      await admin.from('account_permissions').delete().eq('account_id', accountId);
       await admin
         .from('account_event_permissions')
         .update({ deleted_at: new Date().toISOString() })

@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Building2, CalendarDays, DatabaseZap, RefreshCcw, RotateCcw, Trash2 } from 'lucide-react';
+import { AlertTriangle, Building2, CalendarDays, DatabaseZap, RefreshCcw, RotateCcw, Trash2, UserX } from 'lucide-react';
 import { useTournamentStore } from '../store';
+import { listDeletedAdminAccounts, type DeletedAdminAccount } from '../lib/api/adminAccounts';
 import { normalizeRpcError, tournamentRpc } from '../lib/api/tournamentRpc';
 
-type DeletedTab = 'tenants' | 'tournaments' | 'events';
+type DeletedTab = 'tenants' | 'tournaments' | 'events' | 'accounts';
 
 function formatDate(value?: string | null) {
   if (!value) return 'Chưa rõ';
@@ -31,6 +32,7 @@ export default function DeletedItemsManager() {
   const [tenants, setTenants] = useState<any[]>([]);
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<DeletedAdminAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -39,26 +41,29 @@ export default function DeletedItemsManager() {
   const userRole = useTournamentStore((state) => state.userRole);
   const tenantParam = userRole === 'SUPER_ADMIN' || activeTenantId === 'default' ? null : activeTenantId;
 
-  const activeRows = activeTab === 'tenants' ? tenants : activeTab === 'tournaments' ? tournaments : events;
+  const activeRows = activeTab === 'tenants' ? tenants : activeTab === 'tournaments' ? tournaments : activeTab === 'events' ? events : accounts;
 
   const totals = useMemo(() => ({
     tenants: tenants.length,
     tournaments: tournaments.length,
     events: events.length,
-  }), [tenants.length, tournaments.length, events.length]);
+    accounts: accounts.length,
+  }), [tenants.length, tournaments.length, events.length, accounts.length]);
 
   const loadData = async () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const [archivedTenants, archivedTournaments, archivedEvents] = await Promise.all([
+      const [archivedTenants, archivedTournaments, archivedEvents, archivedAccounts] = await Promise.all([
         userRole === 'SUPER_ADMIN' ? tournamentRpc.listArchivedTenants() : Promise.resolve([]),
         tournamentRpc.listArchivedTournaments(tenantParam),
         tournamentRpc.listArchivedEvents(tenantParam),
+        listDeletedAdminAccounts(),
       ]);
       setTenants(Array.isArray(archivedTenants) ? archivedTenants : []);
       setTournaments(Array.isArray(archivedTournaments) ? archivedTournaments : []);
       setEvents(Array.isArray(archivedEvents) ? archivedEvents : []);
+      setAccounts(Array.isArray(archivedAccounts) ? archivedAccounts : []);
     } catch (error) {
       setErrorMsg(normalizeRpcError(error).message);
     } finally {
@@ -170,7 +175,7 @@ export default function DeletedItemsManager() {
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">
           <div className="flex items-start gap-2">
             <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-            <p>Xóa cứng chỉ khả dụng với dữ liệu đã archived. Hệ thống sẽ xóa ngược dữ liệu con trước khi xóa đơn vị, giải hoặc nội dung.</p>
+            <p>Xóa cứng chỉ khả dụng với dữ liệu đã archived. Tài khoản ở đây mới ở trạng thái lưu trữ/khóa; khôi phục và xóa cứng tài khoản sẽ được tách sang PR sau.</p>
           </div>
         </div>
       </section>
@@ -212,6 +217,17 @@ export default function DeletedItemsManager() {
           >
             <CalendarDays size={16} /> Danh sách nội dung ({totals.events})
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('accounts')}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-black ${
+              activeTab === 'accounts'
+                ? 'bg-blue-600 text-white'
+                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300'
+            }`}
+          >
+            <UserX size={16} /> Danh sách tài khoản ({totals.accounts})
+          </button>
         </div>
 
         {errorMsg && <div className="m-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">{errorMsg}</div>}
@@ -229,22 +245,26 @@ export default function DeletedItemsManager() {
             <table className="min-w-[980px] w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-200 bg-zinc-50 text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950">
-                  <th className="px-4 py-3">{activeTab === 'tenants' ? 'Đơn vị' : activeTab === 'tournaments' ? 'Giải đấu' : 'Nội dung'}</th>
+                  <th className="px-4 py-3">{activeTab === 'tenants' ? 'Đơn vị' : activeTab === 'tournaments' ? 'Giải đấu' : activeTab === 'events' ? 'Nội dung' : 'Tài khoản'}</th>
                   {activeTab !== 'tenants' && <th className="px-4 py-3">Đơn vị</th>}
                   {activeTab === 'events' && <th className="px-4 py-3">Giải chứa</th>}
-                  <th className="px-4 py-3">Thống kê</th>
+                  <th className="px-4 py-3">{activeTab === 'accounts' ? 'Vai trò / trạng thái' : 'Thống kê'}</th>
                   <th className="px-4 py-3">Archived</th>
                   <th className="px-4 py-3 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {activeRows.map((row) => {
-                  const rowId = activeTab === 'tenants' ? row.tenant_id : activeTab === 'tournaments' ? row.tournament_id : row.event_id;
+                  const rowId = activeTab === 'tenants' ? row.tenant_id : activeTab === 'tournaments' ? row.tournament_id : activeTab === 'events' ? row.event_id : row.id;
                   return (
                     <tr key={rowId} className="border-b border-zinc-100 hover:bg-zinc-50/70 dark:border-zinc-800 dark:hover:bg-zinc-950">
                       <td className="px-4 py-4">
-                        <div className="font-black text-zinc-900 dark:text-zinc-100">{row.name}</div>
-                        <div className="mt-1 font-mono text-[11px] font-bold text-zinc-400">{row.slug || rowId}</div>
+                        <div className="font-black text-zinc-900 dark:text-zinc-100">
+                          {activeTab === 'accounts' ? (row.display_name || row.username) : row.name}
+                        </div>
+                        <div className="mt-1 font-mono text-[11px] font-bold text-zinc-400">
+                          {activeTab === 'accounts' ? row.username : (row.slug || rowId)}
+                        </div>
                       </td>
                       {activeTab !== 'tenants' && (
                         <td className="px-4 py-4 font-bold text-zinc-700 dark:text-zinc-200">{row.tenant_name || row.tenant_id || 'Chưa rõ'}</td>
@@ -257,7 +277,13 @@ export default function DeletedItemsManager() {
                       )}
                       <td className="px-4 py-4">
                         <div className="flex flex-wrap gap-1.5">
-                          {activeTab === 'tenants' ? (
+                          {activeTab === 'accounts' ? (
+                            <>
+                              <CountBadge label="Role" value={row.role_name || 'Chưa rõ'} />
+                              <CountBadge label="Status" value={row.status || 'inactive'} />
+                              <CountBadge label="Auth" value={row.auth_linked ? 'Có' : 'Không'} />
+                            </>
+                          ) : activeTab === 'tenants' ? (
                             <>
                               <CountBadge label="Giải" value={row.tournaments_count || 0} />
                               <CountBadge label="Nội dung" value={row.events_count || 0} />
@@ -281,22 +307,30 @@ export default function DeletedItemsManager() {
                       <td className="px-4 py-4 text-xs font-bold text-zinc-500">{formatDate(row.archived_at || row.updated_at)}</td>
                       <td className="px-4 py-4">
                         <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            disabled={!!actionLoading}
-                            onClick={() => activeTab === 'tenants' ? restoreTenant(row) : activeTab === 'tournaments' ? restoreTournament(row) : restoreEvent(row)}
-                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:bg-emerald-950/30 dark:text-emerald-300"
-                          >
-                            <RotateCcw size={14} /> Khôi phục
-                          </button>
-                          <button
-                            type="button"
-                            disabled={!!actionLoading}
-                            onClick={() => activeTab === 'tenants' ? hardDeleteTenant(row) : activeTab === 'tournaments' ? hardDeleteTournament(row) : hardDeleteEvent(row)}
-                            className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-black text-red-700 hover:bg-red-100 disabled:opacity-50 dark:bg-red-950/30 dark:text-red-300"
-                          >
-                            <Trash2 size={14} /> Xóa cứng
-                          </button>
+                          {activeTab === 'accounts' ? (
+                            <span className="rounded-lg bg-zinc-100 px-3 py-2 text-xs font-black text-zinc-500 dark:bg-zinc-800 dark:text-zinc-300">
+                              Chờ PR khôi phục/xóa cứng
+                            </span>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                disabled={!!actionLoading}
+                                onClick={() => activeTab === 'tenants' ? restoreTenant(row) : activeTab === 'tournaments' ? restoreTournament(row) : restoreEvent(row)}
+                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:bg-emerald-950/30 dark:text-emerald-300"
+                              >
+                                <RotateCcw size={14} /> Khôi phục
+                              </button>
+                              <button
+                                type="button"
+                                disabled={!!actionLoading}
+                                onClick={() => activeTab === 'tenants' ? hardDeleteTenant(row) : activeTab === 'tournaments' ? hardDeleteTournament(row) : hardDeleteEvent(row)}
+                                className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-black text-red-700 hover:bg-red-100 disabled:opacity-50 dark:bg-red-950/30 dark:text-red-300"
+                              >
+                                <Trash2 size={14} /> Xóa cứng
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
