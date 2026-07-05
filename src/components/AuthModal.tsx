@@ -16,7 +16,7 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const { setAuthStatus } = useTournamentStore();
+  const { setAuthStatus, setAuthAccessState } = useTournamentStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -38,6 +38,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }
 
     try {
+      setAuthAccessState('AUTHENTICATING');
       const loginEmail = trimmedUser.includes('@') ? trimmedUser : `${trimmedUser}@pic.com`;
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: loginEmail,
@@ -45,15 +46,18 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       });
 
     if (authError || !authData.user) {
+      setAuthAccessState('UNAUTHENTICATED');
       setErrorMsg('Tên đăng nhập hoặc mật khẩu không chính xác.');
       return;
     }
 
+    setAuthAccessState('PROFILE_LOADING');
     // Load Enterprise Account details using unified RPC
     const { data: profileStr, error: accountError } = await supabase.rpc('get_current_profile');
     
     if (accountError || !profileStr) {
       console.warn('[Auth] Profile lookup failed during login.');
+      setAuthAccessState('PROFILE_ERROR');
       setErrorMsg('Tài khoản không tồn tại trên hệ thống hoặc đã bị khóa.');
       await supabase.auth.signOut();
       return;
@@ -115,6 +119,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }, 800);
     } catch {
       console.warn('[Auth] Login request failed.');
+      setAuthAccessState('PROFILE_ERROR');
       setErrorMsg('Không thể đăng nhập lúc này. Vui lòng kiểm tra kết nối và thử lại.');
     }
   };

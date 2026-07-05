@@ -8,6 +8,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { Tournament, Team, Group, Match, AuditLog, TournamentSettings, SeedType, GroupStanding, ThirdPlaceStanding, EventData, Account } from './types';
 import { generateRoundRobinMatches, calculateGroupStandings, calculateBestThirdPlaces, generateKnockoutMatchesSchema, balanceMatchesRestTime, normalizeSlotKey } from './utils/tournamentEngine';
 import { supabase, checkSupabaseConnection } from './supabaseClient';
+import { AuthAccessState } from './lib/auth/accessState';
 
 const getBasePath = () => {
   const basePath = import.meta.env.BASE_URL || '/';
@@ -114,10 +115,13 @@ interface AppState {
   activeTenantId: string; // 'default' or UUID of tenant
   activeTenantName: string | null;
   activeTournamentId: string | null;
+  authAccessState: AuthAccessState;
+  setAuthAccessState: (state: AuthAccessState) => void;
   setAuthStatus: (role: 'guest' | string, username: string | null, tenantId: string, enterpriseUser?: any) => Promise<void>;
   logout: () => Promise<void>;
   setTenantId: (tenantId: string) => Promise<void>;
   setWorkspaceContext: (context: { tenantId: string; tenantName?: string | null; tournamentId?: string | null; tournamentName?: string | null; tournamentSlug?: string | null; }) => Promise<void>;
+  clearWorkspaceContext: () => void;
 
   permissions: string[];
   hasPermission: (permissionName: string) => boolean;
@@ -394,16 +398,15 @@ export const useTournamentStore = create<AppState>()(
         activeTenantId: 'default',
         activeTenantName: null,
         activeTournamentId: null,
+        authAccessState: 'UNAUTHENTICATED',
+        setAuthAccessState: (authAccessState) => originalSet({ authAccessState }),
         isLoadingSupabase: false,
         setAuthStatus: async (role, username, tenantId, enterpriseUser) => {
           console.log('[Auth Setup] Bắt đầu thiết lập Auth.');
+          originalSet({ authAccessState: 'PROFILE_LOADING' });
           const isWorkspaceRoute = isRouteWorkspacePath();
           const currentState = get();
-          const selectedTabAfterAuth = (role === 'EVENT_ADMIN' || (enterpriseUser?.permissions?.includes('enter_scores') && !enterpriseUser?.permissions?.includes('*')))
-            ? 'scoreEntry'
-            : isWorkspaceRoute
-              ? currentState.selectedTab
-              : 'dashboard';
+          const selectedTabAfterAuth = isWorkspaceRoute ? currentState.selectedTab : 'workspaces';
           const normalizedEnterpriseUser = enterpriseUser ? {
             ...enterpriseUser,
             role: enterpriseUser.role || role || enterpriseUser.role_name || 'guest',
@@ -419,12 +422,13 @@ export const useTournamentStore = create<AppState>()(
             userRole: role || 'guest',
             currentUser: username,
             currentEnterpriseUser: normalizedEnterpriseUser,
-            activeTenantId: tenantId,
-            activeTenantName: normalizedEnterpriseUser?.tenant?.name || currentState.activeTenantName || null,
+            activeTenantId: isWorkspaceRoute ? currentState.activeTenantId : tenantId,
+            activeTenantName: isWorkspaceRoute ? currentState.activeTenantName : normalizedEnterpriseUser?.tenant?.name || currentState.activeTenantName || null,
             permissions: normalizedEnterpriseUser?.permissions || [],
             isAdmin: false /* deprecated */,
             selectedTab: selectedTabAfterAuth,
-            isLoadingSupabase: true
+            isLoadingSupabase: true,
+            authAccessState: isWorkspaceRoute ? 'ACCESS_LOADING' : 'WORKSPACE_SELECT_REQUIRED',
           });
 
           if (normalizedEnterpriseUser && normalizedEnterpriseUser.id && tenantId !== 'default') {
@@ -461,6 +465,7 @@ export const useTournamentStore = create<AppState>()(
             activeTournamentId: null,
             permissions: [],
             isAdmin: false,
+            authAccessState: 'UNAUTHENTICATED',
           });
           
           // Reset URL hash so client isn't stuck on the active admin tenant path as guest on reload
@@ -525,7 +530,7 @@ export const useTournamentStore = create<AppState>()(
             currentTournament.name === nextTournament.name;
 
           if (isSameContext) {
-            originalSet({ isLoadingSupabase: false, supabaseConnected: true });
+            originalSet({ isLoadingSupabase: false, supabaseConnected: true, authAccessState: 'WORKSPACE_CONTEXT_READY' });
             return;
           }
 
@@ -536,6 +541,21 @@ export const useTournamentStore = create<AppState>()(
             isLoadingSupabase: false,
             supabaseConnected: true,
             tournament: nextTournament,
+            authAccessState: 'WORKSPACE_CONTEXT_READY',
+          });
+        },
+        clearWorkspaceContext: () => {
+          originalSet({
+            activeTenantId: 'default',
+            activeTenantName: null,
+            activeTournamentId: null,
+            currentEventId: '',
+            teams: {},
+            groups: {},
+            matches: [],
+            tournament: { ...DEFAULT_TOURNAMENT, id: '', name: 'Chưa chọn giải' },
+            isLoadingSupabase: false,
+            supabaseConnected: true,
           });
         },
         isAdmin: false,
@@ -2151,7 +2171,7 @@ export const useTournamentStore = create<AppState>()(
       name: 'pickleball-tournament-cache', // Khóa lưu trữ LocalStorage để đồng bộ giữa các tab
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => Object.fromEntries(
-        Object.entries(state).filter(([key]) => !['isAdmin'].includes(key))
+        Object.entries(state).filter(([key]) => !['isAdmin', 'authAccessState'].includes(key))
       ),
     }
   )

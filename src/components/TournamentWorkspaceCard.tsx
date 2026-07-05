@@ -4,6 +4,7 @@ import { TournamentWorkspaceStat } from '../hooks/useTournamentWorkspaces';
 import { useArchiveTournamentWorkspace, useRestoreTournamentWorkspace, useUpdateTournamentWorkspace } from '../hooks/useTournamentMutations';
 import TournamentWorkspaceDetailsDrawer from './TournamentWorkspaceDetailsDrawer';
 import ConfirmDialog from './ConfirmDialog';
+import { useTournamentStore } from '../store';
 
 interface TournamentWorkspaceCardProps {
   tournament: TournamentWorkspaceStat;
@@ -15,6 +16,8 @@ export default function TournamentWorkspaceCard({ tournament }: TournamentWorksp
   const archiveMutation = useArchiveTournamentWorkspace();
   const restoreMutation = useRestoreTournamentWorkspace();
   const updateMutation = useUpdateTournamentWorkspace();
+  const hasPermission = useTournamentStore((state) => state.hasPermission);
+  const canManageTournaments = hasPermission('*') || hasPermission('manage_tournaments');
 
   const handleArchive = () => {
     setIsArchiveConfirmOpen(true);
@@ -113,20 +116,22 @@ export default function TournamentWorkspaceCard({ tournament }: TournamentWorksp
           <button onClick={openAdminWorkspace} className="flex-1 py-2 flex items-center justify-center gap-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
             <ExternalLink size={14} /> Mở giải
           </button>
-          <div className="flex gap-2">
-            <button onClick={handleEdit} disabled={updateMutation.isPending} className="py-2 px-2 flex items-center justify-center text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors disabled:opacity-50" title="Sửa giải">
-              <Pencil size={14} />
-            </button>
-            {tournament.status === 'archived' ? (
-              <button onClick={() => restoreMutation.mutate(tournament.tournament_id)} disabled={restoreMutation.isPending} className="py-2 px-2 flex items-center justify-center text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors disabled:opacity-50" title="Khôi phục">
-                <RotateCcw size={14} />
+          {canManageTournaments && (
+            <div className="flex gap-2">
+              <button onClick={handleEdit} disabled={updateMutation.isPending} className="py-2 px-2 flex items-center justify-center text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors disabled:opacity-50" title="Sửa giải">
+                <Pencil size={14} />
               </button>
-            ) : (
-              <button onClick={handleArchive} disabled={archiveMutation.isPending} className="py-2 px-2 flex items-center justify-center text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50" title="Lưu trữ">
-                <Archive size={14} />
-              </button>
-            )}
-          </div>
+              {tournament.status === 'archived' ? (
+                <button onClick={() => restoreMutation.mutate(tournament.tournament_id)} disabled={restoreMutation.isPending} className="py-2 px-2 flex items-center justify-center text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors disabled:opacity-50" title="Khôi phục">
+                  <RotateCcw size={14} />
+                </button>
+              ) : (
+                <button onClick={handleArchive} disabled={archiveMutation.isPending} className="py-2 px-2 flex items-center justify-center text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50" title="Lưu trữ">
+                  <Archive size={14} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
