@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Building2, CalendarDays, DatabaseZap, RefreshCcw, RotateCcw, Trash2, UserX } from 'lucide-react';
 import { useTournamentStore } from '../store';
-import { listDeletedAdminAccounts, type DeletedAdminAccount } from '../lib/api/adminAccounts';
+import { listDeletedAdminAccounts, restoreDeletedAdminAccount, type DeletedAdminAccount } from '../lib/api/adminAccounts';
 import { normalizeRpcError, tournamentRpc } from '../lib/api/tournamentRpc';
 
 type DeletedTab = 'tenants' | 'tournaments' | 'events' | 'accounts';
@@ -151,6 +151,14 @@ export default function DeletedItemsManager() {
     );
   };
 
+  const restoreAccount = (row: DeletedAdminAccount) => {
+    runAction(
+      `restore-account-${row.id}`,
+      () => restoreDeletedAdminAccount(row.id),
+      `Đã khôi phục tài khoản "${row.username}".`,
+    );
+  };
+
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -175,7 +183,7 @@ export default function DeletedItemsManager() {
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">
           <div className="flex items-start gap-2">
             <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-            <p>Xóa cứng chỉ khả dụng với dữ liệu đã archived. Tài khoản ở đây mới ở trạng thái lưu trữ/khóa; khôi phục và xóa cứng tài khoản sẽ được tách sang PR sau.</p>
+            <p>Xóa cứng chỉ khả dụng với dữ liệu đã archived. Tài khoản có thể khôi phục nếu tenant còn active, Auth user còn tồn tại và username chưa bị tài khoản active khác dùng lại.</p>
           </div>
         </div>
       </section>
@@ -308,9 +316,19 @@ export default function DeletedItemsManager() {
                       <td className="px-4 py-4">
                         <div className="flex justify-end gap-2">
                           {activeTab === 'accounts' ? (
-                            <span className="rounded-lg bg-zinc-100 px-3 py-2 text-xs font-black text-zinc-500 dark:bg-zinc-800 dark:text-zinc-300">
-                              Chờ PR khôi phục/xóa cứng
-                            </span>
+                            <>
+                              <button
+                                type="button"
+                                disabled={!!actionLoading}
+                                onClick={() => restoreAccount(row as DeletedAdminAccount)}
+                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:bg-emerald-950/30 dark:text-emerald-300"
+                              >
+                                <RotateCcw size={14} /> Khôi phục
+                              </button>
+                              <span className="rounded-lg bg-zinc-100 px-3 py-2 text-xs font-black text-zinc-500 dark:bg-zinc-800 dark:text-zinc-300">
+                                Chưa xóa cứng
+                              </span>
+                            </>
                           ) : (
                             <>
                               <button
