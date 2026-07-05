@@ -58,41 +58,8 @@ async function readError(response: Response) {
   }
 }
 
-function shouldUseSupabaseFunction() {
-  const hostname = window.location.hostname;
-  return hostname === 'huunsbk.github.io';
-}
-
-function logEndpoint(functionName: string) {
-  if (import.meta.env.DEV) {
-    console.info(`[AdminAccounts] endpoint=edge-function:${functionName}`);
-  }
-}
-
-async function invokeAdminFunction<T>(functionName: string, body: Record<string, unknown>) {
-  const token = await getBearerToken();
-  logEndpoint(functionName);
-
-  const { data, error } = await supabase.functions.invoke(functionName, {
-    body,
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  if (error) {
-    throw new Error(error.message || `${functionName} chưa khả dụng.`);
-  }
-  if (data?.error) {
-    throw new Error(data.error);
-  }
-  return data as T;
-}
-
 export async function createAdminAccount(payload: AdminAccountPayload) {
   const token = await getBearerToken();
-
-  if (shouldUseSupabaseFunction()) {
-    return invokeAdminFunction('admin-create-account', payload);
-  }
 
   const response = await fetch('/api/admin/accounts', {
     method: 'POST',
@@ -113,10 +80,6 @@ export async function createAdminAccount(payload: AdminAccountPayload) {
 export async function updateAdminAccount(accountId: string, payload: AdminAccountUpdatePayload) {
   const token = await getBearerToken();
 
-  if (shouldUseSupabaseFunction()) {
-    return invokeAdminFunction('admin-update-account', { accountId, ...payload });
-  }
-
   const response = await fetch(`/api/admin/accounts/${accountId}`, {
     method: 'PUT',
     headers: {
@@ -135,10 +98,6 @@ export async function updateAdminAccount(accountId: string, payload: AdminAccoun
 
 export async function deleteAdminAccount(accountId: string) {
   const token = await getBearerToken();
-
-  if (shouldUseSupabaseFunction()) {
-    return invokeAdminFunction('admin-delete-account', { accountId });
-  }
 
   const response = await fetch(`/api/admin/accounts/${accountId}`, {
     method: 'DELETE',
@@ -170,10 +129,6 @@ export async function listDeletedAdminAccounts(): Promise<DeletedAdminAccount[]>
 
 export async function resetAdminAccountPassword(targetUsername: string, newPassword: string) {
   const token = await getBearerToken();
-
-  if (shouldUseSupabaseFunction()) {
-    return invokeAdminFunction('admin-reset-account-password', { targetUsername, newPassword });
-  }
 
   const response = await fetch('/api/admin/accounts/reset', {
     method: 'POST',
