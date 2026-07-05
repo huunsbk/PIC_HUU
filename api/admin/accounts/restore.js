@@ -144,9 +144,18 @@ export default async function handler(req, res) {
     const activePermissionKeys = new Set(
       (activeEventPermissions || []).map((permissionRow) => `${permissionRow.event_id}:${permissionRow.permission}`),
     );
-    const permissionsToRestore = (deletedEventPermissions || []).filter(
-      (permissionRow) => !activePermissionKeys.has(`${permissionRow.event_id}:${permissionRow.permission}`),
-    );
+    const deletedPermissionByKey = new Map();
+    let skippedDuplicateDeletedPermissions = 0;
+    (deletedEventPermissions || []).forEach((permissionRow) => {
+      const permissionKey = `${permissionRow.event_id}:${permissionRow.permission}`;
+      if (activePermissionKeys.has(permissionKey)) return;
+      if (deletedPermissionByKey.has(permissionKey)) {
+        skippedDuplicateDeletedPermissions += 1;
+        return;
+      }
+      deletedPermissionByKey.set(permissionKey, permissionRow);
+    });
+    const permissionsToRestore = Array.from(deletedPermissionByKey.values());
 
     if (permissionsToRestore.length > 0) {
       const { error: restoreEventPermissionsError } = await admin
@@ -165,6 +174,7 @@ export default async function handler(req, res) {
       target_role: targetRoleName,
       restored_event_permissions: permissionsToRestore.length,
       skipped_duplicate_event_permissions: (deletedEventPermissions || []).length - permissionsToRestore.length,
+      skipped_duplicate_archived_event_permissions: skippedDuplicateDeletedPermissions,
       result: 'allow',
     }));
 
