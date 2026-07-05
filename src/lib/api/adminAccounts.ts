@@ -168,6 +168,25 @@ export async function listDeletedAdminAccounts(): Promise<DeletedAdminAccount[]>
   return Array.isArray(body?.accounts) ? body.accounts : [];
 }
 
+export async function restoreDeletedAdminAccount(accountId: string) {
+  const token = await getBearerToken();
+
+  const response = await fetch('/api/admin/accounts/restore', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ accountId }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+
+  return response.json();
+}
+
 export async function resetAdminAccountPassword(targetUsername: string, newPassword: string) {
   const token = await getBearerToken();
 
