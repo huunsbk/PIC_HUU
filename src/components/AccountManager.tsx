@@ -374,7 +374,7 @@ export default function AccountManager() {
     try {
       await deleteAdminAccount(accountToDelete.id);
       
-      setSuccessMsg('Đã xóa thành công tài khoản.');
+      setSuccessMsg('Đã lưu trữ và khóa tài khoản.');
       fetchAccounts();
     } catch (error) {
       setErrorMsg(error instanceof Error ? error.message : 'Không thể xóa tài khoản lúc này. Vui lòng liên hệ hỗ trợ.');
@@ -1095,9 +1095,9 @@ export default function AccountManager() {
 
       <ConfirmDialog
         isOpen={isDeleteConfirmOpen}
-        title="Xóa vĩnh viễn tài khoản"
-        message={`Hành động này cực kỳ nguy hiểm và KHÔNG THỂ HOÀN TÁC.\n\nBạn có thực sự chắc chắn muốn XÓA VĨNH VIỄN tài khoản "${accountToDelete?.username || ''}" cùng toàn bộ phiên làm việc, phân quyền và lịch sử hoạt động liên quan không?`}
-        confirmText="Xóa vĩnh viễn"
+        title="Lưu trữ và khóa tài khoản"
+        message={`Tài khoản "${accountToDelete?.username || ''}" sẽ bị khóa đăng nhập, ẩn khỏi danh sách đang hoạt động và chuyển sang thẻ Đã xóa. Đây chưa phải xóa cứng khỏi Supabase.`}
+        confirmText="Lưu trữ"
         cancelText="Hủy bỏ"
         isDanger={true}
         onConfirm={handleConfirmDeleteAccount}
