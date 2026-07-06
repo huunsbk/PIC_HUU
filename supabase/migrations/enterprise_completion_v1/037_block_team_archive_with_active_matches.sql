@@ -91,3 +91,91 @@ BEGIN
   RETURN jsonb_build_object('success', true, 'team_id', p_team_id, 'event_id', v_team.event_id, 'archived', true);
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION public.hard_delete_event_teams_v1(p_event_id text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO public, pg_temp
+AS $$
+DECLARE
+  v_ctx jsonb;
+  v_tenant_id uuid;
+  v_match_sets integer := 0;
+  v_knockout_slots integer := 0;
+  v_knockout_selections integer := 0;
+  v_matches integer := 0;
+  v_groups integer := 0;
+  v_soft_teams integer := 0;
+  v_teams integer := 0;
+  v_deleted jsonb;
+BEGIN
+  v_ctx := public.p06_require_event_admin_v1(p_event_id, 'manage_teams', 'hard_delete_event_teams_v1');
+  v_tenant_id := (v_ctx->>'tenant_id')::uuid;
+
+  UPDATE public.teams
+  SET deleted_at = COALESCE(deleted_at, now()),
+      group_id = NULL
+  WHERE event_id = p_event_id
+    AND tenant_id = v_tenant_id;
+  GET DIAGNOSTICS v_soft_teams = ROW_COUNT;
+
+  DELETE FROM public.match_sets
+  WHERE event_id = p_event_id
+    AND tenant_id = v_tenant_id;
+  GET DIAGNOSTICS v_match_sets = ROW_COUNT;
+
+  IF to_regclass('public.knockout_slots') IS NOT NULL THEN
+    EXECUTE 'DELETE FROM public.knockout_slots WHERE event_id = $1 AND tenant_id = $2' USING p_event_id, v_tenant_id;
+    GET DIAGNOSTICS v_knockout_slots = ROW_COUNT;
+  END IF;
+
+  IF to_regclass('public.event_knockout_selections') IS NOT NULL THEN
+    EXECUTE 'DELETE FROM public.event_knockout_selections WHERE event_id = $1 AND tenant_id = $2' USING p_event_id, v_tenant_id;
+    GET DIAGNOSTICS v_knockout_selections = ROW_COUNT;
+  END IF;
+
+  DELETE FROM public.matches
+  WHERE event_id = p_event_id
+    AND tenant_id = v_tenant_id;
+  GET DIAGNOSTICS v_matches = ROW_COUNT;
+
+  DELETE FROM public.groups
+  WHERE event_id = p_event_id
+    AND tenant_id = v_tenant_id;
+  GET DIAGNOSTICS v_groups = ROW_COUNT;
+
+  DELETE FROM public.teams
+  WHERE event_id = p_event_id
+    AND tenant_id = v_tenant_id;
+  GET DIAGNOSTICS v_teams = ROW_COUNT;
+
+  UPDATE public.events
+  SET ranking_config = COALESCE(ranking_config, '{}'::jsonb) - 'groupCount'
+  WHERE id = p_event_id
+    AND tenant_id = v_tenant_id
+    AND deleted_at IS NULL;
+
+  v_deleted := jsonb_build_object(
+    'soft_marked_teams', v_soft_teams,
+    'match_sets', v_match_sets,
+    'knockout_slots', v_knockout_slots,
+    'knockout_selections', v_knockout_selections,
+    'matches', v_matches,
+    'groups', v_groups,
+    'teams', v_teams
+  );
+
+  PERFORM public.log_audit_event_v1(
+    'HARD_DELETE_EVENT_TEAMS',
+    'event',
+    p_event_id,
+    jsonb_build_object('deleted', v_deleted)
+  );
+
+  RETURN jsonb_build_object('success', true, 'event_id', p_event_id, 'deleted', v_deleted);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.hard_delete_event_teams_v1(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.hard_delete_event_teams_v1(text) TO authenticated;

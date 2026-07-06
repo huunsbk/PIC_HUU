@@ -313,6 +313,12 @@ export const tournamentRpc = {
     });
   },
 
+  hardDeleteEventTeams(eventId: string) {
+    return callRpc<TournamentRpcResult & { deleted?: JsonRecord }>('hard_delete_event_teams_v1', {
+      p_event_id: eventId,
+    });
+  },
+
   importTeams(eventId: string, teams: TeamImportRow[]) {
     return callRpc<TournamentRpcResult & { imported_count?: number }>('import_teams_v1', {
       p_event_id: eventId,

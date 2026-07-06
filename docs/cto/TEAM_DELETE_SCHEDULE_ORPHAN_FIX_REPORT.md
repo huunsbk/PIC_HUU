@@ -34,6 +34,7 @@
 - If referenced matches are only pending, require the operator to dissolve groups/schedule first.
 - Update UI copy so delete team no longer claims it will clean schedule automatically.
 - Prevent legacy orphan data from rendering raw `team-...` ids by showing a clear inactive-team label.
+- Add a separate destructive action `Xóa toàn bộ đội` for EVENT_ADMIN or higher. This calls `hard_delete_event_teams_v1` and deletes data in reverse order: match sets, knockout slots/selections, matches, groups, then teams.
 
 ## Why This Option
 
@@ -41,3 +42,4 @@
 - It preserves match history and score records.
 - It forces an explicit operational step before destructive changes.
 - It fixes the raw-id symptom for existing orphan data without hiding the underlying integrity issue.
+- It keeps single-team delete safe while still giving admins an explicit reset path for broken/test event data.

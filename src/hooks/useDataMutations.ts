@@ -103,6 +103,21 @@ export function useTeamMutations() {
     }
   });
 
+  const hardDeleteAllTeams = useMutation({
+    mutationFn: async () => {
+      const eventId = requireTenantContext();
+      await assertFreshEventPermission(eventId, 'manage_teams');
+      return tournamentRpc.hardDeleteEventTeams(eventId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
+      queryClient.invalidateQueries({ queryKey: ['match-sets'] });
+      invalidateDashboardStats();
+    }
+  });
+
   const importTeams = useMutation({
     mutationFn: async (csvContent: string) => {
       const lines = csvContent.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
@@ -145,7 +160,7 @@ export function useTeamMutations() {
     }
   });
 
-  return { addTeam, updateTeam, deleteTeam, importTeams };
+  return { addTeam, updateTeam, deleteTeam, hardDeleteAllTeams, importTeams };
 }
 
 export function useGroupMutations() {

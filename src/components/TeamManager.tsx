@@ -17,7 +17,7 @@ export default function TeamManager() {
   const { data: teamsData = [], isLoading: isLoadingTeams } = useTeams();
   const { data: groupsData = [] } = useGroups();
   const { data: eventsData = [] } = useEvents();
-  const { addTeam, deleteTeam, updateTeam, importTeams } = useTeamMutations();
+  const { addTeam, deleteTeam, hardDeleteAllTeams, updateTeam, importTeams } = useTeamMutations();
   const hasSelectedRealEvent = isUsableEventId(currentEventId) && eventsData.some((event) => event.id === currentEventId);
   const canManage = hasPermission('manage_teams') && hasSelectedRealEvent;
   
@@ -33,6 +33,7 @@ export default function TeamManager() {
   
   // Custom Confirmation Modal State to replace iframe-blocking confirm()
   const [teamToDelete, setTeamToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string | null }>({
     type: 'success',
@@ -107,6 +108,17 @@ export default function TeamManager() {
       setTeamToDelete(null);
     } catch(err: any) {
       showNotification('error', err.message || 'Lỗi khi xóa đội');
+    }
+  };
+
+  const handleDeleteAllConfirm = async () => {
+    try {
+      const result = await hardDeleteAllTeams.mutateAsync();
+      const deleted = (result.deleted || {}) as Record<string, any>;
+      showNotification('success', `Đã xóa toàn bộ đội và dữ liệu liên quan: ${deleted.teams || 0} đội, ${deleted.matches || 0} trận.`);
+      setShowDeleteAllConfirm(false);
+    } catch (err: any) {
+      showNotification('error', err.message || 'Không xóa được toàn bộ đội.');
     }
   };
 
@@ -324,14 +336,27 @@ export default function TeamManager() {
                 <p className="text-[11px] text-zinc-400 mt-0.5 font-semibold">Tất cả vận động viên được duyệt tư cách thi đấu hợp lệ.</p>
               </div>
 
-              {/* Bộ tìm kiếm to hơn */}
-              <input
-                type="text"
-                placeholder="Tìm kiếm đội, vận động viên..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-sm w-full shadow-xs"
-              />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm đội, vận động viên..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-sm w-full shadow-xs"
+                />
+                {canManage && teamList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteAllConfirm(true)}
+                    className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-black uppercase tracking-wide shadow-sm cursor-pointer whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
+                    id="btn-hard-delete-all-teams"
+                    disabled={hardDeleteAllTeams.isPending}
+                    title="Xóa cứng toàn bộ đội và dữ liệu liên quan của nội dung đang chọn"
+                  >
+                    Xóa toàn bộ đội
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Bảng Danh Sách */}
@@ -510,6 +535,51 @@ export default function TeamManager() {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {showDeleteAllConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-51 animate-fade-in" id="delete-all-teams-popup">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-lg w-full p-6.5 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3.5 text-red-600">
+              <div className="p-3 bg-red-50 dark:bg-red-950/50 rounded-2xl">
+                <Trash2 size={24} className="stroke-[2.5]" />
+              </div>
+              <div>
+                <h4 className="text-lg font-black text-zinc-900 dark:text-zinc-100 leading-tight">Xóa Toàn Bộ Đội Của Nội Dung</h4>
+                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Thao tác xóa cứng không lưu dữ liệu</p>
+              </div>
+            </div>
+
+            <div className="text-sm font-semibold text-zinc-650 dark:text-zinc-400 leading-relaxed pt-2 space-y-2">
+              <p>
+                Thao tác này sẽ xóa cứng toàn bộ đội của nội dung thi đấu đang chọn và xóa ngược dữ liệu liên quan:
+                séc điểm, sơ đồ KO, lịch thi đấu và bảng đấu.
+              </p>
+              <p className="font-black text-red-600 dark:text-red-400">
+                Dữ liệu đã xóa không thể khôi phục. Chỉ dùng khi muốn làm sạch nội dung tạo lỗi hoặc tạo lại từ đầu.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+              <button
+                onClick={() => setShowDeleteAllConfirm(false)}
+                className="px-5 py-2.5 text-xs font-bold text-zinc-605 hover:text-zinc-800 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-805 dark:text-zinc-300 rounded-xl cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                id="btn-close-delete-all-teams-modal"
+                disabled={hardDeleteAllTeams.isPending}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleDeleteAllConfirm}
+                className="px-6 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-500 rounded-xl shadow-md cursor-pointer uppercase tracking-wider disabled:opacity-60 disabled:cursor-not-allowed"
+                id="btn-confirm-delete-all-teams-submit"
+                disabled={hardDeleteAllTeams.isPending}
+              >
+                {hardDeleteAllTeams.isPending ? 'Đang xóa...' : 'Xóa Cứng Toàn Bộ'}
+              </button>
+            </div>
           </div>
         </div>
       )}
