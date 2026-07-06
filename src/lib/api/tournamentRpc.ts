@@ -103,6 +103,8 @@ const ERROR_TRANSLATIONS: Array<[RegExp, string]> = [
   [/INVALID_CONTEXT/i, 'Sai ngữ cảnh dữ liệu. Vui lòng chọn đúng đơn vị, giải đấu và nội dung thi đấu.'],
   [/INVALID_EVENT_ID/i, 'ID nội dung thi đấu không hợp lệ. Vui lòng chọn nội dung thi đấu thật.'],
   [/Team name already exists/i, 'Tên đội đã tồn tại trong nội dung thi đấu này.'],
+  [/TEAM_DELETE_BLOCKED_MATCH_RESULTS/i, 'Không thể xóa đội vì đội đang có lịch thi đấu đã nhập điểm hoặc đang diễn ra. Hãy giữ lịch sử trận, hoặc reset điểm và xử lý lịch theo quy trình riêng trước.'],
+  [/TEAM_DELETE_BLOCKED_ACTIVE_SCHEDULE/i, 'Đội đang nằm trong lịch thi đấu. Vui lòng giải tán bảng/lịch trước khi xóa đội.'],
   [/Team count .* smaller than requested group count/i, 'Số đội ít hơn số bảng đã chọn. Vui lòng giảm số bảng hoặc nhập thêm đội.'],
   [/p_group_count must be between 1 and 32/i, 'Số bảng phải nằm trong khoảng từ 1 đến 32.'],
   [/Schedule already generated/i, 'Lịch đã được sinh. Vui lòng tạo lại lịch trước khi chuyển đội giữa bảng.'],

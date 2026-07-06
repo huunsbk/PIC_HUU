@@ -1050,6 +1050,9 @@ export function getMatchDisplayName(
   if (!keyToCheck || keyToCheck === 'null' || keyToCheck === 'undefined') {
     return 'Chưa xác định';
   }
+  if (/^team-[a-z0-9-]+$/i.test(keyToCheck.trim())) {
+    return 'Đội đã xóa hoặc không còn hoạt động';
+  }
 
   // 3. Nếu ID khớp trực tiếp với tên của một đội trong hệ thống (phòng khi được gán trực tiếp bằng chuỗi tên)
   const matchedRealTeam = Object.values(teams).find(

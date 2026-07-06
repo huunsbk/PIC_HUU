@@ -489,7 +489,7 @@ export default function TeamManager() {
 
             <p className="text-sm font-semibold text-zinc-650 dark:text-zinc-400 leading-relaxed pt-2">
               Bạn có chắc chắn muốn xóa đấu thủ <strong className="text-red-600 dark:text-red-400 text-base">"{teamToDelete.name}"</strong> khỏi giải đấu? 
-              Hệ thống sẽ thực hiện dọn sạch mọi lịch thi đấu và bảng xếp hạng liên quan đến đội này.
+              Nếu đội đang nằm trong lịch thi đấu, hệ thống sẽ chặn thao tác để tránh mất dữ liệu. Hãy giải tán bảng/lịch trước khi xóa đội chưa có kết quả.
             </p>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
