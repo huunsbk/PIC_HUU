@@ -79,7 +79,11 @@ export default async function handler(req, res) {
         .eq('id', accountId);
       if (updateError) throw apiError(`Lỗi cập nhật account: ${updateError.message}`, 500);
 
-      await audit(admin, tenantId, 'account.update', `Updated account ${targetAccount.username}`);
+      await audit(admin, tenantId, 'account.update', { target_role: role, status }, {
+        actor,
+        entityType: 'account',
+        entityId: accountId,
+      });
       return sendJson(res, 200, { success: true });
     }
 
@@ -139,7 +143,11 @@ export default async function handler(req, res) {
         .is('deleted_at', null);
       if (softDeleteError) throw apiError(`Lỗi khi khóa tài khoản: ${softDeleteError.message}`, 500);
 
-      await audit(admin, targetAccount.tenant_id, 'account.archive', `Soft-deleted account ${targetAccount.username}`);
+      await audit(admin, targetAccount.tenant_id, 'account.archive', { target_role: targetRoleName }, {
+        actor,
+        entityType: 'account',
+        entityId: accountId,
+      });
       return sendJson(res, 200, { success: true });
     }
 

@@ -168,15 +168,16 @@ export default async function handler(req, res) {
       }
     }
 
-    await audit(admin, target.tenant_id, 'account.restore', JSON.stringify({
-      actor_account_id: actor.id,
-      target_account_id: target.id,
+    await audit(admin, target.tenant_id, 'account.restore', {
       target_role: targetRoleName,
       restored_event_permissions: permissionsToRestore.length,
       skipped_duplicate_event_permissions: (deletedEventPermissions || []).length - permissionsToRestore.length,
       skipped_duplicate_archived_event_permissions: skippedDuplicateDeletedPermissions,
-      result: 'allow',
-    }));
+    }, {
+      actor,
+      entityType: 'account',
+      entityId: target.id,
+    });
 
     return sendJson(res, 200, { success: true });
   } catch (error) {
