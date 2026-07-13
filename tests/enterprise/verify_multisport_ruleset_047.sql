@@ -31,7 +31,6 @@ SELECT jsonb_build_object(
     AND NOT EXISTS (SELECT 1 FROM events_without_ruleset)
     AND NOT (SELECT missing FROM trigger_missing)
     AND has_function_privilege('authenticated', 'public.list_active_sports_v1()'::regprocedure, 'EXECUTE')
-    AND NOT has_function_privilege('anon', 'public.list_active_sports_v1()'::regprocedure, 'EXECUTE')
     AND NOT has_function_privilege('authenticated', 'public.validate_event_config_v1(text,text,text,jsonb,jsonb)'::regprocedure, 'EXECUTE'),
   'missing_or_invalid_sports', COALESCE((SELECT jsonb_agg(id) FROM missing_or_invalid_sports), '[]'::jsonb),
   'events_without_ruleset', COALESCE((SELECT jsonb_agg(id) FROM events_without_ruleset), '[]'::jsonb)

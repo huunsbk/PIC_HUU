@@ -44,8 +44,13 @@ Ba migration đã apply và verify trên Supabase production.
 | Public snapshot chứa `sport_id` | PASS |
 | Dữ liệu E2E rollback | PASS, không còn event test |
 | Vercel Preview public/admin | PASS |
+| Vercel Production public TV | PASS, `https://picvn.vercel.app/tournament/pic-cocdan` |
+| Vercel Production SUPER_ADMIN | PASS, đủ 3 môn và đúng defaults Cầu lông |
+| Production Console/Network | PASS, không có lỗi nghiệp vụ hoặc request từ 400 trở lên |
 
 Các E2E database chạy trong transaction và `ROLLBACK`, không sửa dữ liệu giải thật.
+
+Production smoke test hoàn tất trên commit merge `ddc6386` sau khi Vercel deployment báo success.
 
 ## Giới hạn có chủ đích
 
