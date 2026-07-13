@@ -8,6 +8,8 @@ import EventConfigModal from './EventConfigModal';
 import ConfirmDialog from './ConfirmDialog';
 import { useTournamentStore } from '../store';
 import { tournamentRpc } from '../lib/api/tournamentRpc';
+import { useSportsCatalog } from '../hooks/useSportsCatalog';
+import { getSportName } from '../lib/sports';
 
 function EventRefereeSummary({ eventId }: { eventId: string }) {
   const { data, isLoading } = useEventMembersQuery(eventId);
@@ -102,6 +104,7 @@ export default function EventManagementPage() {
   const activeTournamentId = useTournamentStore((state) => state.activeTournamentId);
   const hasPermission = useTournamentStore((state) => state.hasPermission);
   const canCreateEvents = hasPermission('create_events');
+  const { data: sports = [] } = useSportsCatalog();
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ event, status }: { event: any; status: string }) => {
@@ -236,6 +239,9 @@ export default function EventManagementPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="font-black text-zinc-900 dark:text-zinc-100">{event.name}</div>
+                      <div className="mt-1 text-[10px] font-bold text-zinc-500">
+                        Môn: {getSportName(event.sport_id, sports)} · Ruleset v{event.sport_ruleset_version || 1}
+                      </div>
                     </td>
                     <td className="px-4 py-4">
                       <span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-black uppercase ${getStatusClass(event.status)}`}>

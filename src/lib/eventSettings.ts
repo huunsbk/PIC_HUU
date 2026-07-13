@@ -1,4 +1,4 @@
-import type { EventFormatType, CompetitionType, Match, MatchRoundKey, MatchSetMode, RankingConfig, RoundScoringRule, ScoringConfig, TournamentSettings } from '../types';
+import type { EventFormatType, CompetitionType, Match, MatchRoundKey, MatchSetMode, RankingConfig, RoundScoringRule, ScoringConfig, Sport, TournamentSettings } from '../types';
 import { buildScoringConfig } from './api/tournamentRpc';
 
 const numberOr = (value: unknown, fallback: number) => {
@@ -16,6 +16,29 @@ export function buildDefaultEventScoringConfig(settings?: Partial<TournamentSett
     ...config,
     roundSetModes: buildDefaultRoundSetModes(mode),
     roundScoringRules: buildDefaultRoundScoringRules(mode, config.maxScore, config.capScore),
+  };
+}
+
+export function buildSportEventScoringConfig(
+  sport: Sport | undefined,
+  tournamentSettings?: Partial<TournamentSettings>,
+  requestedMode?: MatchSetMode,
+): ScoringConfig {
+  const sportDefaults = sport?.default_settings || {};
+  const useTournamentDefaults = !sport || sport.id === 'sport_pickleball';
+  const mode = requestedMode || (sportDefaults.matchSetMode === 'best_of_3' ? 'best_of_3' : 'single');
+  const maxScore = useTournamentDefaults
+    ? numberOr(tournamentSettings?.maxScore, numberOr(sportDefaults.maxScore, 15))
+    : numberOr(sportDefaults.maxScore, 15);
+  const capScore = useTournamentDefaults
+    ? numberOr(tournamentSettings?.capScore, numberOr(sportDefaults.capScore, maxScore))
+    : numberOr(sportDefaults.capScore, maxScore);
+  const config = buildDefaultEventScoringConfig({ maxScore, capScore }, mode);
+
+  return {
+    ...config,
+    winByTwo: sportDefaults.winByTwo !== false,
+    allowDraw: sportDefaults.allowDraw === true,
   };
 }
 
@@ -137,6 +160,31 @@ export function buildDefaultEventRankingConfig(settings?: Partial<TournamentSett
       count: bestThirdCount,
       excludeBottomTeamResults: Boolean(overrides.exclude_bottom_results),
     },
+  };
+}
+
+export function buildSportEventRankingConfig(
+  sport: Sport | undefined,
+  tournamentSettings?: Partial<TournamentSettings>,
+  overrides: Record<string, unknown> = {},
+): RankingConfig & Record<string, unknown> {
+  const defaults = sport?.default_ranking_config || {};
+  const useTournamentDefaults = !sport || sport.id === 'sport_pickleball';
+  const settings = useTournamentDefaults
+    ? tournamentSettings
+    : {
+        winPoint: numberOr(defaults.pointsWin, 2),
+        lossPoint: numberOr(defaults.pointsLoss, 0),
+      };
+
+  return {
+    ...buildDefaultEventRankingConfig(settings, {
+      ...overrides,
+      pointsWin: overrides.pointsWin ?? defaults.pointsWin,
+      pointsLoss: overrides.pointsLoss ?? defaults.pointsLoss,
+      pointsDraw: overrides.pointsDraw ?? defaults.pointsDraw,
+    }),
+    tieBreakers: defaults.tieBreakers || ['points', 'setDiff', 'pointDiff', 'pointsWon', 'headToHead'],
   };
 }
 

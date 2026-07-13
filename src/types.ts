@@ -60,6 +60,16 @@ export interface Sport {
   slug: string;
   scoring_type: 'sets' | string;
   default_settings: Partial<ScoringConfig> & Record<string, unknown>;
+  ruleset_version?: number;
+  capabilities?: {
+    engine?: string;
+    supportedMatchSetModes?: MatchSetMode[];
+    competitionTypes?: CompetitionType[];
+    supportsRoundRules?: boolean;
+    allowsDraw?: boolean;
+    participantLabel?: string;
+  };
+  default_ranking_config?: RankingConfig & Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
@@ -189,6 +199,7 @@ export interface EventData {
   tenant_id?: string;
   sport_id?: string;
   sport?: Sport;
+  sport_ruleset_version?: number;
   competition_type?: CompetitionType;
   format_type?: EventFormatType;
   scoring_config?: Partial<ScoringConfig>;

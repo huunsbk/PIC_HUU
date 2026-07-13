@@ -6,6 +6,7 @@ import type {
   RankingConfig,
   ScoringConfig,
   SeedType,
+  Sport,
 } from '../../types';
 
 export type JsonRecord = Record<string, unknown>;
@@ -107,6 +108,12 @@ const ERROR_TRANSLATIONS: Array<[RegExp, string]> = [
   [/MATCH_NOT_FOUND/i, 'Không tìm thấy trận đấu. Vui lòng tải lại dữ liệu.'],
   [/INVALID_CONTEXT/i, 'Sai ngữ cảnh dữ liệu. Vui lòng chọn đúng đơn vị, giải đấu và nội dung thi đấu.'],
   [/INVALID_EVENT_ID/i, 'ID nội dung thi đấu không hợp lệ. Vui lòng chọn nội dung thi đấu thật.'],
+  [/SPORT_REQUIRED|SPORT_NOT_SUPPORTED/i, 'Môn thi đấu không hợp lệ hoặc không còn được hỗ trợ.'],
+  [/SPORT_SCORING_ENGINE_NOT_SUPPORTED/i, 'Môn này chưa có máy tính điểm tương thích trong hệ thống.'],
+  [/COMPETITION_TYPE_NOT_SUPPORTED_FOR_SPORT/i, 'Loại nội dung không được hỗ trợ cho môn đã chọn.'],
+  [/MATCH_SET_MODE_NOT_SUPPORTED_FOR_SPORT|ROUND_MATCH_SET_MODE_NOT_SUPPORTED_FOR_SPORT/i, 'Số séc không được hỗ trợ cho môn đã chọn.'],
+  [/DRAW_NOT_SUPPORTED_FOR_SPORT/i, 'Môn đã chọn không hỗ trợ kết quả hòa.'],
+  [/INVALID_SPORT_SCORE_LIMITS/i, 'Điểm chạm đến hoặc điểm kịch trần không hợp lệ cho môn đã chọn.'],
   [/Team name already exists/i, 'Tên đội đã tồn tại trong nội dung thi đấu này.'],
   [/TEAM_DELETE_BLOCKED_MATCH_RESULTS/i, 'Không thể xóa đội vì đội đang có lịch thi đấu đã nhập điểm hoặc đang diễn ra. Hãy giữ lịch sử trận, hoặc reset điểm và xử lý lịch theo quy trình riêng trước.'],
   [/TEAM_DELETE_BLOCKED_ACTIVE_SCHEDULE/i, 'Đội đang nằm trong lịch thi đấu. Vui lòng giải tán bảng/lịch trước khi xóa đội.'],
@@ -160,6 +167,10 @@ async function callRpc<T>(name: string, params: JsonRecord): Promise<T> {
 }
 
 export const tournamentRpc = {
+  listActiveSports() {
+    return callRpc<Sport[]>('list_active_sports_v1', {});
+  },
+
   async getPublicTournamentSnapshot(slug: string) {
     const response = await fetch(`/api/public/tournament/${encodeURIComponent(slug)}`, {
       method: 'GET',
