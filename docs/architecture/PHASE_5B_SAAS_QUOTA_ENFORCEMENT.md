@@ -22,4 +22,3 @@ Mỗi tenant/resource dùng advisory transaction lock để hai request đồng 
 ## An toàn
 
 Migration không thay đổi plan, subscription hoặc dữ liệu nghiệp vụ hiện có. Account API tiếp tục xóa Auth user vừa tạo nếu insert account bị trigger từ chối.
-

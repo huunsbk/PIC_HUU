@@ -30,4 +30,3 @@ SELECT jsonb_build_object(
   'missing_triggers',
     COALESCE((SELECT jsonb_agg(to_jsonb(m)) FROM missing_triggers m), '[]'::jsonb)
 ) AS saas_quota_enforcement_043;
-
