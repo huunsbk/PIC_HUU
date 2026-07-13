@@ -110,6 +110,7 @@ const ERROR_TRANSLATIONS: Array<[RegExp, string]> = [
   [/INVALID_EVENT_ID/i, 'ID nội dung thi đấu không hợp lệ. Vui lòng chọn nội dung thi đấu thật.'],
   [/SPORT_REQUIRED|SPORT_NOT_SUPPORTED/i, 'Môn thi đấu không hợp lệ hoặc không còn được hỗ trợ.'],
   [/SPORT_SCORING_ENGINE_NOT_SUPPORTED/i, 'Môn này chưa có máy tính điểm tương thích trong hệ thống.'],
+  [/SPORT_CHANGE_LOCKED/i, 'Nội dung đã có điểm hoặc trận đang diễn ra. Hãy giữ nguyên môn thi đấu để bảo toàn lịch sử kết quả.'],
   [/COMPETITION_TYPE_NOT_SUPPORTED_FOR_SPORT/i, 'Loại nội dung không được hỗ trợ cho môn đã chọn.'],
   [/MATCH_SET_MODE_NOT_SUPPORTED_FOR_SPORT|ROUND_MATCH_SET_MODE_NOT_SUPPORTED_FOR_SPORT/i, 'Số séc không được hỗ trợ cho môn đã chọn.'],
   [/DRAW_NOT_SUPPORTED_FOR_SPORT/i, 'Môn đã chọn không hỗ trợ kết quả hòa.'],
