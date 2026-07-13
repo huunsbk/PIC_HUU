@@ -12,6 +12,10 @@ Pham vi:
 
 `supabase/migrations/enterprise_completion_v1/038_harden_anon_grants_and_legacy_rpc.sql`
 
+Follow-up verification showed some RPCs remained executable by `anon` through `PUBLIC` function privileges. Added:
+
+`supabase/migrations/enterprise_completion_v1/039_revoke_public_legacy_rpc_execute.sql`
+
 ## Khong Lam Trong PR Nay
 
 - Khong revoke helper RPC nhu `current_account_id`, `current_role_name`, `has_permission`.
