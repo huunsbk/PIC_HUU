@@ -187,4 +187,3 @@ $$;
 
 REVOKE ALL ON FUNCTION public.get_tenant_entitlements_v1(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_tenant_entitlements_v1(uuid) TO authenticated;
-

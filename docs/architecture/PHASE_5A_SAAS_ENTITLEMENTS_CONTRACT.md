@@ -35,4 +35,3 @@ SUPER_ADMIN có thể đọc tenant được chỉ định. Các role khác ch�
 ## Rollback
 
 Rollback riêng RPC, unique partial index và view definition nếu phát hiện contract không tương thích. Không thay đổi dữ liệu subscription hiện tại trong migration này.
-

@@ -45,4 +45,3 @@ SELECT jsonb_build_object(
   'duplicate_current_subscriptions',
     COALESCE((SELECT jsonb_agg(to_jsonb(d)) FROM duplicate_current_subscriptions d), '[]'::jsonb)
 ) AS saas_entitlements_042;
-
