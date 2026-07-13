@@ -34,11 +34,13 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from('tournament')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', tournament.id);
+      const { data, error } = await supabase.rpc('archive_tournament_v1', {
+        p_tournament_id: tournament.id,
+      });
       if (error) throw error;
+      if (data && data.success === false) {
+        throw new Error(data.error || 'Không thể lưu trữ giải đấu');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tournaments'] });

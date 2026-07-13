@@ -678,24 +678,19 @@ export const useTournamentStore = create<AppState>()(
           const event = get().events[id];
           if (!event) return;
 
-          // 1. Xóa trên Supabase trước (theo thứ tự FK)
-          // Đặt active_group_id thành null trước để gỡ bỏ ràng buộc khóa ngoại (nếu có)
           try {
-            await supabase.from('events').update({ active_group_id: null }).eq('id', id);
-            const deleteTimestamp = new Date().toISOString();
-            const { error: e1 } = await supabase.from('matches').update({ deleted_at: deleteTimestamp }).eq('event_id', id);
-            if (e1) throw e1;
-            const { error: e2 } = await supabase.from('teams').update({ deleted_at: deleteTimestamp }).eq('event_id', id);
-            if (e2) throw e2;
-            const { error: e3 } = await supabase.from('groups').update({ deleted_at: deleteTimestamp }).eq('event_id', id);
-            if (e3) throw e3;
-            const { error: e4 } = await supabase.from('events').update({ deleted_at: deleteTimestamp }).eq('id', id);
-            if (e4) throw e4;
+            const { data, error } = await supabase.rpc('archive_event_v1', {
+              p_event_id: id,
+            });
+            if (error) throw error;
+            if (data && data.success === false) {
+              throw new Error(data.error || 'Không thể lưu trữ nội dung thi đấu.');
+            }
           } catch (err) {
-            console.error("Lỗi xóa dữ liệu liên quan trên Supabase:", err);
+            console.error('Lỗi lưu trữ nội dung thi đấu qua RPC:', err);
+            return;
           }
 
-          // 2. Cập nhật State Zustand
           set((state) => {
             const nextEvents = { ...state.events };
             delete nextEvents[id];
@@ -2124,9 +2119,6 @@ export const useTournamentStore = create<AppState>()(
                 settings: DEFAULT_SETTINGS,
                 current_event_id: localState.activeTenantId === 'default' ? 'event-default' : `${localState.activeTenantId}__event-default`,
               };
-              if (localState.hasPermission('manage_tenants') || localState.hasPermission('manage_tournaments') || localState.hasPermission('*')) {
-                await supabase.from('tournament').insert([defaultObj]);
-              }
               dbTournament = defaultObj;
             }
 
