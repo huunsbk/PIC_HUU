@@ -31,6 +31,8 @@ Migration `041` đã apply vào Supabase production ngày 2026-07-13.
 - Gọi trực tiếp `invalidate_account_sessions_v1(uuid)`: bị chặn.
 - SUPER_ADMIN gọi RPC và cập nhật đội trong transaction: thành công, sau đó rollback.
 - REFEREE cập nhật đội: bị chặn.
+- SUPER_ADMIN production đăng nhập, tải profile, gọi list/session RPC và đăng xuất: PASS.
+- SUPER_ADMIN production ghi trực tiếp bảng và gọi helper nội bộ: bị chặn.
 - Public tournament snapshot: HTTP 200 và trả dữ liệu thật.
 - Root, workspace direct route và public tournament route: HTTP 200.
 - `npm run build`: PASS.
