@@ -3,7 +3,9 @@ import { X, Save } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTournamentStore } from '../store';
 import { tournamentRpc } from '../lib/api/tournamentRpc';
-import { buildDefaultEventRankingConfig, buildDefaultEventScoringConfig } from '../lib/eventSettings';
+import { buildSportEventRankingConfig, buildSportEventScoringConfig } from '../lib/eventSettings';
+import { useSportsCatalog } from '../hooks/useSportsCatalog';
+import { COMPETITION_TYPE_LABELS, getSportCompetitionTypes, getSportDefaultMatchSetMode, getSportMatchSetModes } from '../lib/sports';
 import type { CompetitionType, EventFormatType, MatchSetMode } from '../types';
 
 export default function CreateEventModal({ onClose }: { onClose: () => void }) {
@@ -26,6 +28,22 @@ export default function CreateEventModal({ onClose }: { onClose: () => void }) {
   const scopedTournamentId = activeTournamentId || tournamentId;
   const setCurrentEvent = useTournamentStore(state => state.setCurrentEvent);
   const defaultSettings = tournament.settings || {};
+  const { data: sports = [], isLoading: sportsLoading } = useSportsCatalog();
+  const selectedSport = sports.find((sport) => sport.id === sportId);
+  const competitionTypes = getSportCompetitionTypes(selectedSport);
+  const matchSetModes = getSportMatchSetModes(selectedSport);
+  const scoringPreview = buildSportEventScoringConfig(selectedSport, defaultSettings, matchSetMode);
+
+  const handleSportChange = (nextSportId: string) => {
+    const nextSport = sports.find((sport) => sport.id === nextSportId);
+    const nextCompetitionTypes = getSportCompetitionTypes(nextSport);
+    const nextMode = getSportDefaultMatchSetMode(nextSport);
+    setSportId(nextSportId);
+    setMatchSetMode(nextMode);
+    if (!nextCompetitionTypes.includes(competitionType)) {
+      setCompetitionType(nextCompetitionTypes[0] || 'custom');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,8 +61,8 @@ export default function CreateEventModal({ onClose }: { onClose: () => void }) {
           sportId,
           competitionType,
           formatType,
-          scoringConfig: buildDefaultEventScoringConfig(defaultSettings, matchSetMode),
-          rankingConfig: buildDefaultEventRankingConfig(defaultSettings, {
+          scoringConfig: buildSportEventScoringConfig(selectedSport, defaultSettings, matchSetMode),
+          rankingConfig: buildSportEventRankingConfig(selectedSport, defaultSettings, {
             groupCount,
             top_per_group: topPerGroup,
             best_third_count: bestThirdCount,
@@ -102,18 +120,16 @@ export default function CreateEventModal({ onClose }: { onClose: () => void }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-800">
             <div>
               <label className="block text-xs font-bold text-zinc-500 mb-1 uppercase">Môn thi đấu</label>
-              <select value={sportId} onChange={e => setSportId(e.target.value)} className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm">
-                <option value="sport_pickleball">Pickleball</option>
+              <select value={sportId} onChange={e => handleSportChange(e.target.value)} disabled={sportsLoading || sports.length === 0} className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm disabled:opacity-60">
+                {sports.length === 0 ? <option value="sport_pickleball">Đang tải môn...</option> : sports.map((sport) => (
+                  <option key={sport.id} value={sport.id}>{sport.name}</option>
+                ))}
               </select>
             </div>
             <div>
               <label className="block text-xs font-bold text-zinc-500 mb-1 uppercase">Nội dung</label>
               <select value={competitionType} onChange={e => setCompetitionType(e.target.value as CompetitionType)} className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm">
-                <option value="singles">Đơn</option>
-                <option value="doubles">Đôi</option>
-                <option value="team">Đồng đội</option>
-                <option value="individual_time">Cá nhân tính giờ</option>
-                <option value="custom">Tùy chỉnh</option>
+                {competitionTypes.map((type) => <option key={type} value={type}>{COMPETITION_TYPE_LABELS[type]}</option>)}
               </select>
             </div>
             <div>
@@ -127,12 +143,12 @@ export default function CreateEventModal({ onClose }: { onClose: () => void }) {
             <div>
               <label className="block text-xs font-bold text-zinc-500 mb-1 uppercase">Số séc</label>
               <select value={matchSetMode} onChange={e => setMatchSetMode(e.target.value as MatchSetMode)} className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm">
-                <option value="single">Một séc</option>
-                <option value="best_of_3">Best of 3</option>
+                {matchSetModes.includes('single') && <option value="single">Một séc</option>}
+                {matchSetModes.includes('best_of_3') && <option value="best_of_3">Best of 3</option>}
               </select>
             </div>
             <div className="sm:col-span-2 rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs font-semibold text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-200">
-              Nội dung mới sẽ lấy luật mặc định từ Tổng quan: thắng {defaultSettings.winPoint ?? 2} điểm, thua {defaultSettings.lossPoint ?? 1} điểm, điểm chạm đến {defaultSettings.maxScore ?? 15}, cap {defaultSettings.capScore ?? 17}.
+              {selectedSport?.name || 'Môn đã chọn'} dùng luật mặc định: {matchSetMode === 'best_of_3' ? 'best of 3' : 'một séc'}, điểm chạm đến {scoringPreview.maxScore}, cap {scoringPreview.capScore}. Pickleball tiếp tục ưu tiên cấu hình chung của giải.
             </div>
             <div>
               <label className="block text-xs font-bold text-zinc-500 mb-1 uppercase">Số bảng</label>
@@ -162,7 +178,7 @@ export default function CreateEventModal({ onClose }: { onClose: () => void }) {
 
           <div className="pt-4 flex gap-3">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg font-bold">Hủy</button>
-            <button type="submit" disabled={isSubmitting} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold flex items-center justify-center gap-2">
+            <button type="submit" disabled={isSubmitting || !selectedSport} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold flex items-center justify-center gap-2 disabled:opacity-60">
               <Save size={16} /> Tạo nội dung
             </button>
           </div>

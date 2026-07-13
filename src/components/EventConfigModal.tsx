@@ -3,7 +3,9 @@ import { Save, X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTournamentStore } from '../store';
 import { tournamentRpc } from '../lib/api/tournamentRpc';
-import { ROUND_SET_MODE_KEYS, ROUND_SET_MODE_LABELS, buildDefaultEventRankingConfig, buildDefaultEventScoringConfig, getEventConfigDefaults } from '../lib/eventSettings';
+import { ROUND_SET_MODE_KEYS, ROUND_SET_MODE_LABELS, buildDefaultRoundScoringRules, buildSportEventRankingConfig, buildSportEventScoringConfig, getEventConfigDefaults } from '../lib/eventSettings';
+import { useSportsCatalog } from '../hooks/useSportsCatalog';
+import { COMPETITION_TYPE_LABELS, getSportCompetitionTypes, getSportDefaultMatchSetMode, getSportMatchSetModes } from '../lib/sports';
 import type { CompetitionType, EventFormatType, MatchRoundKey, MatchSetMode, RoundScoringRule } from '../types';
 
 export default function EventConfigModal({ event, onClose }: { event: any; onClose: () => void }) {
@@ -25,6 +27,27 @@ export default function EventConfigModal({ event, onClose }: { event: any; onClo
   const [courtCount, setCourtCount] = useState(defaults.courtCount);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
+  const { data: sports = [], isLoading: sportsLoading } = useSportsCatalog();
+  const selectedSport = sports.find((sport) => sport.id === sportId);
+  const competitionTypes = getSportCompetitionTypes(selectedSport);
+  const matchSetModes = getSportMatchSetModes(selectedSport);
+
+  const handleSportChange = (nextSportId: string) => {
+    const nextSport = sports.find((sport) => sport.id === nextSportId);
+    const nextMode = getSportDefaultMatchSetMode(nextSport);
+    const nextScoring = buildSportEventScoringConfig(nextSport, tournamentSettings, nextMode);
+    const nextRanking = buildSportEventRankingConfig(nextSport, tournamentSettings);
+    const nextCompetitionTypes = getSportCompetitionTypes(nextSport);
+
+    setSportId(nextSportId);
+    setMatchSetMode(nextMode);
+    setRoundScoringRules(buildDefaultRoundScoringRules(nextMode, nextScoring.maxScore, nextScoring.capScore));
+    setWinPoint(Number(nextRanking.pointsWin ?? 2));
+    setLossPoint(Number(nextRanking.pointsLoss ?? 0));
+    if (!nextCompetitionTypes.includes(competitionType)) {
+      setCompetitionType(nextCompetitionTypes[0] || 'custom');
+    }
+  };
 
   const handleSubmit = async (submitEvent: React.FormEvent) => {
     submitEvent.preventDefault();
@@ -53,13 +76,12 @@ export default function EventConfigModal({ event, onClose }: { event: any; onClo
         competitionType,
         formatType,
         scoringConfig: {
-          ...buildDefaultEventScoringConfig({ maxScore: primaryRule.maxScore, capScore: primaryRule.capScore }, primaryRule.matchSetMode),
+          ...buildSportEventScoringConfig(selectedSport, { maxScore: primaryRule.maxScore, capScore: primaryRule.capScore }, primaryRule.matchSetMode),
           roundSetModes,
           roundScoringRules,
-          winByTwo: event.scoring_config?.winByTwo ?? true,
-          allowDraw: event.scoring_config?.allowDraw ?? false,
         },
-        rankingConfig: buildDefaultEventRankingConfig(
+        rankingConfig: buildSportEventRankingConfig(
+          selectedSport,
           { winPoint, lossPoint, maxScore: primaryRule.maxScore, capScore: primaryRule.capScore, advanceCount: topPerGroup, numBestThirds: bestThirdCount },
           {
             groupCount,
@@ -101,18 +123,16 @@ export default function EventConfigModal({ event, onClose }: { event: any; onClo
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-bold uppercase text-zinc-500">Môn thi đấu</label>
-              <select value={sportId} onChange={(e) => setSportId(e.target.value)} className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800">
-                <option value="sport_pickleball">Pickleball</option>
+              <select value={sportId} onChange={(e) => handleSportChange(e.target.value)} disabled={sportsLoading || sports.length === 0} className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800">
+                {sports.length === 0 ? <option value={sportId}>Đang tải môn...</option> : sports.map((sport) => (
+                  <option key={sport.id} value={sport.id}>{sport.name}</option>
+                ))}
               </select>
             </div>
             <div>
               <label className="mb-1 block text-xs font-bold uppercase text-zinc-500">Loại nội dung</label>
               <select value={competitionType} onChange={(e) => setCompetitionType(e.target.value as CompetitionType)} className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800">
-                <option value="singles">Đơn</option>
-                <option value="doubles">Đôi</option>
-                <option value="team">Đồng đội</option>
-                <option value="individual_time">Cá nhân tính giờ</option>
-                <option value="custom">Tùy chỉnh</option>
+                {competitionTypes.map((type) => <option key={type} value={type}>{COMPETITION_TYPE_LABELS[type]}</option>)}
               </select>
             </div>
             <div>
@@ -137,8 +157,8 @@ export default function EventConfigModal({ event, onClose }: { event: any; onClo
                 }}
                 className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
               >
-                <option value="single">Một séc</option>
-                <option value="best_of_3">Best of 3</option>
+                {matchSetModes.includes('single') && <option value="single">Một séc</option>}
+                {matchSetModes.includes('best_of_3') && <option value="best_of_3">Best of 3</option>}
               </select>
             </div>
             <div className="sm:col-span-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
@@ -161,6 +181,7 @@ export default function EventConfigModal({ event, onClose }: { event: any; onClo
                             name={`round-mode-${roundKey}`}
                             checked={rule.matchSetMode === 'single'}
                             onChange={() => setRoundScoringRules((prev) => ({ ...prev, [roundKey]: { ...prev[roundKey], matchSetMode: 'single' } }))}
+                            disabled={!matchSetModes.includes('single')}
                           />
                           1 séc
                         </label>
@@ -170,6 +191,7 @@ export default function EventConfigModal({ event, onClose }: { event: any; onClo
                             name={`round-mode-${roundKey}`}
                             checked={rule.matchSetMode === 'best_of_3'}
                             onChange={() => setRoundScoringRules((prev) => ({ ...prev, [roundKey]: { ...prev[roundKey], matchSetMode: 'best_of_3' } }))}
+                            disabled={!matchSetModes.includes('best_of_3')}
                           />
                           3 séc
                         </label>
@@ -256,7 +278,7 @@ export default function EventConfigModal({ event, onClose }: { event: any; onClo
             <button type="button" onClick={onClose} className="flex-1 rounded-lg bg-zinc-100 px-4 py-2 font-bold text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
               Hủy
             </button>
-            <button type="submit" disabled={isSubmitting} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-bold text-white hover:bg-blue-700 disabled:opacity-60">
+            <button type="submit" disabled={isSubmitting || !selectedSport} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-bold text-white hover:bg-blue-700 disabled:opacity-60">
               <Save size={16} /> Lưu cấu hình
             </button>
           </div>

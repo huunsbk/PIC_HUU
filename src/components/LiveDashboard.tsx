@@ -13,6 +13,8 @@ import { tournamentRpc } from '../lib/api/tournamentRpc';
 import { calculateGroupStandings, getReadableTeamName, getReadableKoMatchName, balanceMatchesRestTime, getMatchDisplayName } from '../utils/tournamentEngine';
 import { attachMatchSets, getSetScoreText } from '../utils/scoreDisplay';
 import { getEffectiveTournamentSettings } from '../lib/eventSettings';
+import { useSportsCatalog } from '../hooks/useSportsCatalog';
+import { getSportName } from '../lib/sports';
 import type { MatchSet } from '../types';
 import { 
   Monitor, 
@@ -388,6 +390,7 @@ export default function LiveDashboard() {
   const publicSlug = React.useMemo(() => getRouteSlug(), []);
   const usePublicSnapshot = userRole === 'guest' && isPublicViewerRoute() && !!publicSlug;
   const eventIds = React.useMemo(() => eventsData.map((event: any) => event.id), [eventsData]);
+  const { data: sports = [] } = useSportsCatalog();
 
   const {
     data: publicSnapshot,
@@ -1184,9 +1187,12 @@ export default function LiveDashboard() {
                     <span className="p-2 bg-blue-50 dark:bg-blue-950/50 rounded-xl text-blue-600 dark:text-blue-400">
                       <Trophy size={16} className="stroke-[2.5]" />
                     </span>
-                    <h3 className="text-base font-extrabold text-zinc-900 dark:text-zinc-50 uppercase tracking-tight">
-                      Cặp đấu: {evt.name}
-                    </h3>
+                    <div>
+                      <h3 className="text-base font-extrabold text-zinc-900 dark:text-zinc-50 uppercase tracking-tight">
+                        Cặp đấu: {evt.name}
+                      </h3>
+                      <p className="text-[10px] font-bold text-zinc-500">Môn: {getSportName(evt.sport_id, sports)}</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-3 text-xs font-bold text-zinc-500">
                     <span className="bg-zinc-100 dark:bg-zinc-950 px-2.5 py-1 rounded-lg">Đội: <strong className="text-zinc-850 dark:text-zinc-200">{Object.keys(evt.teams || {}).length}</strong></span>
@@ -1303,6 +1309,11 @@ export default function LiveDashboard() {
 
             return (
               <>
+                <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-black text-zinc-800 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
+                  <span>{currentEvt.name}</span>
+                  <span className="text-zinc-300">·</span>
+                  <span className="text-blue-600 dark:text-blue-400">Môn: {getSportName(currentEvt.sport_id, sports)}</span>
+                </div>
                 {isEventEmpty(currentEvt) ? (
                   <div className="rounded-2xl border border-dashed border-zinc-250 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/30 py-10 text-center text-sm font-bold text-zinc-500">
                     Chưa có dữ liệu cho nội dung này
