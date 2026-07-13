@@ -47,7 +47,11 @@ export default async function handler(req, res) {
     });
     if (updateError) throw apiError(`Lỗi cập nhật mật khẩu: ${updateError.message}`, 400);
 
-    await audit(admin, targetAccount.tenant_id, 'account.reset_password', `Reset password for ${targetUsername}`);
+    await audit(admin, targetAccount.tenant_id, 'account.reset_password', {}, {
+      actor,
+      entityType: 'account',
+      entityId: targetAccount.id,
+    });
     return sendJson(res, 200, { success: true });
   } catch (error) {
     return handleError(res, error);

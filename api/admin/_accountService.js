@@ -250,13 +250,69 @@ export async function validateTargetAccount(admin, actor, role, tenantId, option
   return { tenant, roleRecord, subscription };
 }
 
-export async function audit(admin, tenantId, action, details) {
-  await admin.from('audit_logs').insert({
+const sensitiveAuditKeys = new Set([
+  'password',
+  'newpassword',
+  'new_password',
+  'token',
+  'access_token',
+  'refresh_token',
+  'secret',
+  'service_role_key',
+  'supabase_service_role_key',
+  'authorization',
+]);
+
+function sanitizeAuditDetails(value) {
+  if (Array.isArray(value)) return value.map(sanitizeAuditDetails);
+  if (!value || typeof value !== 'object') return value;
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => !sensitiveAuditKeys.has(key.toLowerCase()))
+      .map(([key, nestedValue]) => [key, sanitizeAuditDetails(nestedValue)]),
+  );
+}
+
+function getAuditCategory(action) {
+  if (/(^|[._])(login|logout|session|permission|grant|revoke|access)/i.test(action)) return 'security';
+  if (/(^|[._])account/i.test(action)) return 'identity';
+  if (/(score|match|standing|bracket|knockout)/i.test(action)) return 'competition';
+  if (/(tenant|tournament|event|team|group|schedule)/i.test(action)) return 'operations';
+  return 'business';
+}
+
+export async function audit(admin, tenantId, action, details, context = {}) {
+  let structuredDetails = details;
+  if (typeof details === 'string') {
+    try {
+      structuredDetails = JSON.parse(details);
+    } catch {
+      structuredDetails = { message: details };
+    }
+  }
+  structuredDetails = sanitizeAuditDetails(structuredDetails || {});
+
+  const { error } = await admin.from('audit_logs').insert({
     tenant_id: tenantId || null,
     action,
-    details,
+    details: typeof details === 'string' ? details : JSON.stringify(structuredDetails),
     timestamp: new Date().toISOString(),
+    actor_account_id: context.actor?.id || null,
+    actor_role: context.actor?.roleName || null,
+    category: context.category || getAuditCategory(action),
+    entity_type: context.entityType || null,
+    entity_id: context.entityId || null,
+    result: context.result || 'allow',
+    reason: context.reason || null,
+    details_json: structuredDetails,
   });
+
+  if (error) {
+    console.error(`[Audit] Could not record ${action}: ${error.code || 'UNKNOWN'}`);
+    return false;
+  }
+  return true;
 }
 
 export async function handleError(res, error) {

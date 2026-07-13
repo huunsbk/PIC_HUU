@@ -67,15 +67,19 @@ export default async function handler(req, res) {
       throw apiError('Supabase Auth không trả về user id sau khi tạo.', 500);
     }
 
-    const { error: insertError } = await admin.from('accounts').insert({
-      user_id: targetAuthUserId,
-      tenant_id: tenantId,
-      username,
-      display_name: displayName,
-      role_id: roleRecord.id,
-      status: 'active',
-      created_by_account_id: actor.id,
-    });
+    const { data: createdAccount, error: insertError } = await admin
+      .from('accounts')
+      .insert({
+        user_id: targetAuthUserId,
+        tenant_id: tenantId,
+        username,
+        display_name: displayName,
+        role_id: roleRecord.id,
+        status: 'active',
+        created_by_account_id: actor.id,
+      })
+      .select('id')
+      .single();
 
     if (insertError) {
       await admin.auth.admin.deleteUser(targetAuthUserId);
@@ -85,7 +89,11 @@ export default async function handler(req, res) {
       throw apiError(`Tạo tài khoản bị lỗi khi đồng bộ dữ liệu: ${insertError.message}`, 500);
     }
 
-    await audit(admin, tenantId, 'account.create', `Created ${role} account ${username}`);
+    await audit(admin, tenantId, 'account.create', { target_role: role }, {
+      actor,
+      entityType: 'account',
+      entityId: createdAccount?.id || targetAuthUserId,
+    });
     return sendJson(res, 200, { success: true, user_id: targetAuthUserId });
   } catch (error) {
     return handleError(res, error);
