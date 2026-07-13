@@ -7,36 +7,25 @@ export async function secureTenantQuery(table: string, selectFields: string = "*
 }
 
 export async function secureTenantDelete(table: string) {
-  const tenantId = await getCurrentTenant();
-  return supabase.from(table).delete().eq("tenant_id", tenantId);
+  void table;
+  throw new Error('Direct frontend deletes are disabled. Use scoped RPC/API mutations.');
 }
 
 export async function secureTenantInsert(table: string, payload: any) {
-  const tenantId = await getCurrentTenant();
-  if (Array.isArray(payload)) {
-    const data = payload.map(item => ({ ...item, tenant_id: tenantId }));
-    return supabase.from(table).insert(data);
-  } else {
-    payload.tenant_id = tenantId;
-    return supabase.from(table).insert(payload);
-  }
+  void table;
+  void payload;
+  throw new Error('Direct frontend inserts are disabled. Use scoped RPC/API mutations.');
 }
 
 export async function secureTenantUpsert(table: string, payload: any, options?: any) {
-  const tenantId = await getCurrentTenant();
-  if (Array.isArray(payload)) {
-    const data = payload.map(item => ({ ...item, tenant_id: tenantId }));
-    return supabase.from(table).upsert(data, options);
-  } else {
-    payload.tenant_id = tenantId;
-    return supabase.from(table).upsert(payload, options);
-  }
+  void table;
+  void payload;
+  void options;
+  throw new Error('Direct frontend upserts are disabled. Use scoped RPC/API mutations.');
 }
 
 export async function updateMyProfile(displayName: string) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not logged in");
-  
-  return supabase.from("accounts").update({ display_name: displayName }).eq("user_id", user.id);
+  void displayName;
+  throw new Error('Direct frontend account updates are disabled. Use the account API.');
 }
 
