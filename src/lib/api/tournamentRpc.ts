@@ -98,6 +98,11 @@ export interface EventAccessResult extends TournamentRpcResult {
 const ERROR_TRANSLATIONS: Array<[RegExp, string]> = [
   [/UNAUTHENTICATED/i, 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.'],
   [/PERMISSION_DENIED|permission denied|not allowed/i, 'Bạn không có đủ quyền để thực hiện thao tác này.'],
+  [/QUOTA_EXCEEDED:accounts/i, 'Đơn vị đã đạt giới hạn tài khoản của gói đang sử dụng.'],
+  [/QUOTA_EXCEEDED:events/i, 'Đơn vị đã đạt giới hạn nội dung thi đấu của gói đang sử dụng.'],
+  [/QUOTA_EXCEEDED:teams/i, 'Đơn vị đã đạt giới hạn đội thi đấu của gói đang sử dụng.'],
+  [/SUBSCRIPTION_INACTIVE|SUBSCRIPTION_PLAN_INACTIVE/i, 'Gói dịch vụ của đơn vị đã hết hạn hoặc không còn hoạt động.'],
+  [/TENANT_INACTIVE/i, 'Đơn vị đang bị khóa hoặc đã lưu trữ.'],
   [/EVENT_NOT_FOUND/i, 'Không tìm thấy nội dung thi đấu. Vui lòng chọn lại nội dung thi đấu.'],
   [/MATCH_NOT_FOUND/i, 'Không tìm thấy trận đấu. Vui lòng tải lại dữ liệu.'],
   [/INVALID_CONTEXT/i, 'Sai ngữ cảnh dữ liệu. Vui lòng chọn đúng đơn vị, giải đấu và nội dung thi đấu.'],
