@@ -79,6 +79,9 @@ export default async function handler(req, res) {
 
     if (insertError) {
       await admin.auth.admin.deleteUser(targetAuthUserId);
+      if (/QUOTA_EXCEEDED|SUBSCRIPTION_INACTIVE|SUBSCRIPTION_PLAN_INACTIVE|TENANT_INACTIVE/i.test(insertError.message || '')) {
+        throw apiError('Không thể tạo tài khoản vì đơn vị đã hết hạn hoặc đạt giới hạn tài khoản của gói.', 403);
+      }
       throw apiError(`Tạo tài khoản bị lỗi khi đồng bộ dữ liệu: ${insertError.message}`, 500);
     }
 
