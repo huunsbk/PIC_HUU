@@ -24,13 +24,18 @@ export interface WorkspaceAccessResult {
   accessibleWorkspaces: AccessibleWorkspace[];
 }
 
-const isUuid = (value: string) =>
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-
-export const isPrivilegedWorkspaceRole = (role?: string | null) =>
-  role === 'SUPER_ADMIN' || role === 'TENANT_ADMIN';
-
-export const isSuperAdmin = (role?: string | null) => role === 'SUPER_ADMIN';
+interface WorkspaceGuardResponse {
+  allowed?: boolean;
+  reason?: string;
+  access_scope?: string;
+  workspace?: {
+    tenant_id?: string | null;
+    tenant_name?: string | null;
+    tournament_id?: string | null;
+    tournament_name?: string | null;
+    slug?: string | null;
+  } | null;
+}
 
 export const normalizeTenantIdForRpc = (tenantId?: string | null) =>
   tenantId && tenantId !== 'default' ? tenantId : null;
@@ -45,139 +50,40 @@ export async function listAccessibleWorkspacesForUser(role?: string | null, tena
   return (Array.isArray(data) ? data : []) as AccessibleWorkspace[];
 }
 
-async function resolveWorkspaceContextBySlug(routeSlug: string): Promise<PendingWorkspaceContext | null> {
-  const { data: tenantByRouteSlug } = await supabase
-    .from('tenants')
-    .select('id, name, slug')
-    .eq('slug', routeSlug)
-    .is('deleted_at', null)
-    .maybeSingle();
-
-  let tenantByRouteId = null as null | { id: string; name: string; slug: string };
-  if (!tenantByRouteSlug && isUuid(routeSlug)) {
-    const { data } = await supabase
-      .from('tenants')
-      .select('id, name, slug')
-      .eq('id', routeSlug)
-      .is('deleted_at', null)
-      .maybeSingle();
-    tenantByRouteId = data;
-  }
-
-  const tenantByRoute = tenantByRouteSlug || tenantByRouteId;
-  if (tenantByRoute) {
-    const { data: latestTournament } = await supabase
-      .from('tournament')
-      .select('id, tenant_id, slug, name')
-      .eq('tenant_id', tenantByRoute.id)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    return {
-      tenantId: tenantByRoute.id,
-      tenantName: tenantByRoute.name,
-      tournamentId: latestTournament?.id || null,
-      tournamentName: latestTournament?.name || null,
-      tournamentSlug: latestTournament?.slug || null,
-    };
-  }
-
-  const { data: workspaceContext, error: workspaceContextError } = await supabase.rpc('get_workspace_context_v1', {
-    p_slug: routeSlug,
-  });
-
-  if (!workspaceContextError && workspaceContext?.tenant_id && workspaceContext?.tournament_id) {
-    return {
-      tenantId: workspaceContext.tenant_id,
-      tenantName: workspaceContext.tenant_name,
-      tournamentId: workspaceContext.tournament_id,
-      tournamentName: workspaceContext.tournament_name,
-      tournamentSlug: workspaceContext.tournament_slug,
-    };
-  }
-
-  const { data: bySlug } = await supabase
-    .from('tournament')
-    .select('id, tenant_id, slug, name')
-    .eq('slug', routeSlug)
-    .is('deleted_at', null)
-    .maybeSingle();
-
-  if (bySlug) {
-    return {
-      tenantId: bySlug.tenant_id || bySlug.id,
-      tournamentId: bySlug.id,
-      tournamentName: bySlug.name,
-      tournamentSlug: bySlug.slug,
-    };
-  }
-
-  if (isUuid(routeSlug)) {
-    const { data: byId } = await supabase
-      .from('tournament')
-      .select('id, tenant_id, slug, name')
-      .eq('id', routeSlug)
-      .is('deleted_at', null)
-      .maybeSingle();
-
-    if (byId) {
-      return {
-        tenantId: byId.tenant_id || byId.id,
-        tournamentId: byId.id,
-        tournamentName: byId.name,
-        tournamentSlug: byId.slug,
-      };
-    }
-  }
-
-  return null;
-}
-
-function accessibleWorkspaceMatches(context: PendingWorkspaceContext, workspace: AccessibleWorkspace) {
-  if (!context.tournamentId) return workspace.tenant_id === context.tenantId;
-  return (
-    workspace.tournament_id === context.tournamentId ||
-    (!!context.tournamentSlug && workspace.slug === context.tournamentSlug)
-  );
-}
-
 export async function resolveWorkspaceAccess(params: {
   routeSlug: string;
   role?: string | null;
   tenantId?: string | null;
 }): Promise<WorkspaceAccessResult> {
-  const pendingContext = await resolveWorkspaceContextBySlug(params.routeSlug);
-
-  if (!pendingContext) {
-    return { allowed: false, reason: 'not_found', accessibleWorkspaces: [] };
+  if (!params.role || params.role === 'guest') {
+    return { allowed: false, reason: 'guest', accessibleWorkspaces: [] };
   }
 
-  if (!pendingContext.tournamentId) {
+  const { data, error } = await supabase.rpc('can_access_workspace_v1', {
+    p_slug: params.routeSlug,
+  });
+  if (error) throw error;
+
+  const guard = (data || {}) as WorkspaceGuardResponse;
+  if (guard.allowed && guard.workspace?.tenant_id && guard.workspace.tournament_id) {
     return {
-      allowed: isSuperAdmin(params.role) || params.role === 'TENANT_ADMIN',
-      reason: 'no_tournament',
-      pendingContext,
+      allowed: true,
+      pendingContext: {
+        tenantId: guard.workspace.tenant_id,
+        tenantName: guard.workspace.tenant_name,
+        tournamentId: guard.workspace.tournament_id,
+        tournamentName: guard.workspace.tournament_name,
+        tournamentSlug: guard.workspace.slug,
+      },
       accessibleWorkspaces: [],
     };
   }
 
-  if (isSuperAdmin(params.role)) {
-    return { allowed: true, pendingContext, accessibleWorkspaces: [] };
-  }
-
-  if (!params.role || params.role === 'guest') {
-    return { allowed: false, reason: 'guest', pendingContext, accessibleWorkspaces: [] };
-  }
-
   const accessibleWorkspaces = await listAccessibleWorkspacesForUser(params.role, params.tenantId);
-  const allowed = accessibleWorkspaces.some((workspace) => accessibleWorkspaceMatches(pendingContext, workspace));
 
   return {
-    allowed,
-    reason: allowed ? undefined : 'no_access',
-    pendingContext,
+    allowed: false,
+    reason: 'no_access',
     accessibleWorkspaces,
   };
 }
