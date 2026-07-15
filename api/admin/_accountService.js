@@ -68,7 +68,7 @@ export async function getActorAccount(req, admin) {
 
   const { data: actor, error: actorError } = await admin
     .from('accounts')
-    .select('id, tenant_id, status, roles(name)')
+    .select('id, tenant_id, status, roles(name), tenants(tenant_type, status)')
     .eq('user_id', userData.user.id)
     .single();
 
@@ -83,6 +83,26 @@ export async function getActorAccount(req, admin) {
 
   if (actor.status && actor.status !== 'active') {
     throw apiError('Tài khoản quản trị đang bị khóa.', 403);
+  }
+
+  const tenant = Array.isArray(actor.tenants) ? actor.tenants[0] : actor.tenants;
+  if (tenant?.status && tenant.status !== 'active') {
+    throw apiError('Đơn vị đang bị khóa.', 403);
+  }
+  if (tenant?.tenant_type === 'self_service_customer') {
+    const now = new Date().toISOString();
+    const { data: subscription, error: subscriptionError } = await admin
+      .from('tenant_subscriptions')
+      .select('id')
+      .eq('tenant_id', actor.tenant_id)
+      .in('status', ['active', 'trial'])
+      .lte('start_date', now)
+      .or(`end_date.is.null,end_date.gt.${now}`)
+      .limit(1)
+      .maybeSingle();
+    if (subscriptionError || !subscription) {
+      throw apiError('Gói vận hành đã hết hạn hoặc chưa được mở khóa.', 403);
+    }
   }
 
   return { ...actor, roleName, authUserId: userData.user.id };
@@ -215,6 +235,8 @@ export async function validateTargetAccount(admin, actor, role, tenantId, option
     .select('id, status, subscription_plans(max_users, max_events, max_teams)')
     .eq('tenant_id', tenantId)
     .in('status', ['active', 'trial'])
+    .lte('start_date', new Date().toISOString())
+    .or(`end_date.is.null,end_date.gt.${new Date().toISOString()}`)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
