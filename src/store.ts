@@ -9,6 +9,7 @@ import { Tournament, Team, Group, Match, AuditLog, TournamentSettings, SeedType,
 import { generateRoundRobinMatches, calculateGroupStandings, calculateBestThirdPlaces, generateKnockoutMatchesSchema, balanceMatchesRestTime, normalizeSlotKey } from './utils/tournamentEngine';
 import { supabase, checkSupabaseConnection } from './supabaseClient';
 import { AuthAccessState } from './lib/auth/accessState';
+import { loadCurrentProfile } from './lib/auth/profile';
 
 const getBasePath = () => {
   const basePath = import.meta.env.BASE_URL || '/';
@@ -2000,9 +2001,11 @@ export const useTournamentStore = create<AppState>()(
                : await supabase.auth.getUser();
              if (currentAuthUser.data?.user) {
                 // Đã đăng nhập, tiến hành đồng bộ profile
-                const { data: profileStr, error: accountError } = await supabase.rpc('get_current_profile');
-                if (!accountError && profileStr) {
-                   const accountData = typeof profileStr === 'string' ? JSON.parse(profileStr) : profileStr;
+                 const accountData = await loadCurrentProfile({
+                   session: currentSession.data?.session || null,
+                   bootstrapGoogle: import.meta.env.VITE_SELF_SERVICE_ENABLED === 'true',
+                 });
+                 if (accountData) {
                    if (accountData.account_id && accountData.tenant_id && accountData.role) {
                       const mappedRole = accountData.role || 'guest';
                       const tenantIdStr = accountData.tenant_id || 'default';
@@ -2022,10 +2025,13 @@ export const useTournamentStore = create<AppState>()(
                         permissions: fetchedPermissions,
                         event_ids: eventIds,
                         permittedEventIds: eventIds,
-                        event_permissions: eventPermissions,
-                        eventPermissions,
-                        eventPermissionMap: normalizeEventPermissionMap(eventPermissions, eventIds)
-                      };
+                         event_permissions: eventPermissions,
+                         eventPermissions,
+                         eventPermissionMap: normalizeEventPermissionMap(eventPermissions, eventIds),
+                         tenant_type: accountData.tenant_type,
+                         onboarding_status: accountData.onboarding_status,
+                         business_access_active: accountData.business_access_active,
+                       };
 
                       const routeState = get();
                       originalSet({

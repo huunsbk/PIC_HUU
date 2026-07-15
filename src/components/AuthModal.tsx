@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { useTournamentStore } from '../store';
 import { supabase } from '../supabaseClient';
+import { getAppAuthRedirectUrl } from '../lib/authRedirect';
+import { loadCurrentProfile } from '../lib/auth/profile';
 import { 
+  Chrome,
   Lock, 
   User, 
   X, 
@@ -21,6 +24,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const selfServiceEnabled = import.meta.env.VITE_SELF_SERVICE_ENABLED === 'true';
 
   if (!isOpen) return null;
 
@@ -52,19 +57,18 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }
 
     setAuthAccessState('PROFILE_LOADING');
-    // Load Enterprise Account details using unified RPC
-    const { data: profileStr, error: accountError } = await supabase.rpc('get_current_profile');
-    
-    if (accountError || !profileStr) {
+    const accountData = await loadCurrentProfile({
+      session: authData.session,
+      bootstrapGoogle: false,
+    });
+
+    if (!accountData) {
       console.warn('[Auth] Profile lookup failed during login.');
       setAuthAccessState('PROFILE_ERROR');
       setErrorMsg('Tài khoản không tồn tại trên hệ thống hoặc đã bị khóa.');
       await supabase.auth.signOut();
       return;
     }
-
-    // Since RPC returns row_to_json, data is the json object
-    const accountData = typeof profileStr === 'string' ? JSON.parse(profileStr) : profileStr;
     
     // Check if expected attributes exist
     const hasPermissionPayload = Array.isArray(accountData.permissions)
@@ -105,7 +109,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       permissions: fetchedPermissions,
       event_ids: eventIds,
       event_permissions: eventPermissions,
-      eventPermissions
+      eventPermissions,
+      tenant_type: accountData.tenant_type,
+      onboarding_status: accountData.onboarding_status,
+      business_access_active: accountData.business_access_active,
     };
 
     setSuccessMsg(`Đăng nhập thành công! Chào mừng đại diện ${accountData.display_name}.`);
@@ -121,6 +128,31 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       console.warn('[Auth] Login request failed.');
       setAuthAccessState('PROFILE_ERROR');
       setErrorMsg('Không thể đăng nhập lúc này. Vui lòng kiểm tra kết nối và thử lại.');
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setErrorMsg('');
+    setSuccessMsg('');
+    setIsGoogleLoading(true);
+    setAuthAccessState('AUTHENTICATING');
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: getAppAuthRedirectUrl(),
+          queryParams: {
+            prompt: 'select_account',
+          },
+        },
+      });
+
+      if (error) throw error;
+    } catch {
+      setAuthAccessState('UNAUTHENTICATED');
+      setErrorMsg('Không thể bắt đầu đăng nhập Google. Vui lòng thử lại.');
+      setIsGoogleLoading(false);
     }
   };
 
@@ -163,6 +195,25 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             <ShieldCheck size={13} className="text-emerald-500 shrink-0" />
             <span>{successMsg}</span>
           </div>
+        )}
+
+        {selfServiceEnabled && (
+          <>
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={isGoogleLoading}
+              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-zinc-250 bg-white px-3 py-2.5 text-xs font-black text-zinc-800 shadow-sm transition-colors hover:bg-zinc-50 disabled:cursor-wait disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
+            >
+              <Chrome size={15} className="text-blue-600" />
+              {isGoogleLoading ? 'Đang chuyển tới Google...' : 'Tiếp tục bằng Google'}
+            </button>
+            <div className="flex items-center gap-3 text-[10px] font-bold uppercase text-zinc-400">
+              <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+              Hoặc dùng tài khoản được cấp
+              <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+            </div>
+          </>
         )}
 
         {/* Biểu mẫu */}
@@ -212,7 +263,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         </form>
 
         <div className="text-[10px] text-zinc-400 dark:text-zinc-500 text-center border-t border-zinc-100 dark:border-zinc-850 pt-2.5">
-          Nếu chưa có tài khoản, vui lòng liên hệ Nguyễn Văn Hữu để được phê duyệt
+          {selfServiceEnabled
+            ? 'Tài khoản Google mới sẽ được tạo không gian riêng và cần mở khóa trước khi vận hành.'
+            : 'Nếu chưa có tài khoản, vui lòng liên hệ Nguyễn Văn Hữu để được phê duyệt'}
         </div>
 
       </div>
