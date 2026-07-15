@@ -12,7 +12,7 @@ SECURITY DEFINER
 SET search_path TO public, pg_temp
 AS $$
 DECLARE
-  v_claim_role text := current_setting('request.jwt.claim.role', true);
+  v_claim_role text := public.request_claim_role_v1();
   v_account record;
   v_order public.payment_orders%ROWTYPE;
 BEGIN
@@ -99,7 +99,7 @@ SECURITY DEFINER
 SET search_path TO public, pg_temp
 AS $$
 DECLARE
-  v_claim_role text := current_setting('request.jwt.claim.role', true);
+  v_claim_role text := public.request_claim_role_v1();
   v_actor record;
   v_rows jsonb;
 BEGIN
@@ -161,7 +161,7 @@ SECURITY DEFINER
 SET search_path TO public, pg_temp
 AS $$
 DECLARE
-  v_claim_role text := current_setting('request.jwt.claim.role', true);
+  v_claim_role text := public.request_claim_role_v1();
   v_actor record;
   v_order public.payment_orders%ROWTYPE;
   v_target record;
@@ -270,7 +270,7 @@ SECURITY DEFINER
 SET search_path TO public, pg_temp
 AS $$
 DECLARE
-  v_claim_role text := current_setting('request.jwt.claim.role', true);
+  v_claim_role text := public.request_claim_role_v1();
   v_actor record;
   v_order public.payment_orders%ROWTYPE;
   v_reason text := left(NULLIF(btrim(p_reason), ''), 500);

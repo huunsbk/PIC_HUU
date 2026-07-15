@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useParams, useNavigate, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useParams, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useTournamentStore } from './store';
 import { supabase } from './supabaseClient';
 
@@ -22,10 +22,13 @@ import EventManagementPage from './components/event-management-page';
 import TournamentWorkspaceListPage from './components/TournamentWorkspaceListPage';
 import TenantManagementPage from './components/TenantManagementPage';
 import DeletedItemsManager from './components/DeletedItemsManager';
+import CommercialUnlockPage from './components/CommercialUnlockPage';
+import PaymentReviewManager from './components/PaymentReviewManager';
 import EventSwitcher from './components/event-switcher';
 import { useEventsQuery } from './components/use-events-query';
 import { getAuthHashErrorMessage } from './lib/authRedirect';
 import { resolveWorkspaceAccess } from './lib/auth/workspaceAccessService';
+import { getCommercialAccessState } from './lib/api/commercial';
 
 import {
   Trophy,
@@ -48,7 +51,9 @@ import {
   Presentation,
   Wrench,
   ListChecks,
-  Trash2
+  Trash2,
+  KeyRound,
+  CreditCard,
 } from 'lucide-react';
 
 function isRouteWorkspacePathname() {
@@ -76,6 +81,7 @@ const TAB_GROUP_ALIASES: Record<string, string> = {
   logs: 'admin',
   export: 'admin',
   deleted: 'admin',
+  payments: 'admin',
 };
 
 const panelShellClass = 'rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900';
@@ -248,10 +254,12 @@ function AdminWorkspacePanel() {
   const canManageAccounts = hasPermission('*') || hasPermission('manage_accounts') || hasPermission('manage_referees');
   const canManageDeleted = canManageTournaments || hasPermission('*') || hasPermission('manage_events');
   const canViewLogs = hasPermission('*') || hasPermission('view_audit_logs');
+  const canReviewPayments = userRole === 'SUPER_ADMIN';
   const adminTabs = [
     { id: 'tenants', label: 'Đơn vị', icon: Building2, disabled: !canManageTenants },
     { id: 'workspaces', label: 'Giải đấu', icon: Layers, disabled: !canManageTournaments },
     { id: 'accounts', label: 'Tài khoản', icon: UserCog, disabled: !canManageAccounts },
+    { id: 'payments', label: 'Thanh toán', icon: CreditCard, disabled: !canReviewPayments },
     { id: 'deleted', label: 'Đã xóa', icon: Trash2, disabled: !canManageDeleted },
     { id: 'logs', label: 'Nhật ký', icon: ClipboardList, disabled: !canViewLogs },
     { id: 'export', label: 'Xuất file', icon: FileDown, disabled: false },
@@ -282,6 +290,7 @@ function AdminWorkspacePanel() {
       {activeSubTab === 'tenants' && <TenantManagementPage />}
       {activeSubTab === 'workspaces' && <TournamentWorkspaceListPage />}
       {activeSubTab === 'accounts' && <AccountManager />}
+      {activeSubTab === 'payments' && <PaymentReviewManager />}
       {activeSubTab === 'deleted' && <DeletedItemsManager />}
       {activeSubTab === 'logs' && <AuditLogger />}
       {activeSubTab === 'export' && <ExportManager />}
@@ -306,6 +315,12 @@ function AdminWorkspace() {
     let isCancelled = false;
     const loadWorkspace = async () => {
       if (!slug) return;
+      if (currentEnterpriseUser?.tenant_type === 'self_service_customer'
+          && currentEnterpriseUser?.business_access_active === false) {
+        setSelectedTab('unlock');
+        navigate('/unlock', { replace: true });
+        return;
+      }
       const routeSlug = decodeURIComponent(slug);
       setAuthAccessState('ACCESS_LOADING');
 
@@ -346,7 +361,7 @@ function AdminWorkspace() {
     return () => {
       isCancelled = true;
     };
-  }, [slug, activeTenantId, activeTournamentId, userRole, currentEnterpriseUser?.tenant_id, setWorkspaceContext, setSelectedTab, setAuthAccessState, clearWorkspaceContext, navigate]);
+  }, [slug, activeTenantId, activeTournamentId, userRole, currentEnterpriseUser?.tenant_id, currentEnterpriseUser?.tenant_type, currentEnterpriseUser?.business_access_active, setWorkspaceContext, setSelectedTab, setAuthAccessState, clearWorkspaceContext, navigate]);
 
   return <TournamentShell />;
 }
@@ -362,6 +377,12 @@ function WorkspaceDirectory() {
     }
   }, [setSelectedTab, currentEnterpriseUser, userRole]);
 
+  return <TournamentShell />;
+}
+
+function CommercialUnlockEntry() {
+  const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
+  React.useEffect(() => setSelectedTab('unlock'), [setSelectedTab]);
   return <TournamentShell />;
 }
 
@@ -478,8 +499,14 @@ function RootEntry() {
       }
       setTenantId('default').then(async () => {
          await initSupabase();
-         if (useTournamentStore.getState().currentEnterpriseUser) {
-           navigate('/admin/workspaces', { replace: true });
+         const currentUser = useTournamentStore.getState().currentEnterpriseUser;
+         if (currentUser) {
+           navigate(
+             currentUser.tenant_type === 'self_service_customer' && currentUser.business_access_active === false
+               ? '/unlock'
+               : '/admin/workspaces',
+             { replace: true },
+           );
          }
       });
   }, [setTenantId, initSupabase, navigate]);
@@ -518,6 +545,7 @@ export default function App() {
         <Route path="/" element={<RootEntry />} />
         <Route path="/admin/workspaces" element={<WorkspaceDirectory />} />
         <Route path="/admin/workspace/:slug" element={<AdminWorkspace />} />
+        <Route path="/unlock" element={<CommercialUnlockEntry />} />
         <Route path="/tournament/:slug" element={<PublicTournament />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -526,6 +554,8 @@ export default function App() {
 }
 
 function TournamentShell() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const tournament = useTournamentStore((state) => state.tournament);
   const darkMode = useTournamentStore((state) => state.darkMode);
   const setDarkMode = useTournamentStore((state) => state.setDarkMode);
@@ -541,9 +571,12 @@ function TournamentShell() {
   const activeTenantName = useTournamentStore((state) => state.activeTenantName);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
   const authAccessState = useTournamentStore((state) => state.authAccessState);
+  const setCommercialAccessState = useTournamentStore((state) => state.setCommercialAccessState);
   const { data: headerEvents = [] } = useEventsQuery();
   const currentHeaderEvent = headerEvents.find((event: any) => event.id === currentEventId) || headerEvents[0];
   const isAuthenticated = !!currentEnterpriseUser || userRole !== 'guest' || !!currentUser;
+  const commercialLocked = currentEnterpriseUser?.tenant_type === 'self_service_customer'
+    && currentEnterpriseUser?.business_access_active === false;
   const roleLabels: Record<string, string> = {
     SUPER_ADMIN: 'Quản trị hệ thống',
     TENANT_ADMIN: 'Quản trị đơn vị',
@@ -632,7 +665,41 @@ function TournamentShell() {
     }
   }, [darkMode]);
 
+  useEffect(() => {
+    if (!commercialLocked || location.pathname === '/unlock') return;
+    setSelectedTab('unlock');
+    navigate('/unlock', { replace: true });
+  }, [commercialLocked, location.pathname, navigate, setSelectedTab]);
+
+  useEffect(() => {
+    if (currentEnterpriseUser?.tenant_type !== 'self_service_customer' || commercialLocked) return;
+    let cancelled = false;
+    const checkAccess = async () => {
+      try {
+        const state = await getCommercialAccessState();
+        if (!cancelled && !state.business_access_active) {
+          setCommercialAccessState(false, state.account?.onboarding_status);
+          navigate('/unlock', { replace: true });
+        }
+      } catch {
+        // Keep the current screen during transient network failures; backend still enforces every mutation.
+      }
+    };
+    const timer = window.setInterval(() => void checkAccess(), 60000);
+    const onFocus = () => void checkAccess();
+    window.addEventListener('focus', onFocus);
+    void checkAccess();
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [commercialLocked, currentEnterpriseUser?.tenant_type, navigate, setCommercialAccessState]);
+
   const navItems = React.useMemo(() => {
+    if (commercialLocked) {
+      return [{ id: 'unlock', label: 'Mở khóa', icon: KeyRound, permission: '', roles: ['EVENT_ADMIN'] }];
+    }
     const allNavItems = [
       { id: 'workspaces', label: 'Giải đấu', icon: Layers, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'VIEWER'] },
       { id: 'dashboard', label: 'Tổng quan', icon: Trophy, permission: 'view_public', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
@@ -652,11 +719,12 @@ function TournamentShell() {
       if (hasPermission('*')) return true;
       return hasPermission(item.permission) || (item.id === 'admin' && hasPermission('manage_referees')) || hasPermission('*');
     });
-  }, [permissions, userRole, hasPermission]);
+  }, [permissions, userRole, hasPermission, commercialLocked]);
 
   const currentPrimaryTab = TAB_GROUP_ALIASES[selectedTab] || selectedTab;
   const isWorkspaceContextReady =
     currentPrimaryTab === 'workspaces' ||
+    currentPrimaryTab === 'unlock' ||
     userRole === 'guest' ||
     authAccessState === 'WORKSPACE_CONTEXT_READY';
 
@@ -746,7 +814,7 @@ function TournamentShell() {
                       <p className="truncate text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">Giải: {profileTournamentName}</p>
                     </div>
                   </div>
-                  <EventSwitcher />
+                  {!commercialLocked && <EventSwitcher />}
                   <button onClick={() => useTournamentStore.getState().logout()} className="cursor-pointer text-[10px] font-bold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-red-650 dark:text-red-400 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded transition-colors">
                     Đăng xuất
                   </button>
@@ -791,6 +859,7 @@ function TournamentShell() {
                     {currentPrimaryTab === 'rankings' && <RankingKnockoutWorkspace />}
                     {currentPrimaryTab === 'live' && <LiveDashboard />}
                     {currentPrimaryTab === 'admin' && <AdminWorkspacePanel />}
+                    {currentPrimaryTab === 'unlock' && <CommercialUnlockPage />}
                   </>
                 );
               })()}
