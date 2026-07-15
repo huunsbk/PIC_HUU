@@ -125,7 +125,11 @@ interface AppState {
   activeTournamentId: string | null;
   authAccessState: AuthAccessState;
   setAuthAccessState: (state: AuthAccessState) => void;
-  setCommercialAccessState: (active: boolean, onboardingStatus?: string) => void;
+  setCommercialAccessState: (
+    active: boolean,
+    onboardingStatus?: string,
+    tenant?: { id: string; name: string; slug: string; type: string; status: string },
+  ) => void;
   setAuthStatus: (role: 'guest' | string, username: string | null, tenantId: string, enterpriseUser?: any) => Promise<void>;
   logout: () => Promise<void>;
   setTenantId: (tenantId: string) => Promise<void>;
@@ -409,12 +413,14 @@ export const useTournamentStore = create<AppState>()(
         activeTournamentId: null,
         authAccessState: 'UNAUTHENTICATED',
         setAuthAccessState: (authAccessState) => originalSet({ authAccessState }),
-        setCommercialAccessState: (active, onboardingStatus) => originalSet((state) => ({
+        setCommercialAccessState: (active, onboardingStatus, tenant) => originalSet((state) => ({
           currentEnterpriseUser: state.currentEnterpriseUser ? {
             ...state.currentEnterpriseUser,
             business_access_active: active,
             onboarding_status: onboardingStatus || state.currentEnterpriseUser.onboarding_status,
+            tenant: tenant || state.currentEnterpriseUser.tenant,
           } : null,
+          activeTenantName: tenant?.name || state.activeTenantName,
           permissions: active ? state.permissions : [],
           selectedTab: active ? state.selectedTab : 'unlock',
           authAccessState: active ? state.authAccessState : 'WORKSPACE_SELECT_REQUIRED',

@@ -124,6 +124,11 @@ export default function CommercialUnlockPage() {
           getCurrentCommercialOrder(data.session),
         ]);
         if (cancelled) return;
+        setCommercialAccessState(
+          access.business_access_active,
+          access.account?.onboarding_status,
+          access.tenant,
+        );
         if (access.commercial_state === 'not_applicable' || access.business_access_active) {
           moveToWorkspace();
           return;
@@ -139,7 +144,7 @@ export default function CommercialUnlockPage() {
     };
     void load();
     return () => { cancelled = true; };
-  }, [moveToWorkspace, navigate]);
+  }, [moveToWorkspace, navigate, setCommercialAccessState]);
 
   React.useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
