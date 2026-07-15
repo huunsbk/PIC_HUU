@@ -8,6 +8,10 @@ import commercialBootstrapHandler from "./api/commercial/bootstrap.js";
 import commercialOrderHandler from "./api/commercial/orders/index.js";
 import commercialCurrentOrderHandler from "./api/commercial/orders/current.js";
 import payOSWebhookHandler from "./api/webhooks/payos.js";
+import commercialManualReviewHandler from "./api/commercial/orders/manual-review.js";
+import adminManualReviewsHandler from "./api/admin/commercial/manual-reviews/index.js";
+import adminConfirmManualReviewHandler from "./api/admin/commercial/manual-reviews/confirm.js";
+import adminRejectManualReviewHandler from "./api/admin/commercial/manual-reviews/reject.js";
 
 dotenv.config();
 
@@ -23,6 +27,14 @@ async function startServer() {
   app.options('/api/commercial/orders/current', (req, res) => commercialCurrentOrderHandler(req, res));
   app.get('/api/commercial/orders/current', (req, res) => commercialCurrentOrderHandler(req, res));
   app.post('/api/webhooks/payos', (req, res) => payOSWebhookHandler(req, res));
+  app.options('/api/commercial/orders/manual-review', (req, res) => commercialManualReviewHandler(req, res));
+  app.post('/api/commercial/orders/manual-review', (req, res) => commercialManualReviewHandler(req, res));
+  app.options('/api/admin/commercial/manual-reviews', (req, res) => adminManualReviewsHandler(req, res));
+  app.get('/api/admin/commercial/manual-reviews', (req, res) => adminManualReviewsHandler(req, res));
+  app.options('/api/admin/commercial/manual-reviews/confirm', (req, res) => adminConfirmManualReviewHandler(req, res));
+  app.post('/api/admin/commercial/manual-reviews/confirm', (req, res) => adminConfirmManualReviewHandler(req, res));
+  app.options('/api/admin/commercial/manual-reviews/reject', (req, res) => adminRejectManualReviewHandler(req, res));
+  app.post('/api/admin/commercial/manual-reviews/reject', (req, res) => adminRejectManualReviewHandler(req, res));
 
   // API Configuration
   const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "https://ykckqcykxfhpfqptckxk.supabase.co";
