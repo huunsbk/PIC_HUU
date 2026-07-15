@@ -48,7 +48,7 @@ SECURITY DEFINER
 SET search_path TO public, pg_temp
 AS $$
 DECLARE
-  v_claim_role text := current_setting('request.jwt.claim.role', true);
+  v_claim_role text := public.request_claim_role_v1();
   v_actor record;
   v_plan public.subscription_plans%ROWTYPE;
   v_existing public.payment_orders%ROWTYPE;
@@ -329,7 +329,7 @@ SECURITY DEFINER
 SET search_path TO public, pg_temp
 AS $$
 DECLARE
-  v_claim_role text := current_setting('request.jwt.claim.role', true);
+  v_claim_role text := public.request_claim_role_v1();
   v_order public.payment_orders%ROWTYPE;
 BEGIN
   IF v_claim_role IS DISTINCT FROM 'service_role' THEN
@@ -388,7 +388,7 @@ SECURITY DEFINER
 SET search_path TO public, pg_temp
 AS $$
 DECLARE
-  v_claim_role text := current_setting('request.jwt.claim.role', true);
+  v_claim_role text := public.request_claim_role_v1();
   v_order public.payment_orders%ROWTYPE;
   v_plan public.subscription_plans%ROWTYPE;
   v_subscription public.tenant_subscriptions%ROWTYPE;
@@ -654,7 +654,7 @@ SECURITY DEFINER
 SET search_path TO public, pg_temp
 AS $$
 DECLARE
-  v_claim_role text := current_setting('request.jwt.claim.role', true);
+  v_claim_role text := public.request_claim_role_v1();
   v_event_id uuid;
   v_order_id uuid;
   v_result jsonb;
@@ -752,7 +752,7 @@ SECURITY DEFINER
 SET search_path TO public, pg_temp
 AS $$
 DECLARE
-  v_claim_role text := current_setting('request.jwt.claim.role', true);
+  v_claim_role text := public.request_claim_role_v1();
 BEGIN
   IF v_claim_role IS DISTINCT FROM 'service_role' THEN
     RAISE EXCEPTION 'SERVICE_ROLE_REQUIRED';

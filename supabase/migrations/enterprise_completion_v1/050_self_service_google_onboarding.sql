@@ -3,6 +3,26 @@
 
 BEGIN;
 
+CREATE OR REPLACE FUNCTION public.request_claim_role_v1()
+RETURNS text
+LANGUAGE plpgsql
+STABLE
+SET search_path TO public, pg_temp
+AS $$
+DECLARE
+  v_legacy_role text := NULLIF(current_setting('request.jwt.claim.role', true), '');
+  v_claims_text text := NULLIF(current_setting('request.jwt.claims', true), '');
+BEGIN
+  IF v_legacy_role IS NOT NULL THEN RETURN v_legacy_role; END IF;
+  IF v_claims_text IS NULL THEN RETURN NULL; END IF;
+  RETURN v_claims_text::jsonb->>'role';
+EXCEPTION WHEN invalid_text_representation THEN
+  RETURN NULL;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.request_claim_role_v1() FROM PUBLIC, anon, authenticated;
+
 ALTER TABLE public.tenants
   ADD COLUMN IF NOT EXISTS tenant_type text NOT NULL DEFAULT 'managed_enterprise';
 
@@ -161,7 +181,7 @@ SECURITY DEFINER
 SET search_path TO public, auth, pg_temp
 AS $$
 DECLARE
-  v_claim_role text := current_setting('request.jwt.claim.role', true);
+  v_claim_role text := public.request_claim_role_v1();
   v_auth_user record;
   v_existing_account record;
   v_role_id uuid;

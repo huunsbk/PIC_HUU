@@ -13,6 +13,8 @@ export function useEventsQuery() {
   const setCurrentEvent = useTournamentStore((state) => state.setCurrentEvent);
   const userRole = useTournamentStore((state) => state.userRole);
   const shouldUsePublicSnapshot = userRole === 'guest' && isPublicViewerRoute();
+  const commercialAccessActive = currentEnterpriseUser?.tenant_type !== 'self_service_customer'
+    || currentEnterpriseUser?.business_access_active !== false;
 
   const query = useQuery({
     queryKey: ['events', activeTournamentId || tournamentId],
@@ -32,7 +34,8 @@ export function useEventsQuery() {
 
       return events;
     },
-    enabled: !shouldUsePublicSnapshot && !!activeTenantId && activeTenantId !== 'default' && !!(activeTournamentId || tournamentId),
+    enabled: commercialAccessActive && !shouldUsePublicSnapshot && !!activeTenantId
+      && activeTenantId !== 'default' && !!(activeTournamentId || tournamentId),
   });
 
   useEffect(() => {

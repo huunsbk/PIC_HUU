@@ -46,6 +46,13 @@ const navigateToWorkspaceList = () => {
   window.dispatchEvent(new PopStateEvent('popstate'));
 };
 
+const navigateToCommercialUnlock = () => {
+  const targetUrl = `${window.location.origin}${getBasePath()}unlock`;
+  if (window.location.href === targetUrl) return;
+  window.history.replaceState(null, '', targetUrl);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+};
+
 const EVENT_SCOPED_PERMISSIONS = new Set([
   'view_event',
   'create_events',
@@ -118,6 +125,11 @@ interface AppState {
   activeTournamentId: string | null;
   authAccessState: AuthAccessState;
   setAuthAccessState: (state: AuthAccessState) => void;
+  setCommercialAccessState: (
+    active: boolean,
+    onboardingStatus?: string,
+    tenant?: { id: string; name: string; slug: string; type: string; status: string },
+  ) => void;
   setAuthStatus: (role: 'guest' | string, username: string | null, tenantId: string, enterpriseUser?: any) => Promise<void>;
   logout: () => Promise<void>;
   setTenantId: (tenantId: string) => Promise<void>;
@@ -401,6 +413,18 @@ export const useTournamentStore = create<AppState>()(
         activeTournamentId: null,
         authAccessState: 'UNAUTHENTICATED',
         setAuthAccessState: (authAccessState) => originalSet({ authAccessState }),
+        setCommercialAccessState: (active, onboardingStatus, tenant) => originalSet((state) => ({
+          currentEnterpriseUser: state.currentEnterpriseUser ? {
+            ...state.currentEnterpriseUser,
+            business_access_active: active,
+            onboarding_status: onboardingStatus || state.currentEnterpriseUser.onboarding_status,
+            tenant: tenant || state.currentEnterpriseUser.tenant,
+          } : null,
+          activeTenantName: tenant?.name || state.activeTenantName,
+          permissions: active ? state.permissions : [],
+          selectedTab: active ? state.selectedTab : 'unlock',
+          authAccessState: active ? state.authAccessState : 'WORKSPACE_SELECT_REQUIRED',
+        })),
         isLoadingSupabase: false,
         setAuthStatus: async (role, username, tenantId, enterpriseUser) => {
           console.log('[Auth Setup] Bắt đầu thiết lập Auth.');
@@ -418,6 +442,8 @@ export const useTournamentStore = create<AppState>()(
               enterpriseUser.permittedEventIds || enterpriseUser.event_ids || []
             ),
           } : null;
+          const commercialLocked = normalizedEnterpriseUser?.tenant_type === 'self_service_customer'
+            && normalizedEnterpriseUser?.business_access_active === false;
           
           originalSet({
             userRole: role || 'guest',
@@ -427,10 +453,21 @@ export const useTournamentStore = create<AppState>()(
             activeTenantName: isWorkspaceRoute ? currentState.activeTenantName : normalizedEnterpriseUser?.tenant?.name || currentState.activeTenantName || null,
             permissions: normalizedEnterpriseUser?.permissions || [],
             isAdmin: false /* deprecated */,
-            selectedTab: selectedTabAfterAuth,
+            selectedTab: commercialLocked ? 'unlock' : selectedTabAfterAuth,
             isLoadingSupabase: true,
             authAccessState: isWorkspaceRoute ? 'ACCESS_LOADING' : 'WORKSPACE_SELECT_REQUIRED',
           });
+
+          if (commercialLocked) {
+            originalSet({
+              activeTournamentId: null,
+              isLoadingSupabase: false,
+              supabaseConnected: true,
+              authAccessState: 'WORKSPACE_SELECT_REQUIRED',
+            });
+            navigateToCommercialUnlock();
+            return;
+          }
 
           if (normalizedEnterpriseUser && normalizedEnterpriseUser.id && tenantId !== 'default') {
             requestAnimationFrame(() => {
@@ -2062,6 +2099,20 @@ export const useTournamentStore = create<AppState>()(
              }
           } catch (err: any) {
              console.warn('Lỗi khi phục hồi session trước tiên.');
+          }
+
+          const restoredCommercialUser = get().currentEnterpriseUser;
+          if (restoredCommercialUser?.tenant_type === 'self_service_customer'
+              && restoredCommercialUser?.business_access_active === false) {
+            originalSet({
+              selectedTab: 'unlock',
+              activeTournamentId: null,
+              supabaseConnected: true,
+              isLoadingSupabase: false,
+              authAccessState: 'WORKSPACE_SELECT_REQUIRED',
+            });
+            navigateToCommercialUnlock();
+            return;
           }
 
           if (routedWorkspace) {

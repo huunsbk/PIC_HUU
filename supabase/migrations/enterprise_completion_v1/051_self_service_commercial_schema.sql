@@ -300,7 +300,8 @@ AS $$
 DECLARE
   v_account record;
   v_subscription record;
-  v_usage record;
+  v_usage jsonb := NULL;
+  v_has_subscription boolean := false;
   v_entitlements jsonb := '[]'::jsonb;
   v_state text;
 BEGIN
@@ -359,7 +360,9 @@ BEGIN
   ORDER BY ts.created_at DESC
   LIMIT 1;
 
-  IF FOUND THEN
+  v_has_subscription := FOUND;
+
+  IF v_has_subscription THEN
     v_state := 'active';
 
     SELECT COALESCE(jsonb_agg(jsonb_build_object(
@@ -372,7 +375,7 @@ BEGIN
     FROM public.subscription_entitlements se
     WHERE se.subscription_id = v_subscription.id;
 
-    SELECT * INTO v_usage
+    SELECT to_jsonb(tu) INTO v_usage
     FROM public.tenant_usage tu
     WHERE tu.tenant_id = v_account.tenant_id;
   ELSE
@@ -402,7 +405,7 @@ BEGIN
       'status', v_account.account_status,
       'onboarding_status', v_account.onboarding_status
     ),
-    'subscription', CASE WHEN v_subscription.id IS NULL THEN NULL ELSE jsonb_build_object(
+    'subscription', CASE WHEN NOT v_has_subscription THEN NULL ELSE jsonb_build_object(
       'id', v_subscription.id,
       'status', v_subscription.status,
       'start_date', v_subscription.start_date,
@@ -413,7 +416,7 @@ BEGIN
       'duration_days', v_subscription.duration_days
     ) END,
     'entitlements', v_entitlements,
-    'usage', CASE WHEN v_usage.tenant_id IS NULL THEN NULL ELSE to_jsonb(v_usage) END,
+    'usage', v_usage,
     'server_time', now()
   );
 END;
