@@ -4,6 +4,7 @@ import { createServer as createViteServer } from "vite";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import dotenv from "dotenv";
+import commercialBootstrapHandler from "./api/commercial/bootstrap.js";
 
 dotenv.config();
 
@@ -12,6 +13,8 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+  app.options('/api/commercial/bootstrap', (req, res) => commercialBootstrapHandler(req, res));
+  app.post('/api/commercial/bootstrap', (req, res) => commercialBootstrapHandler(req, res));
 
   // API Configuration
   const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "https://ykckqcykxfhpfqptckxk.supabase.co";

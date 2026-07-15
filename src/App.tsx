@@ -476,8 +476,11 @@ function RootEntry() {
           });
         return;
       }
-      setTenantId('default').then(() => {
-         initSupabase();
+      setTenantId('default').then(async () => {
+         await initSupabase();
+         if (useTournamentStore.getState().currentEnterpriseUser) {
+           navigate('/admin/workspaces', { replace: true });
+         }
       });
   }, [setTenantId, initSupabase, navigate]);
 
