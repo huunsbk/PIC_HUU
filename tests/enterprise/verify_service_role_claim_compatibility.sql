@@ -1,6 +1,7 @@
 WITH commercial_functions(signature) AS (
   VALUES
     ('public.bootstrap_self_service_customer_v1(uuid)'::regprocedure),
+    ('public.create_payment_order_v2(uuid,text,text,integer,integer,text)'::regprocedure),
     ('public.create_payment_order_v1(uuid,text,integer,integer,text)'::regprocedure),
     ('public.attach_payment_provider_v1(uuid,text,text,text)'::regprocedure),
     ('public.settle_payment_order_v1(bigint,text,numeric,text,uuid)'::regprocedure),

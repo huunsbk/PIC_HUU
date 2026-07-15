@@ -20,7 +20,7 @@ AS $$
           FROM public.tenant_subscriptions ts
           JOIN public.subscription_plans sp ON sp.id = ts.plan_id
           WHERE ts.tenant_id = t.id
-            AND ts.status IN ('active', 'trial')
+            AND ts.status IN ('active', 'trial', 'scheduled')
             AND ts.start_date <= now()
             AND (ts.end_date IS NULL OR ts.end_date > now())
             AND sp.is_active = true

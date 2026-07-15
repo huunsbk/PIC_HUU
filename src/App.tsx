@@ -23,6 +23,7 @@ import TournamentWorkspaceListPage from './components/TournamentWorkspaceListPag
 import TenantManagementPage from './components/TenantManagementPage';
 import DeletedItemsManager from './components/DeletedItemsManager';
 import CommercialUnlockPage from './components/CommercialUnlockPage';
+import CommercialSubscriptionPage from './components/CommercialSubscriptionPage';
 import PaymentReviewManager from './components/PaymentReviewManager';
 import EventSwitcher from './components/event-switcher';
 import { useEventsQuery } from './components/use-events-query';
@@ -368,14 +369,10 @@ function AdminWorkspace() {
 
 function WorkspaceDirectory() {
   const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
-  const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
-  const userRole = useTournamentStore((state) => state.userRole);
 
   useEffect(() => {
-    if (currentEnterpriseUser || userRole !== 'guest') {
-      setSelectedTab('workspaces');
-    }
-  }, [setSelectedTab, currentEnterpriseUser, userRole]);
+    setSelectedTab('workspaces');
+  }, [setSelectedTab]);
 
   return <TournamentShell />;
 }
@@ -383,6 +380,12 @@ function WorkspaceDirectory() {
 function CommercialUnlockEntry() {
   const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
   React.useEffect(() => setSelectedTab('unlock'), [setSelectedTab]);
+  return <TournamentShell />;
+}
+
+function CommercialSubscriptionEntry() {
+  const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
+  React.useEffect(() => setSelectedTab('subscription'), [setSelectedTab]);
   return <TournamentShell />;
 }
 
@@ -546,6 +549,7 @@ export default function App() {
         <Route path="/admin/workspaces" element={<WorkspaceDirectory />} />
         <Route path="/admin/workspace/:slug" element={<AdminWorkspace />} />
         <Route path="/unlock" element={<CommercialUnlockEntry />} />
+        <Route path="/subscription" element={<CommercialSubscriptionEntry />} />
         <Route path="/tournament/:slug" element={<PublicTournament />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -709,6 +713,9 @@ function TournamentShell() {
       { id: 'live', label: 'Trình chiếu', icon: Presentation, permission: 'view_event', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'guest'] },
       { id: 'admin', label: 'Quản trị', icon: Wrench, permission: 'manage_accounts', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
     ];
+    if (currentEnterpriseUser?.tenant_type === 'self_service_customer') {
+      allNavItems.splice(1, 0, { id: 'subscription', label: 'Gói dịch vụ', icon: CreditCard, permission: 'view_public', roles: ['EVENT_ADMIN'] });
+    }
     
     if (userRole === 'guest') {
       return allNavItems.filter(item => item.id === 'live');
@@ -719,12 +726,13 @@ function TournamentShell() {
       if (hasPermission('*')) return true;
       return hasPermission(item.permission) || (item.id === 'admin' && hasPermission('manage_referees')) || hasPermission('*');
     });
-  }, [permissions, userRole, hasPermission, commercialLocked]);
+  }, [permissions, userRole, hasPermission, commercialLocked, currentEnterpriseUser?.tenant_type]);
 
   const currentPrimaryTab = TAB_GROUP_ALIASES[selectedTab] || selectedTab;
   const isWorkspaceContextReady =
     currentPrimaryTab === 'workspaces' ||
     currentPrimaryTab === 'unlock' ||
+    currentPrimaryTab === 'subscription' ||
     userRole === 'guest' ||
     authAccessState === 'WORKSPACE_CONTEXT_READY';
 
@@ -761,7 +769,21 @@ function TournamentShell() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setSelectedTab(item.id)}
+                    onClick={() => {
+                      if (item.id === 'workspaces') {
+                        navigate('/admin/workspaces');
+                        return;
+                      }
+                      if (item.id === 'unlock') {
+                        navigate('/unlock');
+                        return;
+                      }
+                      if (item.id === 'subscription') {
+                        navigate('/subscription');
+                        return;
+                      }
+                      setSelectedTab(item.id);
+                    }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold tracking-normal transition-all duration-150 text-left cursor-pointer group ${
                       isActive ? 'bg-blue-600 text-white shadow-md font-extrabold translate-x-1' : 'text-slate-300 hover:bg-[#1e293b]/70 hover:text-white'
                     }`}
@@ -860,6 +882,7 @@ function TournamentShell() {
                     {currentPrimaryTab === 'live' && <LiveDashboard />}
                     {currentPrimaryTab === 'admin' && <AdminWorkspacePanel />}
                     {currentPrimaryTab === 'unlock' && <CommercialUnlockPage />}
+                    {currentPrimaryTab === 'subscription' && <CommercialSubscriptionPage />}
                   </>
                 );
               })()}

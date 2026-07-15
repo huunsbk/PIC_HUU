@@ -200,10 +200,10 @@ WITH current_subscription AS (
     ts.plan_id,
     ts.status
   FROM public.tenant_subscriptions ts
-  WHERE ts.status IN ('active', 'trial')
+  WHERE ts.status IN ('active', 'trial', 'scheduled')
     AND ts.start_date <= now()
     AND (ts.end_date IS NULL OR ts.end_date > now())
-  ORDER BY ts.tenant_id, ts.created_at DESC
+  ORDER BY ts.tenant_id, ts.start_date DESC, ts.created_at DESC
 ), entitlement_limits AS (
   SELECT
     se.subscription_id,

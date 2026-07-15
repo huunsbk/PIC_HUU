@@ -32,7 +32,10 @@ export async function bootstrapSelfServiceCustomer(
 export interface CommercialPaymentOrder {
   id: string;
   order_code: string;
+  order_type: 'activation' | 'renewal' | 'addon';
   status: string;
+  base_amount?: number;
+  addon_amount?: number;
   total_amount: number;
   currency: 'VND';
   transfer_content: string;
@@ -72,6 +75,14 @@ export interface CommercialAccessState {
     plan_code: string;
     plan_name: string;
     duration_days: number;
+  } | null;
+  scheduled_renewal?: {
+    id: string;
+    status: 'scheduled';
+    start_date: string;
+    end_date: string;
+    plan_code: string;
+    plan_name: string;
   } | null;
   entitlements?: Array<{ resource_type: string; base_limit: number; addon_limit: number; effective_limit: number }>;
   usage?: Record<string, number> | null;
@@ -114,6 +125,7 @@ async function authenticatedJson<T>(session: Session, url: string, init: Request
 export async function createCommercialOrder(
   session: Session,
   input: {
+    orderType?: 'activation' | 'renewal' | 'addon';
     planCode: string;
     extraEvents?: number;
     extraReferees?: number;
