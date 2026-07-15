@@ -19,6 +19,26 @@
       "destination": "/api/commercial/orders/index"
     },
     {
+      "source": "/api/commercial/orders/current",
+      "destination": "/api/commercial/orders/index?action=current"
+    },
+    {
+      "source": "/api/commercial/orders/manual-review",
+      "destination": "/api/commercial/orders/index?action=manual-review"
+    },
+    {
+      "source": "/api/admin/commercial/manual-reviews",
+      "destination": "/api/admin/commercial-reviews?action=list"
+    },
+    {
+      "source": "/api/admin/commercial/manual-reviews/confirm",
+      "destination": "/api/admin/commercial-reviews?action=confirm"
+    },
+    {
+      "source": "/api/admin/commercial/manual-reviews/reject",
+      "destination": "/api/admin/commercial-reviews?action=reject"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
