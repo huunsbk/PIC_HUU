@@ -769,7 +769,21 @@ function TournamentShell() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setSelectedTab(item.id)}
+                    onClick={() => {
+                      if (item.id === 'workspaces') {
+                        navigate('/admin/workspaces');
+                        return;
+                      }
+                      if (item.id === 'unlock') {
+                        navigate('/unlock');
+                        return;
+                      }
+                      if (item.id === 'subscription') {
+                        navigate('/subscription');
+                        return;
+                      }
+                      setSelectedTab(item.id);
+                    }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold tracking-normal transition-all duration-150 text-left cursor-pointer group ${
                       isActive ? 'bg-blue-600 text-white shadow-md font-extrabold translate-x-1' : 'text-slate-300 hover:bg-[#1e293b]/70 hover:text-white'
                     }`}
