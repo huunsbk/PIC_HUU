@@ -7,6 +7,7 @@ import {
   sendJson,
   setCorsHeaders,
 } from '../admin/_accountService.js';
+import { getPayOSConfig } from './_payos.js';
 
 function hasGoogleIdentity(user) {
   const providers = new Set([
@@ -38,6 +39,12 @@ export default async function handler(req, res) {
 
     if (!hasGoogleIdentity(data.user)) {
       throw apiError('Onboarding self-service chỉ hỗ trợ tài khoản Google.', 403);
+    }
+    if (process.env.SELF_SERVICE_SIGNUP_ENABLED !== 'true') {
+      throw apiError('Đăng ký tự phục vụ chưa được mở.', 503);
+    }
+    if (!getPayOSConfig().available) {
+      throw apiError('Cổng thanh toán tự động chưa sẵn sàng.', 503);
     }
 
     const { data: bootstrap, error: bootstrapError } = await admin.rpc(
