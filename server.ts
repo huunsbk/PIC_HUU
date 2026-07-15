@@ -5,6 +5,9 @@ import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import dotenv from "dotenv";
 import commercialBootstrapHandler from "./api/commercial/bootstrap.js";
+import commercialOrderHandler from "./api/commercial/orders/index.js";
+import commercialCurrentOrderHandler from "./api/commercial/orders/current.js";
+import payOSWebhookHandler from "./api/webhooks/payos.js";
 
 dotenv.config();
 
@@ -15,6 +18,11 @@ async function startServer() {
   app.use(express.json());
   app.options('/api/commercial/bootstrap', (req, res) => commercialBootstrapHandler(req, res));
   app.post('/api/commercial/bootstrap', (req, res) => commercialBootstrapHandler(req, res));
+  app.options('/api/commercial/orders', (req, res) => commercialOrderHandler(req, res));
+  app.post('/api/commercial/orders', (req, res) => commercialOrderHandler(req, res));
+  app.options('/api/commercial/orders/current', (req, res) => commercialCurrentOrderHandler(req, res));
+  app.get('/api/commercial/orders/current', (req, res) => commercialCurrentOrderHandler(req, res));
+  app.post('/api/webhooks/payos', (req, res) => payOSWebhookHandler(req, res));
 
   // API Configuration
   const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "https://ykckqcykxfhpfqptckxk.supabase.co";

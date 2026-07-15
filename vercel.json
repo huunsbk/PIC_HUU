@@ -15,6 +15,10 @@
       "destination": "/api/public/tournament-item?slug=:slug"
     },
     {
+      "source": "/api/commercial/orders",
+      "destination": "/api/commercial/orders/index"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
