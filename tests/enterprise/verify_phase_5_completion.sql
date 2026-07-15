@@ -2,7 +2,13 @@ WITH expected_usage AS (
   SELECT
     t.id AS tenant_id,
     (SELECT count(*) FROM public.accounts a WHERE a.tenant_id = t.id AND a.deleted_at IS NULL) AS users_used,
-    (SELECT count(*) FROM public.events e WHERE e.tenant_id = t.id AND e.deleted_at IS NULL) AS events_used,
+    (
+      SELECT count(*)
+      FROM public.events e
+      WHERE e.tenant_id = t.id
+        AND e.deleted_at IS NULL
+        AND COALESCE(e.status, 'active') <> 'archived'
+    ) AS events_used,
     (SELECT count(*) FROM public.teams tm WHERE tm.tenant_id = t.id AND tm.deleted_at IS NULL) AS teams_used
   FROM public.tenants t
 ), usage_mismatches AS (
