@@ -23,6 +23,7 @@ import TournamentWorkspaceListPage from './components/TournamentWorkspaceListPag
 import TenantManagementPage from './components/TenantManagementPage';
 import DeletedItemsManager from './components/DeletedItemsManager';
 import CommercialUnlockPage from './components/CommercialUnlockPage';
+import CommercialSubscriptionPage from './components/CommercialSubscriptionPage';
 import PaymentReviewManager from './components/PaymentReviewManager';
 import EventSwitcher from './components/event-switcher';
 import { useEventsQuery } from './components/use-events-query';
@@ -386,6 +387,12 @@ function CommercialUnlockEntry() {
   return <TournamentShell />;
 }
 
+function CommercialSubscriptionEntry() {
+  const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
+  React.useEffect(() => setSelectedTab('subscription'), [setSelectedTab]);
+  return <TournamentShell />;
+}
+
 // Wrapper for Public Tournament
 function PublicTournament() {
   const { slug } = useParams();
@@ -546,6 +553,7 @@ export default function App() {
         <Route path="/admin/workspaces" element={<WorkspaceDirectory />} />
         <Route path="/admin/workspace/:slug" element={<AdminWorkspace />} />
         <Route path="/unlock" element={<CommercialUnlockEntry />} />
+        <Route path="/subscription" element={<CommercialSubscriptionEntry />} />
         <Route path="/tournament/:slug" element={<PublicTournament />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -709,6 +717,9 @@ function TournamentShell() {
       { id: 'live', label: 'Trình chiếu', icon: Presentation, permission: 'view_event', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN', 'REFEREE', 'guest'] },
       { id: 'admin', label: 'Quản trị', icon: Wrench, permission: 'manage_accounts', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
     ];
+    if (currentEnterpriseUser?.tenant_type === 'self_service_customer') {
+      allNavItems.splice(1, 0, { id: 'subscription', label: 'Gói dịch vụ', icon: CreditCard, permission: 'view_public', roles: ['EVENT_ADMIN'] });
+    }
     
     if (userRole === 'guest') {
       return allNavItems.filter(item => item.id === 'live');
@@ -719,12 +730,13 @@ function TournamentShell() {
       if (hasPermission('*')) return true;
       return hasPermission(item.permission) || (item.id === 'admin' && hasPermission('manage_referees')) || hasPermission('*');
     });
-  }, [permissions, userRole, hasPermission, commercialLocked]);
+  }, [permissions, userRole, hasPermission, commercialLocked, currentEnterpriseUser?.tenant_type]);
 
   const currentPrimaryTab = TAB_GROUP_ALIASES[selectedTab] || selectedTab;
   const isWorkspaceContextReady =
     currentPrimaryTab === 'workspaces' ||
     currentPrimaryTab === 'unlock' ||
+    currentPrimaryTab === 'subscription' ||
     userRole === 'guest' ||
     authAccessState === 'WORKSPACE_CONTEXT_READY';
 
@@ -860,6 +872,7 @@ function TournamentShell() {
                     {currentPrimaryTab === 'live' && <LiveDashboard />}
                     {currentPrimaryTab === 'admin' && <AdminWorkspacePanel />}
                     {currentPrimaryTab === 'unlock' && <CommercialUnlockPage />}
+                    {currentPrimaryTab === 'subscription' && <CommercialSubscriptionPage />}
                   </>
                 );
               })()}

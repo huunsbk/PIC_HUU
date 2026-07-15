@@ -108,12 +108,13 @@ export async function getPayOSPaymentLink(providerOrderCode, config) {
 }
 
 export async function createPayOSPaymentLink(order, appUrl, config) {
+  const returnPath = order.order_type === 'activation' ? '/unlock' : '/subscription';
   const signatureData = {
     amount: Number(order.total_amount),
-    cancelUrl: `${appUrl}/unlock?payment=cancelled`,
+    cancelUrl: `${appUrl}${returnPath}?payment=cancelled`,
     description: order.transfer_content,
     orderCode: Number(order.provider_order_code),
-    returnUrl: `${appUrl}/unlock?payment=returned`,
+    returnUrl: `${appUrl}${returnPath}?payment=returned`,
   };
   const payload = {
     ...signatureData,

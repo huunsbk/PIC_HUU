@@ -37,7 +37,7 @@ async function getCurrentOrder(admin, user) {
 
   const { data: order, error: orderError } = await admin
     .from('payment_orders')
-    .select('id, order_code, provider_order_code, order_type, status, total_amount, currency, transfer_content, provider_checkout_url, provider_qr_code, manual_review_available_at, manual_review_requested_at, expires_at, paid_at, created_at')
+    .select('id, order_code, provider_order_code, order_type, status, base_amount, addon_amount, total_amount, currency, transfer_content, provider_checkout_url, provider_qr_code, manual_review_available_at, manual_review_requested_at, expires_at, paid_at, created_at')
     .eq('account_id', account.id)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -95,18 +95,23 @@ export default async function handler(req, res) {
       return sendJson(res, 405, { error: 'Method not allowed' });
     }
 
+    const orderType = String(req.body?.orderType || 'activation').trim().toLowerCase();
     const planCode = String(req.body?.planCode || '').trim().toUpperCase();
     const extraEvents = Number(req.body?.extraEvents || 0);
     const extraReferees = Number(req.body?.extraReferees || 0);
     const clientRequestId = String(req.body?.clientRequestId || crypto.randomUUID()).trim();
-    if (!/^SELF_(3D|7D|30D|60D)$/.test(planCode)) throw apiError('Gói mở khóa không hợp lệ.', 400);
+    if (!['activation', 'renewal', 'addon'].includes(orderType)) throw apiError('Loại đơn không hợp lệ.', 400);
+    if (orderType !== 'addon' && !/^SELF_(3D|7D|30D|60D)$/.test(planCode)) {
+      throw apiError('Gói mở khóa không hợp lệ.', 400);
+    }
     if (!Number.isInteger(extraEvents) || !Number.isInteger(extraReferees)) {
       throw apiError('Số lượng mua thêm phải là số nguyên.', 400);
     }
 
-    const { data: created, error: createError } = await admin.rpc('create_payment_order_v1', {
+    const { data: created, error: createError } = await admin.rpc('create_payment_order_v2', {
       p_auth_user_id: user.id,
-      p_plan_code: planCode,
+      p_order_type: orderType,
+      p_plan_code: orderType === 'addon' ? null : planCode,
       p_extra_event_quantity: extraEvents,
       p_extra_referee_quantity: extraReferees,
       p_client_request_id: clientRequestId,
@@ -114,6 +119,9 @@ export default async function handler(req, res) {
     if (createError) {
       const code = String(createError.message || '');
       if (/SUBSCRIPTION_ALREADY_ACTIVE/.test(code)) throw apiError('Gói hiện tại vẫn còn hiệu lực.', 409);
+      if (/SUBSCRIPTION_NOT_ACTIVE/.test(code)) throw apiError('Không có kỳ sử dụng đang hoạt động.', 409);
+      if (/RENEWAL_ALREADY_SCHEDULED/.test(code)) throw apiError('Đã có một kỳ gia hạn đang chờ hiệu lực.', 409);
+      if (/ADDON_QUANTITY_REQUIRED/.test(code)) throw apiError('Hãy chọn ít nhất một quota mua thêm.', 400);
       if (/SELF_SERVICE_ACCOUNT_REQUIRED/.test(code)) throw apiError('Tài khoản không thuộc luồng tự phục vụ.', 403);
       throw apiError('Không thể tạo đơn thanh toán lúc này.', 500);
     }
