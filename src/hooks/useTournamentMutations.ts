@@ -41,10 +41,40 @@ export function useCreateTournamentWorkspace() {
       return data;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant_tournament_summary_v1'] });
       queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
       queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
       queryClient.invalidateQueries({ queryKey: ['commercial_access_state'] });
     }
+  });
+}
+
+export function useEnsureSelfServiceWorkspace() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (tenantId: string) => {
+      if (!tenantId || tenantId === 'default') {
+        throw new Error('Không xác định được đơn vị cần khởi tạo giải.');
+      }
+
+      const { data, error } = await supabase.rpc('admin_ensure_self_service_workspace_v1', {
+        p_tenant_id: tenantId,
+      });
+
+      if (error) throw normalizeRpcError(error);
+      if (data?.success === false) {
+        throw new Error(data.error || 'Không thể khởi tạo giải mặc định.');
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant_tournament_summary_v1'] });
+      queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
+      queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
+      queryClient.invalidateQueries({ queryKey: ['commercial_access_state'] });
+    },
   });
 }
 
