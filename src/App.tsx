@@ -740,6 +740,22 @@ function TournamentShell() {
     }
   };
 
+  const openOperationalTab = async (tabId: string) => {
+    const isWorkspaceDetailRoute = /\/admin\/workspace\/[^/]+/.test(location.pathname);
+    if (currentEnterpriseUser?.tenant_type !== 'self_service_customer' || isWorkspaceDetailRoute) {
+      setSelectedTab(tabId);
+      return;
+    }
+
+    try {
+      const result = await ensureMySelfServiceWorkspace();
+      setSelectedTab(tabId);
+      navigate(`/admin/workspace/${encodeURIComponent(result.workspace.slug)}`);
+    } catch (error) {
+      console.error('Không thể quay lại giải self-service đã được cấp.', error);
+    }
+  };
+
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -869,7 +885,7 @@ function TournamentShell() {
                         navigate('/subscription');
                         return;
                       }
-                      setSelectedTab(item.id);
+                      void openOperationalTab(item.id);
                     }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold tracking-normal transition-all duration-150 text-left cursor-pointer group ${
                       isActive ? 'bg-blue-600 text-white shadow-md font-extrabold translate-x-1' : 'text-slate-300 hover:bg-[#1e293b]/70 hover:text-white'

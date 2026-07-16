@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import {
+  ArrowLeft,
   CalendarClock,
   Check,
   Clock3,
@@ -18,6 +19,7 @@ import { supabase } from '../supabaseClient';
 import { useTournamentStore } from '../store';
 import {
   createCommercialOrder,
+  ensureMySelfServiceWorkspace,
   getCommercialAccessState,
   getCurrentCommercialOrder,
   listSelfServicePlans,
@@ -64,6 +66,7 @@ function entitlementLimit(access: CommercialAccessState, resource: string) {
 export default function CommercialSubscriptionPage() {
   const navigate = useNavigate();
   const setCommercialAccessState = useTournamentStore((state) => state.setCommercialAccessState);
+  const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
   const [access, setAccess] = React.useState<CommercialAccessState | null>(null);
   const [plans, setPlans] = React.useState<SelfServicePlan[]>([]);
   const [mode, setMode] = React.useState<'renewal' | 'addon'>('renewal');
@@ -74,6 +77,7 @@ export default function CommercialSubscriptionPage() {
   const [providerAvailable, setProviderAvailable] = React.useState<boolean | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isOpeningWorkspace, setIsOpeningWorkspace] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [message, setMessage] = React.useState<string | null>(null);
   const [now, setNow] = React.useState(() => Date.now());
@@ -190,14 +194,41 @@ export default function CommercialSubscriptionPage() {
     } finally { setIsSubmitting(false); }
   };
 
+  const openEventContent = async () => {
+    setIsOpeningWorkspace(true);
+    setError(null);
+    try {
+      const result = await ensureMySelfServiceWorkspace();
+      setSelectedTab('content');
+      navigate(`/admin/workspace/${encodeURIComponent(result.workspace.slug)}`);
+    } catch (workspaceError) {
+      setError(workspaceError instanceof Error
+        ? workspaceError.message
+        : 'Không thể mở nội dung thi đấu của giải.');
+    } finally {
+      setIsOpeningWorkspace(false);
+    }
+  };
+
   if (isLoading || !access) return <div className="grid min-h-[50vh] place-items-center"><LoaderCircle className="animate-spin text-blue-600" size={32} /></div>;
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
-      <div className="border-b border-zinc-200 pb-5 dark:border-zinc-800">
-        <div className="mb-2 flex items-center gap-2 text-blue-700 dark:text-blue-300"><CalendarClock size={20} /><span className="text-xs font-black uppercase tracking-[0.16em]">Gói dịch vụ</span></div>
-        <h1 className="text-2xl font-black">Quản lý thời hạn và quota</h1>
-        <p className="mt-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">Gia hạn không làm mất ngày còn lại. Quota mua thêm chỉ thuộc kỳ hiện tại.</p>
+      <div className="flex flex-col gap-4 border-b border-zinc-200 pb-5 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-blue-700 dark:text-blue-300"><CalendarClock size={20} /><span className="text-xs font-black uppercase tracking-[0.16em]">Gói dịch vụ</span></div>
+          <h1 className="text-2xl font-black">Quản lý thời hạn và quota</h1>
+          <p className="mt-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">Gia hạn không làm mất ngày còn lại. Quota mua thêm chỉ thuộc kỳ hiện tại.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void openEventContent()}
+          disabled={isOpeningWorkspace}
+          className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 text-sm font-black text-blue-800 transition-colors hover:bg-blue-100 disabled:cursor-wait disabled:opacity-60 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200"
+        >
+          {isOpeningWorkspace ? <LoaderCircle size={16} className="animate-spin" /> : <ArrowLeft size={16} />}
+          Về nội dung thi đấu
+        </button>
       </div>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-800">{error}</div>}
