@@ -27,6 +27,10 @@
       "destination": "/api/commercial/orders/index?action=manual-review"
     },
     {
+      "source": "/api/commercial/readiness",
+      "destination": "/api/commercial/bootstrap?action=readiness"
+    },
+    {
       "source": "/api/admin/commercial/manual-reviews",
       "destination": "/api/admin/commercial-reviews?action=list"
     },
