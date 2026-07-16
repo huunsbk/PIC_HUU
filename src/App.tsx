@@ -356,6 +356,15 @@ function AdminWorkspace() {
       } else {
         setAuthAccessState('WORKSPACE_CONTEXT_READY');
       }
+
+      const currentTab = useTournamentStore.getState().selectedTab;
+      if (['workspaces', 'unlock', 'subscription'].includes(currentTab)) {
+        setSelectedTab(
+          currentEnterpriseUser?.tenant_type === 'self_service_customer'
+            ? 'content'
+            : 'dashboard',
+        );
+      }
     };
 
     loadWorkspace();
