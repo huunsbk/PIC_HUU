@@ -27,7 +27,7 @@ import CommercialSubscriptionPage from './components/CommercialSubscriptionPage'
 import PaymentReviewManager from './components/PaymentReviewManager';
 import EventSwitcher from './components/event-switcher';
 import { useEventsQuery } from './components/use-events-query';
-import { getAuthHashErrorMessage } from './lib/authRedirect';
+import { getAuthHashErrorMessage, isSupabaseAuthCallbackHash } from './lib/authRedirect';
 import { resolveWorkspaceAccess } from './lib/auth/workspaceAccessService';
 import { getCommercialAccessState } from './lib/api/commercial';
 
@@ -466,12 +466,13 @@ function PublicTournament() {
 // Basic Wrapper for Enterprise / Login Page
 function RootEntry() {
   const initSupabase = useTournamentStore(state => state.initSupabase);
-  const setTenantId = useTournamentStore(state => state.setTenantId);
+  const currentEnterpriseUser = useTournamentStore(state => state.currentEnterpriseUser);
   const navigate = useNavigate();
+  const [authInitialized, setAuthInitialized] = React.useState(false);
   
   useEffect(() => {
       const legacyHash = window.location.hash.replace(/^#\/?/, '').trim();
-      if (legacyHash) {
+      if (legacyHash && !isSupabaseAuthCallbackHash()) {
         supabase
           .from('tournament')
           .select('id, slug')
@@ -500,19 +501,32 @@ function RootEntry() {
           });
         return;
       }
-      setTenantId('default').then(async () => {
-         await initSupabase();
-         const currentUser = useTournamentStore.getState().currentEnterpriseUser;
-         if (currentUser) {
-           navigate(
-             currentUser.tenant_type === 'self_service_customer' && currentUser.business_access_active === false
-               ? '/unlock'
-               : '/admin/workspaces',
-             { replace: true },
-           );
-         }
+
+      let cancelled = false;
+      initSupabase().finally(() => {
+        if (!cancelled) setAuthInitialized(true);
       });
-  }, [setTenantId, initSupabase, navigate]);
+      return () => {
+        cancelled = true;
+      };
+  }, [initSupabase, navigate]);
+
+  useEffect(() => {
+    if (!authInitialized || !currentEnterpriseUser) return;
+    navigate(
+      currentEnterpriseUser.tenant_type === 'self_service_customer'
+        && currentEnterpriseUser.business_access_active === false
+        ? '/unlock'
+        : '/admin/workspaces',
+      { replace: true },
+    );
+  }, [
+    authInitialized,
+    currentEnterpriseUser?.id,
+    currentEnterpriseUser?.tenant_type,
+    currentEnterpriseUser?.business_access_active,
+    navigate,
+  ]);
 
   return <TournamentShell />;
 }
