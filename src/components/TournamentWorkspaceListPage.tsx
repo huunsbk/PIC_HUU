@@ -80,6 +80,10 @@ function toTenantChoice(tenant: TenantTournamentSummary): TournamentTenantChoice
   };
 }
 
+function formatCustomerCode(slug: string) {
+  return slug ? slug.toUpperCase() : 'Chưa có mã';
+}
+
 export default function TournamentWorkspaceListPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createTargetTenant, setCreateTargetTenant] = useState<TournamentTenantChoice | null>(null);
@@ -164,7 +168,8 @@ export default function TournamentWorkspaceListPage() {
       const matchesTenant = tenantFilter === 'all' || tenant.tenant_name === tenantFilter;
       const matchesSearch = !normalizedQuery
         || tenant.tenant_name.toLowerCase().includes(normalizedQuery)
-        || tenant.tenant_slug.toLowerCase().includes(normalizedQuery);
+        || tenant.tenant_slug.toLowerCase().includes(normalizedQuery)
+        || tenant.registration_email?.toLowerCase().includes(normalizedQuery);
       return matchesTenant && matchesSearch;
     }),
     [normalizedQuery, tenantFilter, zeroTournamentTenants],
@@ -339,14 +344,31 @@ export default function TournamentWorkspaceListPage() {
                 const isEnsuring = ensureSelfServiceWorkspace.isPending
                   && ensureSelfServiceWorkspace.variables === tenant.tenant_id;
                 return (
-                  <div key={tenant.tenant_id} className="grid gap-4 p-4 md:grid-cols-[minmax(220px,1.1fr)_minmax(180px,0.8fr)_minmax(260px,1.4fr)_auto] md:items-center">
+                  <div key={tenant.tenant_id} className="grid gap-4 p-4 md:grid-cols-[minmax(280px,1.25fr)_minmax(160px,0.7fr)_minmax(260px,1.3fr)_auto] md:items-center">
                     <div className="flex min-w-0 items-center gap-3">
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                         <Building2 size={20} />
                       </span>
                       <div className="min-w-0">
                         <p className="truncate font-black text-zinc-950 dark:text-white">{tenant.tenant_name}</p>
-                        <p className="truncate text-xs font-semibold text-zinc-500">{tenant.tenant_slug}</p>
+                        {tenant.tenant_type === 'self_service_customer' ? (
+                          <div className="mt-1 space-y-0.5 text-xs text-zinc-500">
+                            <p>
+                              <span className="font-bold">Mã khách hàng:</span>{' '}
+                              <span className="font-mono font-semibold">{formatCustomerCode(tenant.tenant_slug)}</span>
+                            </p>
+                            <p className="break-all" title={tenant.registration_email || undefined}>
+                              <span className="font-bold">Email đăng ký:</span>{' '}
+                              <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                                {tenant.registration_email || 'Chưa có email đăng ký'}
+                              </span>
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="truncate text-xs font-semibold text-zinc-500">
+                            Mã đơn vị: {tenant.tenant_slug}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div>
@@ -441,12 +463,32 @@ export default function TournamentWorkspaceListPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            {groupedTournaments.map(([tenantName, tenantTournaments]) => (
+            {groupedTournaments.map(([tenantName, tenantTournaments]) => {
+              const tenantSummary = tenantSummaries.find((tenant) => (
+                tenant.tenant_id === tenantTournaments[0]?.tenant_id
+              ));
+              return (
               <section key={tenantName} className="space-y-4">
                 <div className="flex items-center justify-between gap-4 border-b border-zinc-200 pb-3 dark:border-zinc-800">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Đơn vị</p>
                     <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100">{tenantName}</h2>
+                    {tenantSummary?.tenant_type === 'self_service_customer' ? (
+                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-zinc-500">
+                        <span>
+                          Mã khách hàng:{' '}
+                          <span className="font-mono text-zinc-700 dark:text-zinc-300">
+                            {formatCustomerCode(tenantSummary.tenant_slug)}
+                          </span>
+                        </span>
+                        <span className="break-all">
+                          Email đăng ký:{' '}
+                          <span className="text-zinc-700 dark:text-zinc-300">
+                            {tenantSummary.registration_email || 'Chưa có email đăng ký'}
+                          </span>
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
                   <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                     {tenantTournaments.length} giải đấu
@@ -459,7 +501,8 @@ export default function TournamentWorkspaceListPage() {
                   ))}
                 </div>
               </section>
-            ))}
+              );
+            })}
 
             {hasNextPage ? (
               <div className="flex justify-center pb-4 pt-8">
