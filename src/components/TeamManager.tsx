@@ -368,14 +368,14 @@ export default function TeamManager() {
               </div>
             ) : (
               <div className="overflow-x-auto rounded-lg border border-zinc-100 dark:border-zinc-805">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full min-w-[820px] table-fixed text-left border-collapse">
                   <thead>
                     <tr className="bg-zinc-55/70 dark:bg-zinc-850/60 border-b border-zinc-200 dark:border-zinc-800">
-                      <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">STT</th>
-                      <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Tên Đội Đấu</th>
-                      <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Hạt Giống</th>
-                      <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Vòng Bảng</th>
-                      {canManage && <th className="py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">Thao Tác</th>}
+                      <th className="w-16 py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">STT</th>
+                      <th className="w-[42%] min-w-[300px] py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Tên Đội Đấu</th>
+                      <th className="w-36 py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Hạt Giống</th>
+                      <th className="w-40 py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Vòng Bảng</th>
+                      {canManage && <th className="w-32 py-2 px-4 text-[10px] font-extrabold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">Thao Tác</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-850">
@@ -386,16 +386,18 @@ export default function TeamManager() {
                           key={team.id}
                           className="hover:bg-zinc-50/50 dark:hover:bg-zinc-850/10 transition-all font-semibold"
                         >
-                          <td className="py-2 px-4 text-xs text-zinc-450 dark:text-zinc-500 font-bold">{index + 1}</td>
+                          <td className="w-16 py-2 px-4 text-xs text-zinc-450 dark:text-zinc-500 font-bold">{index + 1}</td>
                           
                           {/* Tên Đội */}
-                          <td className="py-2 px-4">
+                          <td className="w-[42%] min-w-[300px] py-2 px-4">
                             {isEditing ? (
                               <input
                                 type="text"
                                 value={editName}
                                 onChange={(e) => setEditName(e.target.value)}
-                                className="px-2.5 py-1 border border-blue-500 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 rounded-md text-xs w-full font-bold focus:outline-none"
+                                className="block h-9 w-full min-w-0 rounded-md border border-blue-500 bg-white px-3 py-1.5 text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:ring-blue-900"
+                                aria-label="Tên đội thi đấu"
+                                title={editName}
                                 required
                               />
                             ) : (
@@ -404,12 +406,12 @@ export default function TeamManager() {
                           </td>
 
                           {/* Nhãn Hạt Giống */}
-                          <td className="py-2 px-4">
+                          <td className="w-36 py-2 px-4">
                             {isEditing ? (
                               <select
                                 value={editSeed}
                                 onChange={(e) => setEditSeed(e.target.value as SeedType)}
-                                className="px-1.5 py-1 border border-zinc-350 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 rounded-md text-[11px] font-bold"
+                                className="h-9 w-full rounded-md border border-zinc-350 bg-white px-2 py-1 text-[11px] font-bold text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                               >
                                 <option value="none">Không</option>
                                 <option value="1">Hạt giống 1</option>
@@ -429,7 +431,7 @@ export default function TeamManager() {
                           </td>
 
                           {/* Trạng Thái Chia Bảng */}
-                          <td className="py-2 px-4">
+                          <td className="w-40 py-2 px-4">
                             {team.groupId ? (
                               <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-blue-50 dark:bg-blue-955/40 text-blue-700 dark:text-blue-300 border border-blue-200/50">
                                 Đã xếp {groups[team.groupId]?.name || `Bảng ${team.groupId.replace('group-', '').split('-')[0].toUpperCase()}`}
@@ -443,7 +445,7 @@ export default function TeamManager() {
 
                           {/* Thao Tác */}
                           {canManage && (
-                            <td className="py-2 px-4 text-right">
+                            <td className="w-32 whitespace-nowrap py-2 px-4 text-right">
                               {isEditing ? (
                                 <div className="flex items-center justify-end gap-1.5">
                                   <button
