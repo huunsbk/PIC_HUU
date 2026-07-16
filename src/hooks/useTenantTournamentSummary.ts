@@ -8,6 +8,7 @@ export interface TenantTournamentSummary {
   tenant_status: string;
   tenant_type: 'managed_enterprise' | 'self_service_customer';
   onboarding_status: 'pending_subscription' | 'ready' | 'suspended' | null;
+  registration_email: string | null;
   business_access_active: boolean;
   subscription_status: string | null;
   subscription_end_date: string | null;
@@ -36,6 +37,7 @@ export function useTenantTournamentSummary(enabled: boolean) {
           || row.onboarding_status === 'pending_subscription'
           ? row.onboarding_status
           : null,
+        registration_email: row.registration_email ? String(row.registration_email) : null,
         business_access_active: row.business_access_active === true,
         subscription_status: row.subscription_status ? String(row.subscription_status) : null,
         subscription_end_date: row.subscription_end_date ? String(row.subscription_end_date) : null,
