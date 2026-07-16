@@ -100,6 +100,7 @@ const ERROR_TRANSLATIONS: Array<[RegExp, string]> = [
   [/UNAUTHENTICATED/i, 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.'],
   [/PERMISSION_DENIED|permission denied|not allowed/i, 'Bạn không có đủ quyền để thực hiện thao tác này.'],
   [/QUOTA_EXCEEDED:accounts/i, 'Đơn vị đã đạt giới hạn tài khoản của gói đang sử dụng.'],
+  [/QUOTA_EXCEEDED:tournaments/i, 'Gói hiện tại chỉ cho phép số lượng giải đấu đang hoạt động như đã đăng ký. Hãy lưu trữ giải cũ trước khi tạo giải mới.'],
   [/QUOTA_EXCEEDED:events/i, 'Đơn vị đã đạt giới hạn nội dung thi đấu của gói đang sử dụng.'],
   [/QUOTA_EXCEEDED:teams/i, 'Đơn vị đã đạt giới hạn đội thi đấu của gói đang sử dụng.'],
   [/SUBSCRIPTION_INACTIVE|SUBSCRIPTION_PLAN_INACTIVE/i, 'Gói dịch vụ của đơn vị đã hết hạn hoặc không còn hoạt động.'],

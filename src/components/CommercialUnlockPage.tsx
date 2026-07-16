@@ -19,6 +19,7 @@ import { useTournamentStore } from '../store';
 import bankQrImage from '../assets/bidv-nguyen-van-huu-qr.jpg';
 import {
   createCommercialOrder,
+  ensureMySelfServiceWorkspace,
   getCommercialAccessState,
   getCurrentCommercialOrder,
   listSelfServicePlans,
@@ -74,6 +75,7 @@ export default function CommercialUnlockPage() {
   const navigate = useNavigate();
   const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
   const setCommercialAccessState = useTournamentStore((state) => state.setCommercialAccessState);
+  const initSupabase = useTournamentStore((state) => state.initSupabase);
   const [plans, setPlans] = React.useState<SelfServicePlan[]>([]);
   const [selectedPlanCode, setSelectedPlanCode] = React.useState<string>('SELF_7D');
   const [extraEvents, setExtraEvents] = React.useState(0);
@@ -95,18 +97,25 @@ export default function CommercialUnlockPage() {
     || (order.manual_review_available_at && now >= new Date(order.manual_review_available_at).getTime())
   ));
 
-  const moveToWorkspace = React.useCallback(() => {
-    setCommercialAccessState(true, 'ready');
-    navigate('/admin/workspaces', { replace: true });
-    window.location.reload();
-  }, [navigate, setCommercialAccessState]);
+  const moveToWorkspace = React.useCallback(async () => {
+    try {
+      setCommercialAccessState(true, 'ready');
+      await initSupabase();
+      const result = await ensureMySelfServiceWorkspace();
+      navigate(`/admin/workspace/${encodeURIComponent(result.workspace.slug)}`, { replace: true });
+    } catch (workspaceError) {
+      setError(workspaceError instanceof Error
+        ? workspaceError.message
+        : 'Không thể chuẩn bị giải đấu sau khi mở khóa.');
+    }
+  }, [initSupabase, navigate, setCommercialAccessState]);
 
   const refreshOrder = React.useCallback(async () => {
     const { data } = await supabase.auth.getSession();
     if (!data.session) return;
     const result = await getCurrentCommercialOrder(data.session);
     setOrder(result.order);
-    if (result.order?.status === 'paid') moveToWorkspace();
+    if (result.order?.status === 'paid') await moveToWorkspace();
   }, [moveToWorkspace]);
 
   React.useEffect(() => {
@@ -130,7 +139,7 @@ export default function CommercialUnlockPage() {
           access.tenant,
         );
         if (access.commercial_state === 'not_applicable' || access.business_access_active) {
-          moveToWorkspace();
+          await moveToWorkspace();
           return;
         }
         setPlans(planRows);
@@ -317,7 +326,7 @@ export default function CommercialUnlockPage() {
         <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-6 text-center dark:border-emerald-900 dark:bg-emerald-950/40">
           <CheckCircle2 className="mx-auto text-emerald-600" size={38} />
           <h2 className="mt-3 text-xl font-black">Thanh toán đã xác minh</h2>
-          <p className="mt-1 text-sm font-semibold text-emerald-800 dark:text-emerald-200">Đang tải quyền vận hành và chuyển đến danh sách giải.</p>
+          <p className="mt-1 text-sm font-semibold text-emerald-800 dark:text-emerald-200">Đang tải quyền vận hành và mở giải đấu của bạn.</p>
         </div>
       )}
     </div>

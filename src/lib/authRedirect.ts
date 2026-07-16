@@ -6,6 +6,18 @@ export const getAppAuthRedirectUrl = () => {
   return `${origin}${normalizedBasePath}`;
 };
 
+export const isSupabaseAuthCallbackHash = () => {
+  const rawHash = window.location.hash.replace(/^#/, '').trim();
+  if (!rawHash || rawHash.startsWith('/')) return false;
+
+  const params = new URLSearchParams(rawHash);
+  return params.has('access_token')
+    || params.has('refresh_token')
+    || params.has('expires_at')
+    || params.has('error')
+    || params.has('error_code');
+};
+
 export const getAuthHashErrorMessage = () => {
   const rawHash = window.location.hash.replace(/^#/, '');
   if (!rawHash || rawHash.startsWith('/')) return null;

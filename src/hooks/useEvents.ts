@@ -20,6 +20,12 @@ export function isPublicViewerRoute() {
   return pathname.includes('/tournament/') || pathname.includes('/admin/workspace/');
 }
 
+export function isTournamentDataRoute() {
+  if (typeof window === 'undefined') return false;
+  const pathname = window.location.pathname;
+  return pathname.includes('/tournament/') || pathname.includes('/admin/workspace/');
+}
+
 export function useEvents() {
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const activeTournamentId = useTournamentStore((state) => state.activeTournamentId);
@@ -28,6 +34,7 @@ export function useEvents() {
   const setCurrentEvent = useTournamentStore((state) => state.setCurrentEvent);
   const userRole = useTournamentStore((state) => state.userRole);
   const shouldUsePublicSnapshot = userRole === 'guest' && isPublicViewerRoute();
+  const shouldLoadTournamentData = isTournamentDataRoute();
 
   const query = useQuery({
     queryKey: ['events', activeTournamentId || tournamentId],
@@ -39,7 +46,8 @@ export function useEvents() {
 
       return tournamentRpc.listEventsByTournament(scopedTournamentId);
     },
-    enabled: !shouldUsePublicSnapshot && !!activeTenantId && activeTenantId !== 'default' && !!(activeTournamentId || tournamentId),
+    enabled: shouldLoadTournamentData && !shouldUsePublicSnapshot && !!activeTenantId
+      && activeTenantId !== 'default' && !!(activeTournamentId || tournamentId),
   });
 
   useEffect(() => {

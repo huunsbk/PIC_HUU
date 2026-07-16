@@ -10,6 +10,7 @@ import {
   X, 
   ShieldCheck, 
   AlertCircle, 
+  ArrowRight,
   Zap, 
 } from 'lucide-react';
 
@@ -203,10 +204,26 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               type="button"
               onClick={handleGoogleLogin}
               disabled={isGoogleLoading}
-              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-zinc-250 bg-white px-3 py-2.5 text-xs font-black text-zinc-800 shadow-sm transition-colors hover:bg-zinc-50 disabled:cursor-wait disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
+              className="group relative flex min-h-14 w-full cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-[#1557b0] bg-[#1a73e8] px-3 py-2.5 text-left text-white shadow-lg shadow-blue-600/20 transition-all hover:-translate-y-0.5 hover:bg-[#1765cc] hover:shadow-xl hover:shadow-blue-600/25 disabled:cursor-wait disabled:opacity-60 disabled:hover:translate-y-0"
             >
-              <Chrome size={15} className="text-blue-600" />
-              {isGoogleLoading ? 'Đang chuyển tới Google...' : 'Tiếp tục bằng Google'}
+              <span className="absolute inset-x-0 top-0 grid h-1 grid-cols-4" aria-hidden="true">
+                <span className="bg-[#4285f4]" />
+                <span className="bg-[#ea4335]" />
+                <span className="bg-[#fbbc05]" />
+                <span className="bg-[#34a853]" />
+              </span>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white shadow-sm">
+                <Chrome size={19} className="text-[#1a73e8]" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-black leading-tight">
+                  {isGoogleLoading ? 'Đang kết nối Google...' : 'Đăng nhập bằng Google'}
+                </span>
+                <span className="mt-0.5 block text-[10px] font-semibold text-blue-100">
+                  Tạo tài khoản và mở giải ngay
+                </span>
+              </span>
+              <ArrowRight size={17} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
             </button>
             <div className="flex items-center gap-3 text-[10px] font-bold uppercase text-zinc-400">
               <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />

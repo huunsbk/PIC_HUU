@@ -27,9 +27,9 @@ import CommercialSubscriptionPage from './components/CommercialSubscriptionPage'
 import PaymentReviewManager from './components/PaymentReviewManager';
 import EventSwitcher from './components/event-switcher';
 import { useEventsQuery } from './components/use-events-query';
-import { getAuthHashErrorMessage } from './lib/authRedirect';
+import { getAuthHashErrorMessage, isSupabaseAuthCallbackHash } from './lib/authRedirect';
 import { resolveWorkspaceAccess } from './lib/auth/workspaceAccessService';
-import { getCommercialAccessState } from './lib/api/commercial';
+import { ensureMySelfServiceWorkspace, getCommercialAccessState } from './lib/api/commercial';
 
 import {
   Trophy,
@@ -356,6 +356,15 @@ function AdminWorkspace() {
       } else {
         setAuthAccessState('WORKSPACE_CONTEXT_READY');
       }
+
+      const currentTab = useTournamentStore.getState().selectedTab;
+      if (['workspaces', 'unlock', 'subscription'].includes(currentTab)) {
+        setSelectedTab(
+          currentEnterpriseUser?.tenant_type === 'self_service_customer'
+            ? 'content'
+            : 'dashboard',
+        );
+      }
     };
 
     loadWorkspace();
@@ -368,11 +377,47 @@ function AdminWorkspace() {
 }
 
 function WorkspaceDirectory() {
+  const navigate = useNavigate();
   const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
+  const setWorkspaceContext = useTournamentStore((state) => state.setWorkspaceContext);
+  const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
 
   useEffect(() => {
+    let cancelled = false;
     setSelectedTab('workspaces');
-  }, [setSelectedTab]);
+    if (!currentEnterpriseUser?.tenant_id) return;
+
+    void setWorkspaceContext({
+      tenantId: currentEnterpriseUser.tenant_id,
+      tenantName: currentEnterpriseUser.tenant?.name || null,
+      tournamentId: null,
+    });
+
+    if (currentEnterpriseUser.tenant_type === 'self_service_customer'
+        && currentEnterpriseUser.business_access_active !== false) {
+      void ensureMySelfServiceWorkspace()
+        .then((result) => {
+          if (!cancelled) {
+            navigate(`/admin/workspace/${encodeURIComponent(result.workspace.slug)}`, { replace: true });
+          }
+        })
+        .catch((error) => {
+          console.error('Không thể mở giải self-service đã được cấp.', error);
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    currentEnterpriseUser?.tenant_id,
+    currentEnterpriseUser?.tenant?.name,
+    currentEnterpriseUser?.tenant_type,
+    currentEnterpriseUser?.business_access_active,
+    navigate,
+    setSelectedTab,
+    setWorkspaceContext,
+  ]);
 
   return <TournamentShell />;
 }
@@ -466,12 +511,13 @@ function PublicTournament() {
 // Basic Wrapper for Enterprise / Login Page
 function RootEntry() {
   const initSupabase = useTournamentStore(state => state.initSupabase);
-  const setTenantId = useTournamentStore(state => state.setTenantId);
+  const currentEnterpriseUser = useTournamentStore(state => state.currentEnterpriseUser);
   const navigate = useNavigate();
+  const [authInitialized, setAuthInitialized] = React.useState(false);
   
   useEffect(() => {
       const legacyHash = window.location.hash.replace(/^#\/?/, '').trim();
-      if (legacyHash) {
+      if (legacyHash && !isSupabaseAuthCallbackHash()) {
         supabase
           .from('tournament')
           .select('id, slug')
@@ -500,19 +546,52 @@ function RootEntry() {
           });
         return;
       }
-      setTenantId('default').then(async () => {
-         await initSupabase();
-         const currentUser = useTournamentStore.getState().currentEnterpriseUser;
-         if (currentUser) {
-           navigate(
-             currentUser.tenant_type === 'self_service_customer' && currentUser.business_access_active === false
-               ? '/unlock'
-               : '/admin/workspaces',
-             { replace: true },
-           );
-         }
+
+      let cancelled = false;
+      initSupabase().finally(() => {
+        if (!cancelled) setAuthInitialized(true);
       });
-  }, [setTenantId, initSupabase, navigate]);
+      return () => {
+        cancelled = true;
+      };
+  }, [initSupabase, navigate]);
+
+  useEffect(() => {
+    if (!authInitialized || !currentEnterpriseUser) return;
+    let cancelled = false;
+
+    const routeAuthenticatedUser = async () => {
+      if (currentEnterpriseUser.tenant_type !== 'self_service_customer') {
+        navigate('/admin/workspaces', { replace: true });
+        return;
+      }
+      if (currentEnterpriseUser.business_access_active === false) {
+        navigate('/unlock', { replace: true });
+        return;
+      }
+
+      try {
+        const result = await ensureMySelfServiceWorkspace();
+        if (!cancelled) {
+          navigate(`/admin/workspace/${encodeURIComponent(result.workspace.slug)}`, { replace: true });
+        }
+      } catch (error) {
+        console.error('Không thể chuẩn bị giải self-service sau đăng nhập.', error);
+        if (!cancelled) navigate('/admin/workspaces', { replace: true });
+      }
+    };
+
+    void routeAuthenticatedUser();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    authInitialized,
+    currentEnterpriseUser?.id,
+    currentEnterpriseUser?.tenant_type,
+    currentEnterpriseUser?.business_access_active,
+    navigate,
+  ]);
 
   return <TournamentShell />;
 }
@@ -661,6 +740,22 @@ function TournamentShell() {
     }
   };
 
+  const openOperationalTab = async (tabId: string) => {
+    const isWorkspaceDetailRoute = /\/admin\/workspace\/[^/]+/.test(location.pathname);
+    if (currentEnterpriseUser?.tenant_type !== 'self_service_customer' || isWorkspaceDetailRoute) {
+      setSelectedTab(tabId);
+      return;
+    }
+
+    try {
+      const result = await ensureMySelfServiceWorkspace();
+      setSelectedTab(tabId);
+      navigate(`/admin/workspace/${encodeURIComponent(result.workspace.slug)}`);
+    } catch (error) {
+      console.error('Không thể quay lại giải self-service đã được cấp.', error);
+    }
+  };
+
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -681,9 +776,15 @@ function TournamentShell() {
     const checkAccess = async () => {
       try {
         const state = await getCommercialAccessState();
-        if (!cancelled && !state.business_access_active) {
-          setCommercialAccessState(false, state.account?.onboarding_status);
-          navigate('/unlock', { replace: true });
+        if (!cancelled) {
+          setCommercialAccessState(
+            state.business_access_active,
+            state.account?.onboarding_status,
+            state.tenant,
+          );
+          if (!state.business_access_active) {
+            navigate('/unlock', { replace: true });
+          }
         }
       } catch {
         // Keep the current screen during transient network failures; backend still enforces every mutation.
@@ -714,6 +815,8 @@ function TournamentShell() {
       { id: 'admin', label: 'Quản trị', icon: Wrench, permission: 'manage_accounts', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
     ];
     if (currentEnterpriseUser?.tenant_type === 'self_service_customer') {
+      const workspaceIndex = allNavItems.findIndex((item) => item.id === 'workspaces');
+      if (workspaceIndex >= 0) allNavItems.splice(workspaceIndex, 1);
       allNavItems.splice(1, 0, { id: 'subscription', label: 'Gói dịch vụ', icon: CreditCard, permission: 'view_public', roles: ['EVENT_ADMIN'] });
     }
     
@@ -782,7 +885,7 @@ function TournamentShell() {
                         navigate('/subscription');
                         return;
                       }
-                      setSelectedTab(item.id);
+                      void openOperationalTab(item.id);
                     }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold tracking-normal transition-all duration-150 text-left cursor-pointer group ${
                       isActive ? 'bg-blue-600 text-white shadow-md font-extrabold translate-x-1' : 'text-slate-300 hover:bg-[#1e293b]/70 hover:text-white'

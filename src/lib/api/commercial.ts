@@ -89,6 +89,19 @@ export interface CommercialAccessState {
   server_time?: string;
 }
 
+export interface SelfServiceWorkspaceResult {
+  success: boolean;
+  created: boolean;
+  workspace: {
+    tournament_id: string;
+    tenant_id: string;
+    tenant_name: string;
+    name: string;
+    slug: string;
+    status: string;
+  };
+}
+
 export interface ManualReviewOrder {
   id: string;
   order_code: string;
@@ -164,6 +177,14 @@ export async function getCommercialAccessState(): Promise<CommercialAccessState>
   const { data, error } = await supabase.rpc('get_commercial_access_state_v1');
   if (error || !data) throw new Error('Không thể kiểm tra trạng thái mở khóa.');
   return data as CommercialAccessState;
+}
+
+export async function ensureMySelfServiceWorkspace(): Promise<SelfServiceWorkspaceResult> {
+  const { data, error } = await supabase.rpc('ensure_my_self_service_workspace_v1');
+  if (error || !data?.workspace?.slug) {
+    throw new Error(error?.message || 'Không thể chuẩn bị giải đấu của tài khoản.');
+  }
+  return data as SelfServiceWorkspaceResult;
 }
 
 export async function listManualReviewOrders(session: Session) {

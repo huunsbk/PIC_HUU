@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Copy, ExternalLink, Archive, Pencil, RotateCcw } from 'lucide-react';
 import { TournamentWorkspaceStat } from '../hooks/useTournamentWorkspaces';
 import { useArchiveTournamentWorkspace, useRestoreTournamentWorkspace, useUpdateTournamentWorkspace } from '../hooks/useTournamentMutations';
@@ -11,13 +12,16 @@ interface TournamentWorkspaceCardProps {
 }
 
 export default function TournamentWorkspaceCard({ tournament }: TournamentWorkspaceCardProps) {
+  const navigate = useNavigate();
   const [showDetails, setShowDetails] = useState(false);
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
   const archiveMutation = useArchiveTournamentWorkspace();
   const restoreMutation = useRestoreTournamentWorkspace();
   const updateMutation = useUpdateTournamentWorkspace();
   const hasPermission = useTournamentStore((state) => state.hasPermission);
-  const canManageTournaments = hasPermission('*') || hasPermission('manage_tournaments');
+  const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
+  const canManageTournaments = currentEnterpriseUser?.tenant_type !== 'self_service_customer'
+    && (hasPermission('*') || hasPermission('manage_tournaments'));
 
   const handleArchive = () => {
     setIsArchiveConfirmOpen(true);
@@ -65,7 +69,7 @@ export default function TournamentWorkspaceCard({ tournament }: TournamentWorksp
   };
 
   const openAdminWorkspace = () => {
-    window.open(getAppUrl(`/admin/workspace/${tournament.slug}`), '_blank');
+    navigate(`/admin/workspace/${encodeURIComponent(tournament.slug)}`);
   };
 
   const publicUrl = getAppUrl(`/tournament/${tournament.slug}`);
