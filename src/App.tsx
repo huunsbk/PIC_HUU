@@ -29,7 +29,7 @@ import EventSwitcher from './components/event-switcher';
 import { useEventsQuery } from './components/use-events-query';
 import { getAuthHashErrorMessage, isSupabaseAuthCallbackHash } from './lib/authRedirect';
 import { resolveWorkspaceAccess } from './lib/auth/workspaceAccessService';
-import { getCommercialAccessState } from './lib/api/commercial';
+import { ensureMySelfServiceWorkspace, getCommercialAccessState } from './lib/api/commercial';
 
 import {
   Trophy,
@@ -368,11 +368,47 @@ function AdminWorkspace() {
 }
 
 function WorkspaceDirectory() {
+  const navigate = useNavigate();
   const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
+  const setWorkspaceContext = useTournamentStore((state) => state.setWorkspaceContext);
+  const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
 
   useEffect(() => {
+    let cancelled = false;
     setSelectedTab('workspaces');
-  }, [setSelectedTab]);
+    if (!currentEnterpriseUser?.tenant_id) return;
+
+    void setWorkspaceContext({
+      tenantId: currentEnterpriseUser.tenant_id,
+      tenantName: currentEnterpriseUser.tenant?.name || null,
+      tournamentId: null,
+    });
+
+    if (currentEnterpriseUser.tenant_type === 'self_service_customer'
+        && currentEnterpriseUser.business_access_active !== false) {
+      void ensureMySelfServiceWorkspace()
+        .then((result) => {
+          if (!cancelled) {
+            navigate(`/admin/workspace/${encodeURIComponent(result.workspace.slug)}`, { replace: true });
+          }
+        })
+        .catch((error) => {
+          console.error('Không thể mở giải self-service đã được cấp.', error);
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    currentEnterpriseUser?.tenant_id,
+    currentEnterpriseUser?.tenant?.name,
+    currentEnterpriseUser?.tenant_type,
+    currentEnterpriseUser?.business_access_active,
+    navigate,
+    setSelectedTab,
+    setWorkspaceContext,
+  ]);
 
   return <TournamentShell />;
 }
@@ -513,13 +549,33 @@ function RootEntry() {
 
   useEffect(() => {
     if (!authInitialized || !currentEnterpriseUser) return;
-    navigate(
-      currentEnterpriseUser.tenant_type === 'self_service_customer'
-        && currentEnterpriseUser.business_access_active === false
-        ? '/unlock'
-        : '/admin/workspaces',
-      { replace: true },
-    );
+    let cancelled = false;
+
+    const routeAuthenticatedUser = async () => {
+      if (currentEnterpriseUser.tenant_type !== 'self_service_customer') {
+        navigate('/admin/workspaces', { replace: true });
+        return;
+      }
+      if (currentEnterpriseUser.business_access_active === false) {
+        navigate('/unlock', { replace: true });
+        return;
+      }
+
+      try {
+        const result = await ensureMySelfServiceWorkspace();
+        if (!cancelled) {
+          navigate(`/admin/workspace/${encodeURIComponent(result.workspace.slug)}`, { replace: true });
+        }
+      } catch (error) {
+        console.error('Không thể chuẩn bị giải self-service sau đăng nhập.', error);
+        if (!cancelled) navigate('/admin/workspaces', { replace: true });
+      }
+    };
+
+    void routeAuthenticatedUser();
+    return () => {
+      cancelled = true;
+    };
   }, [
     authInitialized,
     currentEnterpriseUser?.id,
@@ -695,9 +751,15 @@ function TournamentShell() {
     const checkAccess = async () => {
       try {
         const state = await getCommercialAccessState();
-        if (!cancelled && !state.business_access_active) {
-          setCommercialAccessState(false, state.account?.onboarding_status);
-          navigate('/unlock', { replace: true });
+        if (!cancelled) {
+          setCommercialAccessState(
+            state.business_access_active,
+            state.account?.onboarding_status,
+            state.tenant,
+          );
+          if (!state.business_access_active) {
+            navigate('/unlock', { replace: true });
+          }
         }
       } catch {
         // Keep the current screen during transient network failures; backend still enforces every mutation.

@@ -15,7 +15,9 @@ export default function TournamentWorkspaceListPage() {
   const { data: workspacesResponse, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useTournamentWorkspaces(limit);
   const currentEnterpriseUser = useTournamentStore(state => state.currentEnterpriseUser);
   const hasPermission = useTournamentStore(state => state.hasPermission);
-  const canManageTournaments = hasPermission('*') || hasPermission('manage_tournaments');
+  const isSelfServiceCustomer = currentEnterpriseUser?.tenant_type === 'self_service_customer';
+  const canManageTournaments = !isSelfServiceCustomer
+    && (hasPermission('*') || hasPermission('manage_tournaments'));
 
   if (!currentEnterpriseUser) {
     return (

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabaseClient';
 import { useTournamentStore } from '../store';
+import { normalizeRpcError } from '../lib/api/tournamentRpc';
 
 interface CreateTournamentWorkspaceParams {
   tournamentName: string;
@@ -30,7 +31,7 @@ export function useCreateTournamentWorkspace() {
       });
 
       if (error) {
-        throw error;
+        throw normalizeRpcError(error);
       }
       
       if (data && data.success === false) {
@@ -42,6 +43,7 @@ export function useCreateTournamentWorkspace() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
       queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
+      queryClient.invalidateQueries({ queryKey: ['commercial_access_state'] });
     }
   });
 }
@@ -64,6 +66,7 @@ export function useArchiveTournamentWorkspace() {
      onSuccess: () => {
        queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
        queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
+       queryClient.invalidateQueries({ queryKey: ['commercial_access_state'] });
      }
    });
  }
@@ -98,6 +101,7 @@ export function useUpdateTournamentWorkspace() {
      onSuccess: () => {
        queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
        queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
+       queryClient.invalidateQueries({ queryKey: ['commercial_access_state'] });
      }
    });
 }
@@ -120,6 +124,7 @@ export function useRestoreTournamentWorkspace() {
      onSuccess: () => {
        queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
        queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
+       queryClient.invalidateQueries({ queryKey: ['commercial_access_state'] });
      }
    });
 }

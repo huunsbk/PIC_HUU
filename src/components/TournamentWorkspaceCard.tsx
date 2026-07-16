@@ -19,7 +19,9 @@ export default function TournamentWorkspaceCard({ tournament }: TournamentWorksp
   const restoreMutation = useRestoreTournamentWorkspace();
   const updateMutation = useUpdateTournamentWorkspace();
   const hasPermission = useTournamentStore((state) => state.hasPermission);
-  const canManageTournaments = hasPermission('*') || hasPermission('manage_tournaments');
+  const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
+  const canManageTournaments = currentEnterpriseUser?.tenant_type !== 'self_service_customer'
+    && (hasPermission('*') || hasPermission('manage_tournaments'));
 
   const handleArchive = () => {
     setIsArchiveConfirmOpen(true);

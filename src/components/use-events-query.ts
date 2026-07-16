@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useTournamentStore } from '../store';
-import { isPublicViewerRoute, isUsableEventId } from '../hooks/useEvents';
+import { isPublicViewerRoute, isTournamentDataRoute, isUsableEventId } from '../hooks/useEvents';
 import { tournamentRpc } from '../lib/api/tournamentRpc';
 
 export function useEventsQuery() {
@@ -13,6 +13,7 @@ export function useEventsQuery() {
   const setCurrentEvent = useTournamentStore((state) => state.setCurrentEvent);
   const userRole = useTournamentStore((state) => state.userRole);
   const shouldUsePublicSnapshot = userRole === 'guest' && isPublicViewerRoute();
+  const shouldLoadTournamentData = isTournamentDataRoute();
   const commercialAccessActive = currentEnterpriseUser?.tenant_type !== 'self_service_customer'
     || currentEnterpriseUser?.business_access_active !== false;
 
@@ -34,7 +35,7 @@ export function useEventsQuery() {
 
       return events;
     },
-    enabled: commercialAccessActive && !shouldUsePublicSnapshot && !!activeTenantId
+    enabled: commercialAccessActive && shouldLoadTournamentData && !shouldUsePublicSnapshot && !!activeTenantId
       && activeTenantId !== 'default' && !!(activeTournamentId || tournamentId),
   });
 
