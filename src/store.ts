@@ -68,6 +68,22 @@ const EVENT_SCOPED_PERMISSIONS = new Set([
   'manage_referees',
 ]);
 
+const SELF_SERVICE_OWNER_PERMISSIONS = new Set([
+  'view_public',
+  'view_event',
+  'create_events',
+  'manage_event_config',
+  'manage_events',
+  'manage_teams',
+  'manage_groups',
+  'manage_schedule',
+  'manage_matches',
+  'enter_scores',
+  'manage_standings',
+  'manage_knockout',
+  'manage_referees',
+]);
+
 const EVENT_PERMISSION_ALIASES: Record<string, string[]> = {
   manage_events: ['manage_event_config'],
   manage_event_config: ['manage_events'],
@@ -385,6 +401,13 @@ export const useTournamentStore = create<AppState>()(
         hasPermission: (permissionName) => {
           const state = get();
           if (state.userRole === 'SUPER_ADMIN' || state.userRole === 'TENANT_ADMIN') return true;
+          const isActiveSelfServiceOwner = state.userRole === 'EVENT_ADMIN'
+            && state.currentEnterpriseUser?.tenant_type === 'self_service_customer'
+            && state.currentEnterpriseUser?.onboarding_status === 'ready'
+            && state.currentEnterpriseUser?.business_access_active === true;
+          if (isActiveSelfServiceOwner && SELF_SERVICE_OWNER_PERMISSIONS.has(permissionName)) {
+            return true;
+          }
           if (state.userRole === 'EVENT_ADMIN' || state.userRole === 'REFEREE') {
             if (permissionName === '*') return false;
             if (EVENT_SCOPED_PERMISSIONS.has(permissionName)) {

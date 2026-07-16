@@ -16,6 +16,10 @@ export function useEventsQuery() {
   const shouldLoadTournamentData = isTournamentDataRoute();
   const commercialAccessActive = currentEnterpriseUser?.tenant_type !== 'self_service_customer'
     || currentEnterpriseUser?.business_access_active !== false;
+  const isSelfServiceOwner = userRole === 'EVENT_ADMIN'
+    && currentEnterpriseUser?.tenant_type === 'self_service_customer'
+    && currentEnterpriseUser?.onboarding_status === 'ready'
+    && currentEnterpriseUser?.business_access_active === true;
 
   const query = useQuery({
     queryKey: ['events', activeTournamentId || tournamentId],
@@ -28,7 +32,8 @@ export function useEventsQuery() {
       let events = await tournamentRpc.listEventsByTournament(scopedTournamentId);
       
       // Client-side visual filter fallback. RLS already enforced this at DB level
-      if (currentEnterpriseUser?.role === 'EVENT_ADMIN' || currentEnterpriseUser?.role === 'REFEREE') {
+      if (!isSelfServiceOwner
+          && (currentEnterpriseUser?.role === 'EVENT_ADMIN' || currentEnterpriseUser?.role === 'REFEREE')) {
         const allowedEventIds = currentEnterpriseUser.event_ids || [];
         events = events.filter((evt: any) => allowedEventIds.includes(evt.id));
       }
