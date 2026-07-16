@@ -799,6 +799,8 @@ function TournamentShell() {
       { id: 'admin', label: 'Quản trị', icon: Wrench, permission: 'manage_accounts', roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'] },
     ];
     if (currentEnterpriseUser?.tenant_type === 'self_service_customer') {
+      const workspaceIndex = allNavItems.findIndex((item) => item.id === 'workspaces');
+      if (workspaceIndex >= 0) allNavItems.splice(workspaceIndex, 1);
       allNavItems.splice(1, 0, { id: 'subscription', label: 'Gói dịch vụ', icon: CreditCard, permission: 'view_public', roles: ['EVENT_ADMIN'] });
     }
     
