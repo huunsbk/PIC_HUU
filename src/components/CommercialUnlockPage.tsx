@@ -4,20 +4,26 @@ import { QRCodeSVG } from 'qrcode.react';
 import {
   Check,
   CheckCircle2,
+  Ban,
   Clock3,
   ExternalLink,
   KeyRound,
   Landmark,
   LoaderCircle,
-  Minus,
-  Plus,
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useTournamentStore } from '../store';
 import bankQrImage from '../assets/bidv-nguyen-van-huu-qr.jpg';
+import CommercialOrderCancelDialog from './CommercialOrderCancelDialog';
 import {
+  formatVnd,
+  QuotaCounter,
+  TeamCapacitySelector,
+} from './CommercialQuotaControls';
+import {
+  cancelCommercialOrder,
   createCommercialOrder,
   ensureMySelfServiceWorkspace,
   getCommercialAccessState,
@@ -28,8 +34,12 @@ import {
   type SelfServicePlan,
 } from '../lib/api/commercial';
 
-const ADDON_PRICE = 10000;
 const TERMINAL_ORDER_STATES = new Set(['paid', 'rejected', 'expired', 'cancelled']);
+const DEFAULT_TEAM_CAPACITY_OPTIONS = [
+  { limit: 48 as const, price_vnd: 0 },
+  { limit: 64 as const, price_vnd: 50000 },
+  { limit: 96 as const, price_vnd: 100000 },
+];
 
 const statusLabels: Record<string, string> = {
   awaiting_payment: 'Đang chờ thanh toán',
@@ -42,33 +52,9 @@ const statusLabels: Record<string, string> = {
   cancelled: 'Đã hủy',
 };
 
-function formatVnd(value: number) {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
-}
-
 function formatDateTime(value?: string | null) {
   if (!value) return 'Chưa có';
   return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
-}
-
-function Counter({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
-  return (
-    <div className="flex min-h-14 items-center justify-between gap-3 border-b border-zinc-200 py-2 last:border-b-0 dark:border-zinc-800">
-      <div>
-        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{label}</p>
-        <p className="text-xs font-semibold text-zinc-500">+{formatVnd(ADDON_PRICE)} / đơn vị</p>
-      </div>
-      <div className="grid grid-cols-[36px_44px_36px] items-center overflow-hidden rounded-lg border border-zinc-300 dark:border-zinc-700">
-        <button type="button" title={`Giảm ${label}`} onClick={() => onChange(Math.max(0, value - 1))} className="grid h-9 place-items-center bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800">
-          <Minus size={15} />
-        </button>
-        <span className="text-center text-sm font-black tabular-nums">{value}</span>
-        <button type="button" title={`Tăng ${label}`} onClick={() => onChange(Math.min(100, value + 1))} className="grid h-9 place-items-center bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800">
-          <Plus size={15} />
-        </button>
-      </div>
-    </div>
-  );
 }
 
 export default function CommercialUnlockPage() {
@@ -80,17 +66,31 @@ export default function CommercialUnlockPage() {
   const [selectedPlanCode, setSelectedPlanCode] = React.useState<string>('SELF_7D');
   const [extraEvents, setExtraEvents] = React.useState(0);
   const [extraReferees, setExtraReferees] = React.useState(0);
+  const [selectedTeamCapacity, setSelectedTeamCapacity] = React.useState<48 | 64 | 96>(48);
   const [order, setOrder] = React.useState<CommercialPaymentOrder | null>(null);
   const [providerAvailable, setProviderAvailable] = React.useState<boolean | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isCancelling, setIsCancelling] = React.useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [now, setNow] = React.useState(() => Date.now());
   const requestIdRef = React.useRef(crypto.randomUUID());
 
   const selectedPlan = plans.find((plan) => plan.code === selectedPlanCode) || plans[0];
-  const totalAmount = Number(selectedPlan?.price_vnd || 0) + (extraEvents + extraReferees) * ADDON_PRICE;
+  const eventAddonPrice = Number(selectedPlan?.event_addon_price_vnd || 20000);
+  const refereeAddonPrice = Number(selectedPlan?.referee_addon_price_vnd || 20000);
+  const teamCapacityOptions = selectedPlan?.team_capacity_options?.length
+    ? selectedPlan.team_capacity_options
+    : DEFAULT_TEAM_CAPACITY_OPTIONS;
+  const teamCapacityPrice = Number(
+    teamCapacityOptions.find((option) => option.limit === selectedTeamCapacity)?.price_vnd || 0,
+  );
+  const totalAmount = Number(selectedPlan?.price_vnd || 0)
+    + extraEvents * eventAddonPrice
+    + extraReferees * refereeAddonPrice
+    + teamCapacityPrice;
   const hasPayableOrder = Boolean(order && !TERMINAL_ORDER_STATES.has(order.status));
   const manualReviewAvailable = Boolean(order && (
     ['payment_mismatch', 'webhook_invalid'].includes(order.status)
@@ -183,6 +183,7 @@ export default function CommercialUnlockPage() {
         planCode: selectedPlan.code,
         extraEvents,
         extraReferees,
+        teamCapacity: selectedTeamCapacity,
         clientRequestId: requestIdRef.current,
       });
       setOrder(result.order);
@@ -193,6 +194,26 @@ export default function CommercialUnlockPage() {
       await refreshOrder().catch(() => undefined);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const cancelOrder = async () => {
+    if (!order || order.status !== 'awaiting_payment') return;
+    setIsCancelling(true);
+    setError(null);
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) throw new Error('Phiên đăng nhập đã hết hạn.');
+      await cancelCommercialOrder(data.session, order.id);
+      setOrder(null);
+      setCancelDialogOpen(false);
+      requestIdRef.current = crypto.randomUUID();
+      setMessage('Đã hủy đơn. Bạn có thể chọn lại gói và tạo đơn thanh toán mới.');
+    } catch (cancelError) {
+      setError(cancelError instanceof Error ? cancelError.message : 'Không thể hủy đơn thanh toán.');
+      await refreshOrder().catch(() => undefined);
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -265,16 +286,26 @@ export default function CommercialUnlockPage() {
             </div>
           </section>
 
+          <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <TeamCapacitySelector
+              options={teamCapacityOptions}
+              value={selectedTeamCapacity}
+              onChange={setSelectedTeamCapacity}
+            />
+          </div>
+
           <section className="grid gap-4 lg:grid-cols-[1fr_340px]">
             <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-              <h2 className="mb-2 text-base font-black">2. Tăng giới hạn khi cần</h2>
-              <Counter label="Nội dung thi đấu mua thêm" value={extraEvents} onChange={setExtraEvents} />
-              <Counter label="Tài khoản trọng tài mua thêm" value={extraReferees} onChange={setExtraReferees} />
+              <h2 className="mb-2 text-base font-black">Tăng giới hạn khi cần</h2>
+              <QuotaCounter label="Nội dung thi đấu mua thêm" value={extraEvents} unitPrice={eventAddonPrice} onChange={setExtraEvents} />
+              <QuotaCounter label="Tài khoản trọng tài mua thêm" value={extraReferees} unitPrice={refereeAddonPrice} onChange={setExtraReferees} />
             </div>
             <div className="rounded-lg border border-zinc-200 bg-zinc-950 p-4 text-white dark:border-zinc-700">
               <p className="text-xs font-bold uppercase text-zinc-400">Tổng thanh toán</p>
               <p className="mt-1 text-3xl font-black">{formatVnd(totalAmount)}</p>
-              <p className="mt-2 text-xs font-semibold text-zinc-400">{selectedPlan?.duration_days || 0} ngày, {3 + extraEvents} nội dung, {1 + extraReferees} trọng tài</p>
+              <p className="mt-2 text-xs font-semibold text-zinc-400">
+                {selectedPlan?.duration_days || 0} ngày · {3 + extraEvents} nội dung · {1 + extraReferees} trọng tài · {selectedTeamCapacity} đội/nội dung
+              </p>
               <button type="button" onClick={createOrder} disabled={isSubmitting || !selectedPlan} className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-black hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50">
                 {isSubmitting ? <LoaderCircle className="animate-spin" size={17} /> : <ShieldCheck size={17} />}
                 Tạo đơn an toàn
@@ -306,6 +337,11 @@ export default function CommercialUnlockPage() {
               {manualReviewAvailable && order.status !== 'manual_review' && (
                 <button type="button" onClick={requestReview} disabled={isSubmitting} className="flex h-10 items-center gap-2 rounded-lg border border-amber-400 px-4 text-sm font-black text-amber-800 hover:bg-amber-50 disabled:opacity-50 dark:text-amber-200 dark:hover:bg-amber-950"><Clock3 size={16} /> Yêu cầu kiểm tra thanh toán</button>
               )}
+              {order.status === 'awaiting_payment' && (
+                <button type="button" onClick={() => setCancelDialogOpen(true)} disabled={isSubmitting || isCancelling} className="flex h-10 items-center gap-2 rounded-lg border border-red-300 px-4 text-sm font-black text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40">
+                  <Ban size={16} /> Hủy thanh toán
+                </button>
+              )}
             </div>
             {order.status === 'manual_review' && <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">Yêu cầu đang được SUPER_ADMIN đối soát. Gửi yêu cầu không tự mở khóa và không cộng quota.</p>}
           </div>
@@ -329,6 +365,14 @@ export default function CommercialUnlockPage() {
           <p className="mt-1 text-sm font-semibold text-emerald-800 dark:text-emerald-200">Đang tải quyền vận hành và mở giải đấu của bạn.</p>
         </div>
       )}
+
+      <CommercialOrderCancelDialog
+        open={cancelDialogOpen}
+        orderCode={order?.order_code}
+        pending={isCancelling}
+        onClose={() => setCancelDialogOpen(false)}
+        onConfirm={() => void cancelOrder()}
+      />
     </div>
   );
 }

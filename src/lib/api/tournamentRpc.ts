@@ -102,6 +102,7 @@ const ERROR_TRANSLATIONS: Array<[RegExp, string]> = [
   [/QUOTA_EXCEEDED:accounts/i, 'Đơn vị đã đạt giới hạn tài khoản của gói đang sử dụng.'],
   [/QUOTA_EXCEEDED:tournaments/i, 'Gói hiện tại chỉ cho phép số lượng giải đấu đang hoạt động như đã đăng ký. Hãy lưu trữ giải cũ trước khi tạo giải mới.'],
   [/QUOTA_EXCEEDED:events/i, 'Đơn vị đã đạt giới hạn nội dung thi đấu của gói đang sử dụng.'],
+  [/TEAM_EVENT_QUOTA_EXCEEDED:(\d+)\/(\d+)/i, 'Nội dung này đã đạt giới hạn đội của gói đang sử dụng. Hãy nâng sức chứa lên 64 hoặc 96 đội để tiếp tục.'],
   [/QUOTA_EXCEEDED:teams/i, 'Đơn vị đã đạt giới hạn đội thi đấu của gói đang sử dụng.'],
   [/SUBSCRIPTION_INACTIVE|SUBSCRIPTION_PLAN_INACTIVE/i, 'Gói dịch vụ của đơn vị đã hết hạn hoặc không còn hoạt động.'],
   [/TENANT_INACTIVE|TENANT_NOT_ACTIVE/i, 'Đơn vị đang bị khóa hoặc đã lưu trữ.'],

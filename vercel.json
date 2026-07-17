@@ -27,6 +27,10 @@
       "destination": "/api/commercial/orders/index?action=manual-review"
     },
     {
+      "source": "/api/commercial/orders/cancel",
+      "destination": "/api/commercial/orders/index?action=cancel"
+    },
+    {
       "source": "/api/commercial/readiness",
       "destination": "/api/commercial/bootstrap?action=readiness"
     },

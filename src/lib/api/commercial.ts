@@ -46,6 +46,12 @@ export interface CommercialPaymentOrder {
   expires_at: string;
   paid_at?: string | null;
   created_at: string;
+  team_capacity_limit?: number | null;
+}
+
+export interface TeamCapacityOption {
+  limit: 48 | 64 | 96;
+  price_vnd: number;
 }
 
 export interface SelfServicePlan {
@@ -58,6 +64,10 @@ export interface SelfServicePlan {
   max_active_tournaments: number;
   max_events: number;
   max_active_referees: number;
+  max_teams_per_event: number;
+  event_addon_price_vnd: number;
+  referee_addon_price_vnd: number;
+  team_capacity_options: TeamCapacityOption[];
 }
 
 export interface CommercialAccessState {
@@ -142,6 +152,7 @@ export async function createCommercialOrder(
     planCode: string;
     extraEvents?: number;
     extraReferees?: number;
+    teamCapacity?: 48 | 64 | 96 | null;
     clientRequestId: string;
   },
 ) {
@@ -163,6 +174,14 @@ export async function requestCommercialManualReview(session: Session, orderId: s
   return authenticatedJson<{ success: boolean; result: string; order_id: string }>(
     session,
     '/api/commercial/orders/manual-review',
+    { method: 'POST', body: JSON.stringify({ orderId }) },
+  );
+}
+
+export async function cancelCommercialOrder(session: Session, orderId: string) {
+  return authenticatedJson<{ success: boolean; result: string; order_id: string }>(
+    session,
+    '/api/commercial/orders/cancel',
     { method: 'POST', body: JSON.stringify({ orderId }) },
   );
 }
