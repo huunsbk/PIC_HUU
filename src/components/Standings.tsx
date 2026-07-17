@@ -276,7 +276,7 @@ export default function Standings() {
                                   onClick={() => {
                                     if (advanceSelectionMode === 'manual') toggleManualQualifiedTeam(s.teamId);
                                   }}
-                                  style={isSpecialEl ? { fontSize: '15px', color: '#131389' } : undefined}
+                                  style={isSpecialEl ? { fontSize: '7.5px', color: '#131389' } : undefined}
                                 >
                                   {s.teamName}
                                 </span>
@@ -288,11 +288,11 @@ export default function Standings() {
                               </div>
                             </td>
 
-                            <td className="py-3.5 px-2 text-center text-zinc-400 font-medium" style={isSpecialEl ? { fontSize: '14px' } : undefined}>{s.matchesPlayed}</td>
-                            <td className="py-3.5 px-2 text-center text-emerald-600 font-bold" style={isSpecialEl ? { fontSize: '14px' } : undefined}>{s.matchesWon}</td>
-                            <td className="py-3.5 px-2 text-center text-red-600 font-bold" style={isSpecialEl ? { fontSize: '14px' } : undefined}>{s.matchesLost}</td>
+                            <td className="py-3.5 px-2 text-center text-zinc-400 font-medium" style={isSpecialEl ? { fontSize: '7px' } : undefined}>{s.matchesPlayed}</td>
+                            <td className="py-3.5 px-2 text-center text-emerald-600 font-bold" style={isSpecialEl ? { fontSize: '7px' } : undefined}>{s.matchesWon}</td>
+                            <td className="py-3.5 px-2 text-center text-red-600 font-bold" style={isSpecialEl ? { fontSize: '7px' } : undefined}>{s.matchesLost}</td>
                             
-                            <td className="py-3.5 px-2 text-center font-extrabold text-[13px] text-zinc-900 dark:text-zinc-100" style={isSpecialEl ? { fontSize: '14px' } : undefined}>
+                            <td className="py-3.5 px-2 text-center font-extrabold text-[13px] text-zinc-900 dark:text-zinc-100" style={isSpecialEl ? { fontSize: '7px' } : undefined}>
                               {s.points}
                             </td>
 

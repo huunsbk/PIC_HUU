@@ -14,7 +14,7 @@
 @keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(3px);
   }
   to {
     opacity: 1;
@@ -32,21 +32,73 @@
 
 /* Custom slim scrollbar for Live Dashboard truncated names */
 .scrollbar-thin::-webkit-scrollbar {
-  height: 4px; /* Thin horizontal scrollbar */
+  height: 2px; /* Thin horizontal scrollbar */
 }
 .scrollbar-thin::-webkit-scrollbar-track {
   background: transparent;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background: #cbd5e1; /* zinc-300 */
-  border-radius: 4px;
+  border-radius: 2px;
 }
 .dark .scrollbar-thin::-webkit-scrollbar-thumb {
   background: #3f3f46; /* zinc-700 */
 }
 
+html {
+  font-size: 8px;
+}
+
 body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  margin: 0;
+  overflow-x: hidden;
+  background: #f8fafc;
+}
+
+html.dark body {
+  background: #09090b;
+}
+
+/* Compact fixed-size media that do not inherit the root rem scale. */
+#root svg:not([class*="w-"]):not([class*="h-"]) {
+  zoom: 0.5;
+}
+
+#root img,
+#root video {
+  width: 50% !important;
+  height: auto !important;
+}
+
+/* Shared match typography keeps Operations and Live presentation in sync. */
+.match-event-title {
+  font-size: 10px !important;
+}
+
+.match-section-title {
+  font-size: 8px !important;
+}
+
+.match-group-title {
+  font-size: 7px !important;
+}
+
+.match-team-name {
+  font-size: 6.5px !important;
+}
+
+.match-score-value {
+  font-size: 7px !important;
+}
+
+.score-input-2digits {
+  box-sizing: border-box;
+  width: 21px !important;
+  min-width: 21px !important;
+  height: 15px !important;
+  padding: 1px 2px !important;
+  font-size: 7px !important;
 }
 
 /* --- ADVANCED SPORT CHRONICLE GLOBAL THEME REDESIGN --- 
@@ -60,59 +112,62 @@ html, body, p, span, h1, h2, h3, h4, h5, h6, select, input, button, textarea, la
 }
 
 /* Perfecting athletic snug paddings dynamically */
-.py-1   { padding-top: 3px !important; padding-bottom: 3px !important; }
-.py-1\.5 { padding-top: 4px !important; padding-bottom: 4px !important; }
-.py-2   { padding-top: 6px !important; padding-bottom: 6px !important; }
-.py-2\.5 { padding-top: 7px !important; padding-bottom: 7px !important; }
-.py-3   { padding-top: 8px !important; padding-bottom: 8px !important; }
-.py-3\.5 { padding-top: 10px !important; padding-bottom: 10px !important; }
-.py-4   { padding-top: 12px !important; padding-bottom: 12px !important; }
-.py-5   { padding-top: 14px !important; padding-bottom: 14px !important; }
-.py-6   { padding-top: 16px !important; padding-bottom: 16px !important; }
+.py-1   { padding-top: 1.5px !important; padding-bottom: 1.5px !important; }
+.py-1\.5 { padding-top: 2px !important; padding-bottom: 2px !important; }
+.py-2   { padding-top: 3px !important; padding-bottom: 3px !important; }
+.py-2\.5 { padding-top: 3.5px !important; padding-bottom: 3.5px !important; }
+.py-3   { padding-top: 4px !important; padding-bottom: 4px !important; }
+.py-3\.5 { padding-top: 5px !important; padding-bottom: 5px !important; }
+.py-4   { padding-top: 6px !important; padding-bottom: 6px !important; }
+.py-5   { padding-top: 7px !important; padding-bottom: 7px !important; }
+.py-6   { padding-top: 8px !important; padding-bottom: 8px !important; }
 
-.pt-1   { padding-top: 3px !important; }
-.pt-1\.5 { padding-top: 4px !important; }
-.pt-2   { padding-top: 6px !important; }
-.pt-2\.5 { padding-top: 7px !important; }
-.pt-3   { padding-top: 8px !important; }
-.pt-4   { padding-top: 12px !important; }
-.pt-5   { padding-top: 14px !important; }
-.pt-6   { padding-top: 16px !important; }
+.pt-1   { padding-top: 1.5px !important; }
+.pt-1\.5 { padding-top: 2px !important; }
+.pt-2   { padding-top: 3px !important; }
+.pt-2\.5 { padding-top: 3.5px !important; }
+.pt-3   { padding-top: 4px !important; }
+.pt-4   { padding-top: 6px !important; }
+.pt-5   { padding-top: 7px !important; }
+.pt-6   { padding-top: 8px !important; }
 
-.pb-1   { padding-bottom: 3px !important; }
-.pb-1\.5 { padding-bottom: 4px !important; }
-.pb-2   { padding-bottom: 6px !important; }
-.pb-2\.5 { padding-bottom: 7px !important; }
-.pb-3   { padding-bottom: 8px !important; }
-.pb-4   { padding-bottom: 12px !important; }
-.pb-5   { padding-bottom: 14px !important; }
-.pb-6   { padding-bottom: 16px !important; }
+.pb-1   { padding-bottom: 1.5px !important; }
+.pb-1\.5 { padding-bottom: 2px !important; }
+.pb-2   { padding-bottom: 3px !important; }
+.pb-2\.5 { padding-bottom: 3.5px !important; }
+.pb-3   { padding-bottom: 4px !important; }
+.pb-4   { padding-bottom: 6px !important; }
+.pb-5   { padding-bottom: 7px !important; }
+.pb-6   { padding-bottom: 8px !important; }
 
 /* Tighten layout gaps between sister blocks to avoid hollow spaces */
-.space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 4px !important; }
-.space-y-1\.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 6px !important; }
-.space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top: 8px !important; }
-.space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 10px !important; }
-.space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 12px !important; }
-.space-y-5 > :not([hidden]) ~ :not([hidden]) { margin-top: 14px !important; }
-.space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 16px !important; }
+.space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 2px !important; }
+.space-y-1\.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 3px !important; }
+.space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top: 4px !important; }
+.space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 5px !important; }
+.space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 6px !important; }
+.space-y-5 > :not([hidden]) ~ :not([hidden]) { margin-top: 7px !important; }
+.space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 8px !important; }
 
 /* Dynamic athletic grids with cohesive layout borders */
-.gap-6 { gap: 18px !important; }
-.gap-4 { gap: 12px !important; }
+.gap-6 { gap: 9px !important; }
+.gap-4 { gap: 6px !important; }
 
 /* Professional high-contrast typographic scales: increased by 2-4px everywhere for readability */
-.text-\[8px\]  { font-size: 11px !important; font-weight: 800 !important; tracking: uppercase; }
-.text-\[9px\]  { font-size: 13px !important; font-weight: 800 !important; tracking: uppercase; }
-.text-\[10px\] { font-size: 14px !important; font-weight: 800 !important; }
-.text-\[11px\] { font-size: 15px !important; font-weight: 850 !important; }
-.text-xs       { font-size: 16px !important; font-weight: 850 !important; }
-.text-sm       { font-size: 18px !important; font-weight: 850 !important; }
-.text-base     { font-size: 20px !important; font-weight: 900 !important; }
-.text-lg       { font-size: 22px !important; font-weight: 900 !important; }
-.text-xl       { font-size: 26px !important; font-weight: 900 !important; }
-.text-2xl      { font-size: 32px !important; font-weight: 950 !important; }
-.text-3xl      { font-size: 38px !important; font-weight: 950 !important; letter-spacing: -0.02em; }
+.text-\[8px\]  { font-size: 5.5px !important; font-weight: 800 !important; tracking: uppercase; }
+.text-\[9px\]  { font-size: 6.5px !important; font-weight: 800 !important; tracking: uppercase; }
+.text-\[10px\] { font-size: 7px !important; font-weight: 800 !important; }
+.text-\[10\.5px\] { font-size: 5.25px !important; }
+.text-\[11px\] { font-size: 7.5px !important; font-weight: 850 !important; }
+.text-\[13px\] { font-size: 6.5px !important; }
+.text-\[14px\] { font-size: 7px !important; }
+.text-xs       { font-size: 8px !important; font-weight: 850 !important; }
+.text-sm       { font-size: 9px !important; font-weight: 850 !important; }
+.text-base     { font-size: 10px !important; font-weight: 900 !important; }
+.text-lg       { font-size: 11px !important; font-weight: 900 !important; }
+.text-xl       { font-size: 13px !important; font-weight: 900 !important; }
+.text-2xl      { font-size: 16px !important; font-weight: 950 !important; }
+.text-3xl      { font-size: 19px !important; font-weight: 950 !important; letter-spacing: -0.02em; }
 
 /* Bold headers, tables headers, and tags */
 strong, b, th, h1, h2, h3, h4, h5, h6 {
@@ -169,15 +224,15 @@ html.dark .text-amber-500, html.dark .text-amber-600, html.dark .text-amber-700 
 /* Interactive elements: sport-themed borders, crisp dropdown selectors, deep interactive padding */
 input, select, textarea {
   font-weight: 850 !important;
-  border-width: 2px !important;
+  border-width: 1px !important;
   border-color: #94a3b8 !important; /* Visible classy slate */
   background-color: #ffffff !important;
   color: #0f172a !important;
-  padding-top: 6px !important;
-  padding-bottom: 6px !important;
-  padding-left: 10px !important;
-  padding-right: 10px !important;
-  border-radius: 8px !important;
+  padding-top: 3px !important;
+  padding-bottom: 3px !important;
+  padding-left: 5px !important;
+  padding-right: 5px !important;
+  border-radius: 4px !important;
   outline: none !important;
 }
 html.dark input, html.dark select, html.dark textarea {
@@ -189,12 +244,12 @@ html.dark input, html.dark select, html.dark textarea {
 /* High contrast premium sport card styling & shadow accents */
 .bg-white {
   background-color: #ffffff !important;
-  border: 1.5px solid #e2e8f0 !important;
+  border: 0.75px solid #e2e8f0 !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
 }
 html.dark .bg-zinc-900, html.dark .bg-zinc-950, html.dark .bg-white {
   background-color: #111c30 !important;
-  border: 1.5px solid #1e293b !important;
+  border: 0.75px solid #1e293b !important;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3) !important;
 }
 
@@ -203,7 +258,7 @@ table th {
   background-color: #f1f5f9 !important;
   color: #1e293b !important;
   font-weight: 900 !important;
-  font-size: 15px !important;
+  font-size: 7.5px !important;
 }
 html.dark table th {
   background-color: #1e293b !important;
@@ -211,16 +266,16 @@ html.dark table th {
 }
 
 tr {
-  border-bottom: 1.5px solid #f1f5f9 !important;
+  border-bottom: 0.75px solid #f1f5f9 !important;
 }
 html.dark tr {
-  border-bottom: 1.5px solid #1e293b !important;
+  border-bottom: 0.75px solid #1e293b !important;
 }
 
 /* Layout wrapping container: expands perfectly */
 #main-content-panel {
-  padding-top: 14px !important;
-  padding-bottom: 14px !important;
+  padding-top: 7px !important;
+  padding-bottom: 7px !important;
 }
 
 @media print {
@@ -235,6 +290,14 @@ html.dark tr {
     font-size: 11px !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  #root svg,
+  #root img,
+  #root video {
+    zoom: 1 !important;
+    width: auto !important;
+    height: auto !important;
   }
 
   /* Reset any dark theme backgrounds and styles during print for max contrast */

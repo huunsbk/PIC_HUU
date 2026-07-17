@@ -619,20 +619,20 @@ export default function Dashboard() {
       {/* BANNER ĐẬM CHẤT THỂ THAO ĐỈNH CAO (Chữ to rõ, màu rực rỡ, thiết kế cực sang trọng) */}
       <div className="bg-gradient-to-r from-blue-700 via-indigo-805 to-slate-900 text-white p-5 md:p-6 rounded-2xl shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4" id="tournament-branding-banner">
         <div className="space-y-2 max-w-2xl">
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-white/12 text-blue-200 border border-white/10 rounded-full text-[9px] font-black uppercase tracking-widest" style={{ color: '#e8eeda', fontSize: '19px' }}>
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-white/12 text-blue-200 border border-white/10 rounded-full text-[9px] font-black uppercase tracking-widest" style={{ color: '#e8eeda', fontSize: '9.5px' }}>
             Giải Đấu Điển Hình 2026
           </span>
-          <h2 className="text-xl md:text-2xl font-black tracking-tight leading-none uppercase font-display select-text" style={{ color: '#f1eb38', fontSize: '40px', lineHeight: '35.1px', textAlign: 'left', marginLeft: '0px' }}>
+          <h2 className="text-xl md:text-2xl font-black tracking-tight leading-none uppercase font-display select-text" style={{ color: '#f1eb38', fontSize: '20px', lineHeight: '17.55px', textAlign: 'left', marginLeft: '0px' }}>
             {tournament.name || 'GIẢI PICKLEBALL ĐÔI NAM TOÀN TỈNH'}
           </h2>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-blue-100 font-bold" style={{ textAlign: 'center', color: '#f0f0f0' }}>
             <span className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-md">
               <MapPin size={12} className="text-amber-300" />
-              <span style={{ fontSize: '22px' }}>Địa điểm: {tournament.location || 'Sân vận động Trung tâm Thể thao'}</span>
+              <span style={{ fontSize: '11px' }}>Địa điểm: {tournament.location || 'Sân vận động Trung tâm Thể thao'}</span>
             </span>
             <span className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-md">
               <CalendarDays size={12} className="text-amber-300" />
-              <span style={{ fontSize: '21px' }}>Khai mạc: {tournament.date || '2026-05-28'}</span>
+              <span style={{ fontSize: '10.5px' }}>Khai mạc: {tournament.date || '2026-05-28'}</span>
             </span>
           </div>
         </div>

@@ -274,29 +274,33 @@ export default function ScoreEntry() {
 
       if (maxSetCount === 1) {
         return (
-          <div key={setNumber} className="grid grid-cols-[72px_18px_72px_auto] items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 dark:border-zinc-800 dark:bg-zinc-950">
+          <div key={setNumber} className="grid min-w-max grid-cols-[21px_5px_21px_15px] items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-1.5 py-1 dark:border-zinc-800 dark:bg-zinc-950">
             <input
               type="text"
               inputMode="numeric"
+              size={2}
+              aria-label={`Điểm đội A, ${getTeamName(match, 'A')}`}
               value={setScore.a}
               onChange={(event) => handleSetScoreChange(match.id, setNumber, 'a', event.target.value)}
               disabled={disabled}
-              className="h-8 w-full rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
+              className="score-input-2digits match-score-value rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
             />
-            <span className="text-center text-xs font-black text-zinc-300">-</span>
+            <span className="match-score-value text-center font-black text-zinc-300">-</span>
             <input
               type="text"
               inputMode="numeric"
+              size={2}
+              aria-label={`Điểm đội B, ${getTeamName(match, 'B')}`}
               value={setScore.b}
               onChange={(event) => handleSetScoreChange(match.id, setNumber, 'b', event.target.value)}
               disabled={disabled}
-              className="h-8 w-full rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
+              className="score-input-2digits match-score-value rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
             />
             <button
               type="button"
               onClick={() => saveSetScore(match.id, setNumber)}
               disabled={disabled || updateMatchSetScore.isPending}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400"
+              className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400"
               title="Lưu điểm"
             >
               <Save size={15} />
@@ -306,30 +310,34 @@ export default function ScoreEntry() {
       }
 
       return (
-        <div key={setNumber} className="grid grid-cols-[52px_1fr_20px_1fr_auto] items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 dark:border-zinc-800 dark:bg-zinc-950">
-          <span className="text-[10px] font-black uppercase text-zinc-500">Séc {setNumber}</span>
+        <div key={setNumber} className="grid min-w-max grid-cols-[19px_21px_5px_21px_15px] items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-1.5 py-1 dark:border-zinc-800 dark:bg-zinc-950">
+          <span className="match-group-title font-black uppercase text-zinc-500">Séc {setNumber}</span>
           <input
             type="text"
             inputMode="numeric"
+            size={2}
+            aria-label={`Điểm đội A, séc ${setNumber}, ${getTeamName(match, 'A')}`}
             value={setScore.a}
             onChange={(event) => handleSetScoreChange(match.id, setNumber, 'a', event.target.value)}
             disabled={disabled}
-            className="h-8 w-full rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
+            className="score-input-2digits match-score-value rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
           />
-          <span className="text-center text-xs font-black text-zinc-300">-</span>
+          <span className="match-score-value text-center font-black text-zinc-300">-</span>
           <input
             type="text"
             inputMode="numeric"
+            size={2}
+            aria-label={`Điểm đội B, séc ${setNumber}, ${getTeamName(match, 'B')}`}
             value={setScore.b}
             onChange={(event) => handleSetScoreChange(match.id, setNumber, 'b', event.target.value)}
             disabled={disabled}
-            className="h-8 w-full rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
+            className="score-input-2digits match-score-value rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
           />
           <button
             type="button"
             onClick={() => saveSetScore(match.id, setNumber)}
             disabled={disabled || updateMatchSetScore.isPending}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400"
+            className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400"
             title={`Lưu séc ${setNumber}`}
           >
             <Save size={15} />
@@ -347,12 +355,12 @@ export default function ScoreEntry() {
       <div className="flex items-start justify-between gap-3 border-b border-zinc-200 pb-2 dark:border-zinc-800">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">{getGroupLabel(match)}</p>
-            <span className={`rounded-full border px-2 py-1 text-[10px] font-black uppercase ${getStatusClassName(match.status)}`}>
+            <p className="match-group-title font-black uppercase tracking-widest text-blue-600">{getGroupLabel(match)}</p>
+            <span className={`match-group-title rounded-full border px-2 py-1 font-black uppercase ${getStatusClassName(match.status)}`}>
               {getStatusLabel(match.status)}
             </span>
           </div>
-          <h3 className="mt-1 text-sm font-black leading-tight text-zinc-900 dark:text-zinc-100">
+          <h3 className="match-team-name mt-1 font-black leading-tight text-zinc-900 dark:text-zinc-100">
             {getTeamName(match, 'A')} vs {getTeamName(match, 'B')}
           </h3>
         </div>
@@ -377,24 +385,27 @@ export default function ScoreEntry() {
         </div>
       ) : null}
 
-      <div className="space-y-2">{renderSetInputs(match)}</div>
-
-      <div className="flex items-center justify-between gap-2 border-t border-zinc-200 pt-2 dark:border-zinc-800">
+      <div className="flex items-center gap-1.5 overflow-x-auto border-t border-zinc-200 pt-2 dark:border-zinc-800">
+        <div className="flex min-w-max items-center gap-1.5">{renderSetInputs(match)}</div>
         <button
           type="button"
           onClick={() => handleResetMatch(match.id)}
           disabled={resetMatchScore.isPending}
-          className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-black text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300"
+          className="inline-flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300"
+          aria-label="Reset điểm"
+          title="Reset điểm"
         >
-          <RotateCcw size={15} /> Reset
+          <RotateCcw size={15} />
         </button>
         <button
           type="button"
           onClick={() => handleFinalizeMatch(match.id)}
           disabled={match.status === 'finished' || finalizeMatchScore.isPending}
-          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-black text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label="Chốt trận"
+          title="Chốt trận"
         >
-          <Check size={16} /> Chốt trận
+          <Check size={16} />
         </button>
       </div>
     </div>
@@ -432,12 +443,12 @@ export default function ScoreEntry() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_210px]">
         <section className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
             <div className="flex items-center gap-2">
               <Clock size={16} className="text-blue-600" />
-              <h2 className="text-sm font-black uppercase text-zinc-900 dark:text-zinc-100">Lịch đấu & kết quả mới nhất</h2>
+              <h2 className="match-section-title font-black uppercase text-zinc-900 dark:text-zinc-100">Lịch đấu & kết quả mới nhất</h2>
             </div>
             <span className="text-[10px] font-bold text-zinc-500">{eventMatches.length} trận</span>
           </div>
@@ -471,7 +482,7 @@ export default function ScoreEntry() {
                           <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-zinc-900 px-1.5 text-[10px] font-black text-white dark:bg-zinc-100 dark:text-zinc-950">
                             {index + 1}
                           </span>
-                          <span className="rounded-full border border-zinc-200 px-2 py-0.5 text-[10px] font-black uppercase text-zinc-500 dark:border-zinc-800">
+                          <span className="match-group-title rounded-full border border-zinc-200 px-2 py-0.5 font-black uppercase text-zinc-500 dark:border-zinc-800">
                             {getGroupLabel(match)}
                           </span>
                         </div>
@@ -493,30 +504,30 @@ export default function ScoreEntry() {
                       </button>
                     </div>
 
-                    <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_minmax(116px,168px)] items-center gap-2 rounded-lg bg-zinc-50 p-2 dark:bg-zinc-950 max-sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-                      <p className="min-w-0 whitespace-normal break-words text-sm font-black leading-tight text-zinc-900 dark:text-zinc-100" title={teamA}>{teamA}</p>
+                    <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_minmax(58px,84px)] items-center gap-2 rounded-lg bg-zinc-50 p-2 dark:bg-zinc-950 max-sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+                      <p className="match-team-name min-w-0 whitespace-normal break-words font-black leading-tight text-zinc-900 dark:text-zinc-100" title={teamA}>{teamA}</p>
                       <span className="text-[10px] font-black text-zinc-400">VS</span>
-                      <p className="min-w-0 whitespace-normal break-words text-right text-sm font-black leading-tight text-zinc-900 dark:text-zinc-100" title={teamB}>{teamB}</p>
+                      <p className="match-team-name min-w-0 whitespace-normal break-words text-right font-black leading-tight text-zinc-900 dark:text-zinc-100" title={teamB}>{teamB}</p>
                       <div className="grid gap-1 max-sm:col-span-3">
                       {maxSetCount === 1 ? (
                         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg border border-zinc-100 px-2 py-1 text-xs dark:border-zinc-800">
-                          <span className="rounded bg-blue-50 px-2 py-1 text-center font-mono font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                          <span className="match-score-value rounded bg-blue-50 px-2 py-1 text-center font-mono font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
                             {getSetCell(match, 1, 'A') || '-'}
                           </span>
                           <span className="text-zinc-300">-</span>
-                          <span className="rounded bg-blue-50 px-2 py-1 text-center font-mono font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                          <span className="match-score-value rounded bg-blue-50 px-2 py-1 text-center font-mono font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
                             {getSetCell(match, 1, 'B') || '-'}
                           </span>
                         </div>
                       ) : (
                         setNumbers.map((setNumber) => (
                           <div key={setNumber} className="grid grid-cols-[42px_1fr_auto_1fr] items-center gap-1.5 rounded-lg border border-zinc-100 px-2 py-1 text-xs dark:border-zinc-800">
-                            <span className="text-[10px] font-black uppercase text-zinc-500">Séc {setNumber}</span>
-                            <span className="rounded bg-blue-50 px-2 py-1 text-center font-mono font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                            <span className="match-group-title font-black uppercase text-zinc-500">Séc {setNumber}</span>
+                            <span className="match-score-value rounded bg-blue-50 px-2 py-1 text-center font-mono font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
                               {getSetCell(match, setNumber, 'A') || '-'}
                             </span>
                             <span className="text-zinc-300">-</span>
-                            <span className="rounded bg-blue-50 px-2 py-1 text-center font-mono font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                            <span className="match-score-value rounded bg-blue-50 px-2 py-1 text-center font-mono font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
                               {getSetCell(match, setNumber, 'B') || '-'}
                             </span>
                           </div>
@@ -548,7 +559,7 @@ export default function ScoreEntry() {
             <div className="space-y-3 p-3">
               <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
                 <div>
-                  <p className="text-sm font-black uppercase text-zinc-900 dark:text-zinc-100">
+                  <p className="match-section-title font-black uppercase text-zinc-900 dark:text-zinc-100">
                     {reviewMatch ? 'Trận đang đấu / xem lại' : 'Trận đang đấu'}
                   </p>
                 </div>

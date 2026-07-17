@@ -584,7 +584,7 @@ export default function KnockoutBracket() {
                               className="flex items-center justify-between text-[10px] text-zinc-400 font-extrabold mb-3 pb-2 border-b border-zinc-200/55 dark:border-zinc-850/60 uppercase"
                               style={m.id === 'ko-QF2-3f2hlbu' ? { marginBottom: '0px' } : undefined}
                             >
-                              <span style={{ fontSize: '14px', color: '#dd13c8' }}>{getReadableKoMatchName(m.knockoutMatchId || '')}</span>
+                              <span style={{ fontSize: '7px', color: '#dd13c8' }}>{getReadableKoMatchName(m.knockoutMatchId || '')}</span>
                               {isFinished && <span className="text-emerald-600 dark:text-emerald-400 font-bold">HOÀN TẤT</span>}
                             </div>
 

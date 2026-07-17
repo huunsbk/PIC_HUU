@@ -150,7 +150,7 @@ const StandingGroupCard = React.memo(({
     <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-805 overflow-hidden shadow-sm mb-4">
       {/* Header Bar */}
       <div className="bg-blue-600 text-white py-2 px-2 sm:px-3 flex items-center justify-between">
-        <span className="text-[10px] sm:text-[11px] font-extrabold flex items-center gap-1.5 tracking-tight uppercase">
+        <span className="match-group-title font-extrabold flex items-center gap-1.5 tracking-tight uppercase">
           <Award size={13} /> BẢNG XẾP HẠNG - {group.name}
         </span>
         <span className="text-[9px] font-bold bg-white/20 px-2 py-0.5 rounded-full border border-white/20 select-none hidden sm:inline-block">
@@ -159,7 +159,7 @@ const StandingGroupCard = React.memo(({
       </div>
       {/* Table Data */}
       <div className="overflow-x-auto overflow-y-hidden">
-        <table className="w-full text-left text-[9px] sm:text-[11px] table-fixed">
+        <table className="match-score-value w-full text-left table-fixed">
           <thead>
             <tr className="bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 font-bold text-[9px] sm:text-[10px] md:text-[11px] leading-tight">
               <th className="py-1.5 px-0 text-center w-6 sm:w-8">Hạng</th>
@@ -188,13 +188,13 @@ const StandingGroupCard = React.memo(({
                   <td className="py-1.5 px-0 text-center font-bold text-[10px] sm:text-[11px]">
                     <span className="flex justify-center items-center">{rankBadge}</span>
                   </td>
-                  <td className="py-1.5 px-0.5 text-center font-extrabold text-zinc-700 dark:text-zinc-300 truncate text-[10px] sm:text-[12px]">{s.teamName}</td>
+                  <td className="match-team-name py-1.5 px-0.5 text-center font-extrabold text-zinc-700 dark:text-zinc-300 truncate">{s.teamName}</td>
                   <td className="py-1.5 px-0 text-center text-zinc-600 dark:text-zinc-400 font-medium">{s.matchesPlayed}</td>
                   <td className="py-1.5 px-0 text-center text-emerald-600 font-bold">{s.matchesWon}</td>
                   <td className="py-1.5 px-0 text-center text-red-500 font-bold">{s.matchesLost}</td>
                   <td className="py-1.5 px-0 text-center text-zinc-500 font-medium tracking-tighter">{s.setDiff > 0 ? `+${s.setDiff}` : s.setDiff}</td>
                   <td className="py-1.5 px-0 text-center text-zinc-500 font-medium tracking-tighter">{s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff === 0 ? 'Ø' : s.pointDiff}</td>
-                  <td className="py-1.5 px-0.5 text-center font-extrabold text-blue-600 text-[11px] sm:text-[13px]">{s.points}</td>
+                  <td className="match-score-value py-1.5 px-0.5 text-center font-extrabold text-blue-600">{s.points}</td>
                 </tr>
               );
             })}
@@ -256,14 +256,14 @@ const LiveMatchRow = React.memo(({
       </div>
       <div className="flex flex-col flex-1 pl-1 pr-2 overflow-hidden">
         <div className="overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 flex flex-col gap-0.5">
-          <span className={`font-semibold truncate block ${isFinished && m.winnerId === m.teamAId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-800 dark:text-zinc-200'}`} style={{ fontSize: '13px' }}>{teamA}</span>
-          <span className={`font-semibold truncate block ${isFinished && m.winnerId === m.teamBId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-800 dark:text-zinc-200'}`} style={{ fontSize: '13px' }}>{teamB}</span>
+          <span className={`match-team-name font-semibold truncate block ${isFinished && m.winnerId === m.teamAId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-800 dark:text-zinc-200'}`}>{teamA}</span>
+          <span className={`match-team-name font-semibold truncate block ${isFinished && m.winnerId === m.teamBId ? 'text-blue-600 dark:text-blue-400 font-extrabold' : 'text-zinc-800 dark:text-zinc-200'}`}>{teamB}</span>
         </div>
       </div>
       <div className="flex flex-col items-end shrink-0">
-        <span className="text-[7.5px] font-bold text-zinc-500 uppercase pb-0.5">{roundLabel}</span>
+        <span className="match-group-title font-bold text-zinc-500 uppercase pb-0.5">{roundLabel}</span>
         {isFinished ? (
-          <span className="text-[12px] font-black tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded leading-none shrink-0 border border-emerald-200/50 dark:border-emerald-800 shadow-sm">
+          <span className="match-score-value font-black tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded leading-none shrink-0 border border-emerald-200/50 dark:border-emerald-800 shadow-sm">
             {getSetScoreText(m) || `${m.scoreA} - ${m.scoreB}`}
           </span>
         ) : isPlaying ? (
@@ -299,23 +299,23 @@ const KoRoundCard = React.memo(({
   const { matches, tournament } = useTournamentStore();
   return (
     <div className="space-y-1 bg-white dark:bg-zinc-950 py-1.5 px-2.5 rounded-xl border border-zinc-100 dark:border-zinc-850">
-      <h6 className="text-[9px] font-black text-zinc-400 border-b pb-1 mb-1.5 uppercase select-none" style={{ fontSize: '13px', color: '#c61a8b' }}>{roundName}</h6>
+      <h6 className="text-[9px] font-black text-zinc-400 border-b pb-1 mb-1.5 uppercase select-none" style={{ fontSize: '6.5px', color: '#c61a8b' }}>{roundName}</h6>
       <div className="grid grid-cols-1 gap-1">
         {roundMatches.map((m) => {
           const teamAName = getMatchDisplayName(m.teamAId, m.placeholderA, teams, groups, matches, tournament?.settings || {});
           const teamBName = getMatchDisplayName(m.teamBId, m.placeholderB, teams, groups, matches, tournament?.settings || {});
           return (
             <div key={m.id} className="text-[10px] space-y-1 p-1.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800 rounded-lg">
-              <div className="text-[8px] font-black text-zinc-450 border-b border-zinc-200/30 dark:border-zinc-805 pb-0.5 mb-1 select-none" style={{ fontSize: '13px', color: '#992371' }}>
+              <div className="text-[8px] font-black text-zinc-450 border-b border-zinc-200/30 dark:border-zinc-805 pb-0.5 mb-1 select-none" style={{ fontSize: '6.5px', color: '#992371' }}>
                 {getReadableKoMatchName(m.knockoutMatchId || '')}
               </div>
               <div className="flex justify-between items-center gap-2">
-                <span className={`font-bold max-w-[85%] whitespace-normal break-words leading-tight ${m.winnerId === m.teamAId ? 'text-blue-600 font-extrabold' : 'text-zinc-500'}`} style={{ fontSize: '15px' }}>{teamAName}</span>
-                <strong className="font-mono text-zinc-650 dark:text-zinc-350 shrink-0">{m.status === 'finished' ? m.scoreA : '-'}</strong>
+                <span className={`match-team-name font-bold max-w-[85%] whitespace-normal break-words leading-tight ${m.winnerId === m.teamAId ? 'text-blue-600 font-extrabold' : 'text-zinc-500'}`}>{teamAName}</span>
+                <strong className="match-score-value font-mono text-zinc-650 dark:text-zinc-350 shrink-0">{m.status === 'finished' ? m.scoreA : '-'}</strong>
               </div>
               <div className="flex justify-between items-center gap-2">
-                <span className={`font-bold max-w-[85%] whitespace-normal break-words leading-tight ${m.winnerId === m.teamBId ? 'text-blue-600 font-extrabold' : 'text-zinc-500'}`} style={{ fontSize: '15px' }}>{teamBName}</span>
-                <strong className="font-mono text-zinc-650 dark:text-zinc-350 shrink-0">{m.status === 'finished' ? m.scoreB : '-'}</strong>
+                <span className={`match-team-name font-bold max-w-[85%] whitespace-normal break-words leading-tight ${m.winnerId === m.teamBId ? 'text-blue-600 font-extrabold' : 'text-zinc-500'}`}>{teamBName}</span>
+                <strong className="match-score-value font-mono text-zinc-650 dark:text-zinc-350 shrink-0">{m.status === 'finished' ? m.scoreB : '-'}</strong>
               </div>
             </div>
           );
@@ -1152,7 +1152,7 @@ export default function LiveDashboard() {
                 style={{
                   color: announcementDraft.color,
                   fontFamily: announcementDraft.fontFamily,
-                  fontSize: `${announcementDraft.fontSize}px`,
+                  fontSize: `${announcementDraft.fontSize * 0.5}px`,
                   textAlign: announcementDraft.textAlign,
                 }}
               >
@@ -1188,7 +1188,7 @@ export default function LiveDashboard() {
                       <Trophy size={16} className="stroke-[2.5]" />
                     </span>
                     <div>
-                      <h3 className="text-base font-extrabold text-zinc-900 dark:text-zinc-50 uppercase tracking-tight">
+                      <h3 className="match-event-title font-extrabold text-zinc-900 dark:text-zinc-50 uppercase tracking-tight">
                         Cặp đấu: {evt.name}
                       </h3>
                       <p className="text-[10px] font-bold text-zinc-500">Môn: {getSportName(evt.sport_id, sports)}</p>
@@ -1212,7 +1212,7 @@ export default function LiveDashboard() {
                   
                   {/* Cột 1: Bảng Xếp Hạng Vòng Bảng */}
                   <div className="space-y-3 bg-zinc-50/50 dark:bg-zinc-950/20 py-3 px-1.5 sm:px-4 rounded-2xl border border-zinc-150 dark:border-zinc-850">
-                    <span className="flex items-center gap-1.5 text-xs font-black text-zinc-400 uppercase tracking-wider" style={{ color: '#c225a2', fontSize: '14px' }}>
+                    <span className="match-section-title flex items-center gap-1.5 font-black text-zinc-400 uppercase tracking-wider" style={{ color: '#c225a2' }}>
                       <Layers size={13} /> Vòng bảng & Xếp hạng
                     </span>
                     {evtGroups.length === 0 ? (
@@ -1235,7 +1235,7 @@ export default function LiveDashboard() {
 
                   {/* Cột 2: Tiến Độ Lịch Thi Đấu */}
                   <div className="space-y-3 bg-zinc-50/50 dark:bg-zinc-950/20 py-3 px-4 rounded-2xl border border-zinc-150 dark:border-zinc-850">
-                    <span className="flex items-center gap-1.5 text-xs font-black text-zinc-400 uppercase tracking-wider" style={{ fontSize: '14px', borderColor: '#3fb536', color: '#b5117e' }}>
+                    <span className="match-section-title flex items-center gap-1.5 font-black text-zinc-400 uppercase tracking-wider" style={{ borderColor: '#3fb536', color: '#b5117e' }}>
                       <Clock size={13} /> Lịch đấu & Điểm số mới nhất
                     </span>
                     
@@ -1262,7 +1262,7 @@ export default function LiveDashboard() {
 
                   {/* Cột 3: Sơ đồ Knockout */}
                   <div className="space-y-3 bg-zinc-50/50 dark:bg-zinc-950/20 py-3 px-4 rounded-2xl border border-zinc-150 dark:border-zinc-850">
-                    <span className="flex items-center gap-1.5 text-xs font-black text-zinc-400 uppercase tracking-wider" style={{ color: '#c81d59', fontSize: '14px' }}>
+                    <span className="match-section-title flex items-center gap-1.5 font-black text-zinc-400 uppercase tracking-wider" style={{ color: '#c81d59' }}>
                       <GitCommit size={13} /> Sơ đồ Trực tiếp Knockout
                     </span>
                     

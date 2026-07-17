@@ -475,7 +475,7 @@ export default function SchedulerAndScoreKeeper() {
       {/* HEADER SECTION: "Lịch & Kết quả" & "In dữ liệu / PDF" */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 print:hidden" id="match-scoring-header-main">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+          <h2 className="match-event-title font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
             Lịch & Kết quả
           </h2>
           <p className="text-xs text-zinc-500 font-medium mt-0.5">
@@ -527,7 +527,7 @@ export default function SchedulerAndScoreKeeper() {
                   }`}
                   id={`btn-group-tab-select-${g.id}`}
                 >
-                  <span>{g.name}</span>
+                  <span className="match-group-title">{g.name}</span>
                 </button>
               );
             })}
@@ -580,7 +580,7 @@ export default function SchedulerAndScoreKeeper() {
             <div className="flex items-center justify-between pb-2" id="group-matches-column-bar">
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-4.5 bg-blue-600 rounded-full"></span>
-                <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wide flex items-center gap-1.5">
+                <span className="match-section-title font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wide flex items-center gap-1.5">
                   <ListTodo size={16} className="text-blue-600" />
                   Danh sách lượt đấu ({activeGroup.name})
                 </span>
@@ -617,7 +617,7 @@ export default function SchedulerAndScoreKeeper() {
 
                   return (
                     <div key={roundNum} className="space-y-3" id={`scoring-round-section-${roundNum}`}>
-                      <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest pl-1" style={{ color: '#d72488' }}>
+                      <h4 className="match-group-title font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest pl-1" style={{ color: '#d72488' }}>
                         Vòng {roundNum}
                       </h4>
 
@@ -646,7 +646,7 @@ export default function SchedulerAndScoreKeeper() {
                               style={{
                                 borderRadius: '16px',
                                 width: '100%',
-                                maxWidth: '607.25px',
+                                maxWidth: '303.625px',
                               }}
                               id={`score-card-match-${match.id}`}
                             >
@@ -655,7 +655,7 @@ export default function SchedulerAndScoreKeeper() {
                                 {/* TEAM A (LEFT SIDE - Text aligned to the right) */}
                                 <div className="flex-1 text-right min-w-0 pr-4">
                                   <span 
-                                    className={`text-sm font-semibold block truncate ${
+                                    className={`match-team-name font-semibold block truncate ${
                                       isFinished && match.winnerId === match.teamAId
                                         ? 'text-blue-600 dark:text-blue-400 font-bold'
                                         : 'text-zinc-700 dark:text-zinc-200'
@@ -668,7 +668,7 @@ export default function SchedulerAndScoreKeeper() {
                                 </div>
 
                                 {/* CENTER CONTROL: real set points, aggregate result is display-only */}
-                                <div className="shrink-0 min-w-[185px]">
+                                <div className="shrink-0 min-w-[92.5px]">
                                   {!isBestOf3Match ? (
                                     <div className="space-y-1">
                                       <div className="text-center text-[9px] font-black uppercase tracking-widest text-zinc-400">Điểm từng séc</div>
@@ -681,7 +681,7 @@ export default function SchedulerAndScoreKeeper() {
                                           value={scoreAVal}
                                           onChange={(e) => handleScoreInputChange(match.id, 'A', e.target.value)}
                                           disabled={!canManage || isFinished}
-                                          className="w-13 h-8 border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                                          className="score-input-2digits match-score-value border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                                           id={`input-match-${match.id}-scoreA`}
                                         />
                                         <span className="text-zinc-300 dark:text-zinc-700 select-none font-bold text-xs">-</span>
@@ -693,7 +693,7 @@ export default function SchedulerAndScoreKeeper() {
                                           value={scoreBVal}
                                           onChange={(e) => handleScoreInputChange(match.id, 'B', e.target.value)}
                                           disabled={!canManage || isFinished}
-                                          className="w-13 h-8 border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                                          className="score-input-2digits match-score-value border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                                           id={`input-match-${match.id}-scoreB`}
                                         />
                                       </div>
@@ -715,7 +715,7 @@ export default function SchedulerAndScoreKeeper() {
                                               value={setScore.scoreA}
                                               onChange={(e) => handleSetScoreInputChange(match.id, setNumber, 'A', e.target.value)}
                                               disabled={!canManage || isSetLocked}
-                                              className="w-10 h-7 border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold text-xs bg-white dark:bg-zinc-950 disabled:opacity-50"
+                                              className="score-input-2digits match-score-value border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold bg-white dark:bg-zinc-950 disabled:opacity-50"
                                             />
                                             <span className="text-zinc-300 text-[10px] font-bold">-</span>
                                             <input
@@ -725,7 +725,7 @@ export default function SchedulerAndScoreKeeper() {
                                               value={setScore.scoreB}
                                               onChange={(e) => handleSetScoreInputChange(match.id, setNumber, 'B', e.target.value)}
                                               disabled={!canManage || isSetLocked}
-                                              className="w-10 h-7 border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold text-xs bg-white dark:bg-zinc-950 disabled:opacity-50"
+                                              className="score-input-2digits match-score-value border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold bg-white dark:bg-zinc-950 disabled:opacity-50"
                                             />
                                             <button
                                               type="button"
@@ -766,7 +766,7 @@ export default function SchedulerAndScoreKeeper() {
                                 {/* TEAM B (RIGHT SIDE - Text aligned to the left) */}
                                 <div className="flex-1 text-left min-w-0 pl-4">
                                   <span 
-                                    className={`text-sm font-semibold block truncate ${
+                                    className={`match-team-name font-semibold block truncate ${
                                       isFinished && match.winnerId === match.teamBId
                                         ? 'text-blue-600 dark:text-blue-400 font-bold'
                                         : 'text-zinc-700 dark:text-zinc-200'
@@ -798,19 +798,19 @@ export default function SchedulerAndScoreKeeper() {
               
               {/* Header Bar - Solid Blue color exactly like the screenshot */}
               <div className="bg-blue-600 text-white p-4 flex items-center justify-between" id="standings-box-header">
-                <span className="text-sm font-extrabold flex items-center gap-2 tracking-tight uppercase">
+                <span className="match-section-title font-extrabold flex items-center gap-2 tracking-tight uppercase">
                   <Award size={17} />
                   Bảng xếp hạng hiện tại - {activeGroup.name}
                 </span>
                 
-                <span className="text-[10px] font-bold bg-white/20 px-2.5 py-1 rounded-full border border-white/20 select-none">
+                <span className="match-group-title font-bold bg-white/20 px-2.5 py-1 rounded-full border border-white/20 select-none">
                   Bảng {activeGroup.teamIds.length} đội
                 </span>
               </div>
 
               {/* Table Data Content */}
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="match-score-value w-full text-left">
                   <thead>
                     <tr className="bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 font-bold">
                       <th className="py-3 px-3 text-center w-12 font-bold">Hạng</th>
@@ -855,7 +855,7 @@ export default function SchedulerAndScoreKeeper() {
 
                           {/* Team Name */}
                           <td className="py-3.5 px-3 font-semibold text-zinc-750 dark:text-zinc-200">
-                            <div className="truncate max-w-[120px] sm:max-w-none text-sm" title={s.teamName}>
+                            <div className="match-team-name truncate max-w-[120px] sm:max-w-none" title={s.teamName}>
                               {s.teamName}
                             </div>
                           </td>
@@ -885,7 +885,7 @@ export default function SchedulerAndScoreKeeper() {
                           </td>
 
                           {/* Total Score Points */}
-                          <td className="py-3.5 px-3 text-center text-blue-600 dark:text-blue-400 font-black text-sm">
+                          <td className="match-score-value py-3.5 px-3 text-center text-blue-600 dark:text-blue-400 font-black">
                             {s.points}
                           </td>
                         </tr>
