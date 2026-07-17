@@ -107,6 +107,18 @@ export async function getPayOSPaymentLink(providerOrderCode, config) {
   return parsePayOSResponse(response);
 }
 
+export async function cancelPayOSPaymentLink(providerOrderCode, reason, config) {
+  const response = await fetch(`${PAYOS_API_URL}/v2/payment-requests/${providerOrderCode}/cancel`, {
+    method: 'POST',
+    headers: payOSHeaders(config),
+    body: JSON.stringify({
+      cancellationReason: String(reason || 'Customer requested cancellation').slice(0, 160),
+    }),
+    signal: AbortSignal.timeout(10000),
+  });
+  return parsePayOSResponse(response);
+}
+
 export async function createPayOSPaymentLink(order, appUrl, config) {
   const returnPath = order.order_type === 'activation' ? '/unlock' : '/subscription';
   const signatureData = {

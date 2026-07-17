@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import ExcelJS from 'exceljs';
+import { QRCodeCanvas } from 'qrcode.react';
 import { useQuery } from '@tanstack/react-query';
 import { useTournamentStore } from '../store';
 import { isPublicViewerRoute, useEvents } from '../hooks/useEvents';
@@ -27,7 +28,11 @@ import {
   Layers, 
   GitCommit, 
   Grid,
-  Share2
+  Share2,
+  QrCode,
+  Copy,
+  Link,
+  X,
 } from 'lucide-react';
 import { LiveBracket } from './LiveBracket';
 
@@ -572,6 +577,8 @@ export default function LiveDashboard() {
   const [currentTime, setCurrentTime] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [shareMessage, setShareMessage] = useState<string>('');
+  const [isShareQrOpen, setIsShareQrOpen] = useState(false);
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const canEditAnnouncement = !usePublicSnapshot && (
     hasPermission('*') ||
     hasPermission('manage_tournaments') ||
@@ -623,7 +630,8 @@ export default function LiveDashboard() {
 
   const publicTournamentUrl = React.useMemo(() => {
     if (typeof window === 'undefined') return '';
-    const slug = String((publicSnapshot?.tournament?.slug as any) || getRouteSlug() || '');
+    const slug = String((publicSnapshot?.tournament?.slug as any) || getRouteSlug() || '').trim();
+    if (!slug) return '';
     const basePath = import.meta.env.BASE_URL || '/';
     const normalizedBase = basePath.endsWith('/') ? basePath : `${basePath}/`;
     return `${window.location.origin}${normalizedBase}tournament/${encodeURIComponent(slug)}`;
@@ -639,6 +647,44 @@ export default function LiveDashboard() {
     }
     window.setTimeout(() => setShareMessage(''), 2500);
   };
+
+  const handleCopyQrImage = async () => {
+    const canvas = qrCanvasRef.current;
+    if (!canvas) return;
+
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) {
+      setShareMessage('Không thể tạo ảnh QR.');
+      return;
+    }
+
+    try {
+      if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        setShareMessage('Đã sao chép ảnh QR.');
+      } else {
+        throw new Error('IMAGE_CLIPBOARD_UNAVAILABLE');
+      }
+    } catch {
+      const downloadUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = downloadUrl;
+      anchor.download = 'ma-qr-giai-dau.png';
+      anchor.click();
+      URL.revokeObjectURL(downloadUrl);
+      setShareMessage('Trình duyệt không hỗ trợ sao chép ảnh; ảnh QR đã được tải xuống.');
+    }
+    window.setTimeout(() => setShareMessage(''), 3000);
+  };
+
+  useEffect(() => {
+    if (!isShareQrOpen) return undefined;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsShareQrOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [isShareQrOpen]);
 
   // Đếm giờ địa phương ticking liên tục
   useEffect(() => {
@@ -1047,14 +1093,26 @@ export default function LiveDashboard() {
               {shareMessage}
             </span>
           )}
-          <button
-            type="button"
-            onClick={handleShareTournamentLink}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-black text-zinc-700 shadow-xs transition hover:border-blue-200 hover:text-blue-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-blue-900 dark:hover:text-blue-300"
-          >
-            <Share2 size={14} />
-            Chia sẻ link giải đấu
-          </button>
+          {publicTournamentUrl ? (
+            <>
+              <button
+                type="button"
+                onClick={handleShareTournamentLink}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-black text-zinc-700 shadow-xs transition hover:border-blue-200 hover:text-blue-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-blue-900 dark:hover:text-blue-300"
+              >
+                <Share2 size={14} />
+                Chia sẻ link giải đấu
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsShareQrOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-black text-white shadow-sm transition hover:bg-blue-700"
+              >
+                <QrCode size={14} />
+                Mã QR chia sẻ
+              </button>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -1360,6 +1418,54 @@ export default function LiveDashboard() {
           })()}
         </div>
       )}
+
+      {isShareQrOpen && publicTournamentUrl ? (
+        <div
+          className="fixed inset-0 z-[140] grid place-items-center bg-black/75 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="share-qr-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setIsShareQrOpen(false);
+          }}
+        >
+          <div
+            className="relative rounded-lg border border-zinc-200 bg-white p-5 text-center shadow-2xl dark:border-zinc-700 dark:bg-zinc-900 sm:p-6"
+            style={{ width: 'min(92vw, 440px)', maxWidth: 'min(92vw, 440px)' }}
+          >
+            <button
+              type="button"
+              title="Đóng mã QR"
+              onClick={() => setIsShareQrOpen(false)}
+              className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+            >
+              <X size={20} />
+            </button>
+            <p className="text-xs font-black uppercase tracking-widest text-blue-600">Chia sẻ giải đấu</p>
+            <h2 id="share-qr-title" className="mt-1 pr-9 text-xl font-black text-zinc-950 dark:text-white">Quét mã để xem lịch và kết quả</h2>
+            <div className="mx-auto mt-5 w-fit rounded-lg border border-zinc-200 bg-white p-3 shadow-sm">
+              <QRCodeCanvas
+                ref={qrCanvasRef}
+                value={publicTournamentUrl}
+                size={512}
+                level="M"
+                includeMargin
+                className="h-auto max-w-full"
+                style={{ width: 'clamp(240px, 25vw, 360px)', height: 'auto', maxWidth: '100%' }}
+              />
+            </div>
+            <p className="mx-auto mt-3 max-w-md break-all text-xs font-semibold text-zinc-500">{publicTournamentUrl}</p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <button type="button" onClick={() => void handleCopyQrImage()} className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-black text-white hover:bg-blue-700">
+                <Copy size={16} /> Sao chép ảnh
+              </button>
+              <button type="button" onClick={() => void handleShareTournamentLink()} className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-300 px-4 text-sm font-black text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">
+                <Link size={16} /> Sao chép link
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
     </div>
   );
