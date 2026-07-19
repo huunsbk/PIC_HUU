@@ -29,8 +29,16 @@ WITH test_cases(team_count) AS (
     team_count,
     bool_or(
       LEAST(team_a_id, team_b_id) = 'team-1'
-      AND GREATEST(team_a_id, team_b_id) = 'team-3'
-    ) AS seed_one_meets_seed_three
+      AND GREATEST(team_a_id, team_b_id) = CASE
+        WHEN mod(team_count, 2) = 1 THEN 'team-' || team_count::text
+        ELSE 'team-3'
+      END
+    ) AS primary_pair_valid,
+    bool_or(
+      match_in_round = 2
+      AND LEAST(team_a_id, team_b_id) = 'team-2'
+      AND GREATEST(team_a_id, team_b_id) = 'team-4'
+    ) FILTER (WHERE mod(team_count, 2) = 1 AND team_count >= 5) AS odd_second_pair_valid
   FROM pairs
   WHERE round_no = 2
   GROUP BY team_count
@@ -67,7 +75,8 @@ SELECT
     ELSE test_cases.team_count
   END AS expected_rounds,
   opening_round.adjacent_seed_pairs,
-  second_round.seed_one_meets_seed_three,
+  second_round.primary_pair_valid,
+  second_round.odd_second_pair_valid,
   COALESCE(duplicates.duplicate_count, 0) AS duplicate_pairs,
   COALESCE(conflicts.conflict_count, 0) AS same_team_twice_in_round
 FROM test_cases
@@ -79,7 +88,8 @@ LEFT JOIN conflicts USING (team_count)
 GROUP BY
   test_cases.team_count,
   opening_round.adjacent_seed_pairs,
-  second_round.seed_one_meets_seed_three,
+  second_round.primary_pair_valid,
+  second_round.odd_second_pair_valid,
   duplicates.duplicate_count,
   conflicts.conflict_count
 ORDER BY test_cases.team_count;
