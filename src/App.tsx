@@ -850,7 +850,7 @@ function TournamentShell() {
   return (
     <div className="enterprise-app-shell min-h-screen bg-[#f8fafc] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans transition-colors duration-250">
       <div className="enterprise-layout flex flex-col lg:flex-row min-h-screen">
-        <aside className="w-full lg:w-64 bg-[#111c30] text-slate-200 flex flex-col shrink-0 border-r border-[#1e293b] print:hidden">
+        <aside className="enterprise-sidebar w-full lg:w-64 bg-[#111c30] text-slate-200 flex flex-col shrink-0 border-r border-[#1e293b] print:hidden">
           <div className="p-4 border-b border-[#1e293b] flex items-center gap-2.5">
             <div className="bg-blue-600 p-2 rounded-xl text-white shadow-md animate-pulse">
               <Trophy size={18} className="stroke-[2.5]" id="logo-badge" />

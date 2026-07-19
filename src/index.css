@@ -288,6 +288,15 @@ html.dark tr {
     min-height: 0;
   }
 
+  #root:has(.score-entry-viewport) .enterprise-layout {
+    flex-direction: row;
+  }
+
+  #root:has(.score-entry-viewport) .enterprise-sidebar {
+    width: 16rem;
+    height: 100%;
+  }
+
   #root:has(.score-entry-viewport) .enterprise-app-shell,
   #root:has(.score-entry-viewport) .enterprise-main-column,
   #root:has(.score-entry-viewport) #main-content-panel {
