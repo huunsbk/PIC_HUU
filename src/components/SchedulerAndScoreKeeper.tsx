@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ExcelJS from 'exceljs';
 import { useTournamentStore } from '../store';
 import { useTeams } from '../hooks/useTeams';
@@ -19,7 +19,6 @@ import {
   Printer, 
   RefreshCw, 
   RotateCcw, 
-  Check, 
   AlertTriangle, 
   ListTodo, 
   Award,
@@ -64,7 +63,7 @@ export default function SchedulerAndScoreKeeper() {
     return record;
   }, [eventsData]);
 
-  const { updateMatchScore, updateMatchSetScore, finalizeMatchScore, resetMatchScore, generateForGroup, generateAllSchedules } = useMatchMutations();
+  const { updateMatchSetScore, resetMatchScore, generateForGroup, generateAllSchedules } = useMatchMutations();
   const currentEvent = currentEventId ? events[currentEventId] : null;
   const getMatchMaxSetCount = (match: any) => {
     const event = events[match.event_id || currentEvent?.id || ''] || currentEvent;
@@ -90,6 +89,7 @@ export default function SchedulerAndScoreKeeper() {
   const [localScores, setLocalScores] = useState<Record<string, { scoreA: string; scoreB: string }>>({});
   const [localSetScores, setLocalSetScores] = useState<Record<string, { scoreA: string; scoreB: string }>>({});
   const [scoreError, setScoreError] = useState<string | null>(null);
+  const savingScoreKeysRef = useRef<Set<string>>(new Set());
 
   // Confirmations dialogs
   const [showRegenConfirm, setShowRegenConfirm] = useState(false);
@@ -112,7 +112,7 @@ export default function SchedulerAndScoreKeeper() {
     setLocalScores(scoresMap);
   }, [activeGroupId, matches, matchSetsData]); // Sync when active table changes or background matches update
 
-  const handleScoreInputChange = async (matchId: string, team: 'A' | 'B', value: string) => {
+  const handleScoreInputChange = (matchId: string, team: 'A' | 'B', value: string) => {
     // Keep value clean: only digits or empty string
     const cleanVal = value.replace(/[^0-9]/g, '');
 
@@ -128,29 +128,35 @@ export default function SchedulerAndScoreKeeper() {
       [matchId]: updatedMatch,
     }));
 
-    const scoreAStr = updatedMatch.scoreA;
-    const scoreBStr = updatedMatch.scoreB;
+  };
 
-    // Realtime auto-save & auto-calculate standings
-    if (scoreAStr !== '' && scoreBStr !== '') {
-      const numA = Number(scoreAStr);
-      const numB = Number(scoreBStr);
-      try {
-        await updateMatchScore.mutateAsync({ matchId, scoreA: numA, scoreB: numB });
-        setScoreError(null);
-      } catch (err) {
-        setScoreError(err instanceof Error ? err.message : 'Không lưu được điểm séc.');
-      }
-    } else {
-      // Only reset/clears the match score if there's an actual score populated in the store
-      const currentMatchInStore = matches.find((m) => m.id === matchId);
-      if (
-        currentMatchInStore &&
-        (currentMatchInStore.scoreA !== null || currentMatchInStore.scoreB !== null)
-      ) {
-        await resetMatchScore.mutateAsync(matchId);
-      }
+  const commitSingleSetScore = async (matchId: string) => {
+    const scores = localScores[matchId] || { scoreA: '', scoreB: '' };
+    if (scores.scoreA === '' || scores.scoreB === '') return;
+
+    const scoreKey = `${matchId}:1`;
+    if (savingScoreKeysRef.current.has(scoreKey)) return;
+    savingScoreKeysRef.current.add(scoreKey);
+
+    try {
+      await updateMatchSetScore.mutateAsync({
+        matchId,
+        setNumber: 1,
+        scoreA: Number(scores.scoreA),
+        scoreB: Number(scores.scoreB),
+      });
+      setScoreError(null);
+    } catch (err) {
+      setScoreError(err instanceof Error ? err.message : 'Không lưu được điểm.');
+    } finally {
+      savingScoreKeysRef.current.delete(scoreKey);
     }
+  };
+
+  const handleScoreKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    event.currentTarget.blur();
   };
 
   const getSetKey = (matchId: string, setNumber: number) => `${matchId}:${setNumber}`;
@@ -183,9 +189,12 @@ export default function SchedulerAndScoreKeeper() {
   const handleSaveSetScore = async (matchId: string, setNumber: 1 | 2 | 3) => {
     const scores = getSetScoreValue(matchId, setNumber);
     if (scores.scoreA === '' || scores.scoreB === '') {
-      setScoreError(`Vui lòng nhập đủ điểm cho séc ${setNumber}.`);
       return;
     }
+
+    const scoreKey = `${matchId}:${setNumber}`;
+    if (savingScoreKeysRef.current.has(scoreKey)) return;
+    savingScoreKeysRef.current.add(scoreKey);
 
     try {
       await updateMatchSetScore.mutateAsync({
@@ -197,15 +206,8 @@ export default function SchedulerAndScoreKeeper() {
       setScoreError(null);
     } catch (err) {
       setScoreError(err instanceof Error ? err.message : `Không lưu được điểm séc ${setNumber}.`);
-    }
-  };
-
-  const handleFinalizeMatchScore = async (matchId: string) => {
-    try {
-      await finalizeMatchScore.mutateAsync(matchId);
-      setScoreError(null);
-    } catch (err) {
-      setScoreError(err instanceof Error ? err.message : 'Không chốt được kết quả trận.');
+    } finally {
+      savingScoreKeysRef.current.delete(scoreKey);
     }
   };
 
@@ -680,6 +682,8 @@ export default function SchedulerAndScoreKeeper() {
                                           placeholder=""
                                           value={scoreAVal}
                                           onChange={(e) => handleScoreInputChange(match.id, 'A', e.target.value)}
+                                          onBlur={() => void commitSingleSetScore(match.id)}
+                                          onKeyDown={handleScoreKeyDown}
                                           disabled={!canManage || isFinished}
                                           className="score-input-2digits match-score-value border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                                           id={`input-match-${match.id}-scoreA`}
@@ -692,6 +696,8 @@ export default function SchedulerAndScoreKeeper() {
                                           placeholder=""
                                           value={scoreBVal}
                                           onChange={(e) => handleScoreInputChange(match.id, 'B', e.target.value)}
+                                          onBlur={() => void commitSingleSetScore(match.id)}
+                                          onKeyDown={handleScoreKeyDown}
                                           disabled={!canManage || isFinished}
                                           className="score-input-2digits match-score-value border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                                           id={`input-match-${match.id}-scoreB`}
@@ -704,7 +710,8 @@ export default function SchedulerAndScoreKeeper() {
                                       <div className="text-center text-[9px] font-black uppercase tracking-widest text-zinc-400">Điểm từng séc</div>
                                       {([1, 2, 3] as const).slice(0, maxSetCount).map((setNumber) => {
                                         const setScore = getSetScoreValue(match.id, setNumber);
-                                        const isSetLocked = isFinished || (setNumber === 3 && isTwoZeroSetLead);
+                                        const storedSet = matchSetsData.find((row) => row.match_id === match.id && row.set_number === setNumber && !row.deleted_at);
+                                        const isSetLocked = isFinished || storedSet?.status === 'finished' || (setNumber === 3 && isTwoZeroSetLead);
                                         return (
                                           <div key={setNumber} className="flex items-center justify-center gap-1.5">
                                             <span className="w-8 text-[9px] font-black text-zinc-500">Séc {setNumber}</span>
@@ -714,6 +721,8 @@ export default function SchedulerAndScoreKeeper() {
                                               pattern="[0-9]*"
                                               value={setScore.scoreA}
                                               onChange={(e) => handleSetScoreInputChange(match.id, setNumber, 'A', e.target.value)}
+                                              onBlur={() => void handleSaveSetScore(match.id, setNumber)}
+                                              onKeyDown={handleScoreKeyDown}
                                               disabled={!canManage || isSetLocked}
                                               className="score-input-2digits match-score-value border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold bg-white dark:bg-zinc-950 disabled:opacity-50"
                                             />
@@ -724,31 +733,18 @@ export default function SchedulerAndScoreKeeper() {
                                               pattern="[0-9]*"
                                               value={setScore.scoreB}
                                               onChange={(e) => handleSetScoreInputChange(match.id, setNumber, 'B', e.target.value)}
+                                              onBlur={() => void handleSaveSetScore(match.id, setNumber)}
+                                              onKeyDown={handleScoreKeyDown}
                                               disabled={!canManage || isSetLocked}
                                               className="score-input-2digits match-score-value border border-zinc-250 dark:border-zinc-800 rounded-lg text-center font-bold bg-white dark:bg-zinc-950 disabled:opacity-50"
                                             />
-                                            <button
-                                              type="button"
-                                              onClick={() => handleSaveSetScore(match.id, setNumber)}
-                                              disabled={!canManage || isSetLocked}
-                                              className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-black disabled:opacity-50"
-                                            >
-                                              Lưu
-                                            </button>
+                                            {storedSet?.status === 'finished' ? (
+                                              <span className="text-[9px] font-black text-emerald-600">Đã lưu</span>
+                                            ) : null}
                                           </div>
                                         );
                                       })}
                                       <div className="text-center text-[9px] font-black text-emerald-700 dark:text-emerald-400">Kết quả trận: {resultLabel}</div>
-                                      {!isFinished && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleFinalizeMatchScore(match.id)}
-                                          disabled={!canManage || finalizeMatchScore.isPending}
-                                          className="mx-auto block px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[9px] font-black disabled:opacity-50"
-                                        >
-                                          Chốt trận
-                                        </button>
-                                      )}
                                       {isFinished && (
                                         <button
                                           type="button"

@@ -320,6 +320,19 @@ export function useMatchMutations() {
     }
   });
 
+  const resetMatchScoreForReentry = useMutation({
+    mutationFn: async (matchId: string) => {
+      const eventId = requireBusinessContext();
+      await assertFreshEventPermission(eventId, 'enter_scores');
+      return tournamentRpc.resetMatchScoreForReentry(matchId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
+      queryClient.invalidateQueries({ queryKey: ['match-sets'] });
+      invalidateDashboardStats();
+    }
+  });
+
   const generateForGroup = useMutation({
     mutationFn: async (_params: { groupId: string, teamIds: string[] }) => {
       const eventId = requireBusinessContext();
@@ -386,5 +399,14 @@ export function useMatchMutations() {
     }
   });
 
-  return { updateMatchScore, updateMatchSetScore, finalizeMatchScore, resetMatchScore, generateForGroup, generateAllSchedules, updateMatchStatus };
+  return {
+    updateMatchScore,
+    updateMatchSetScore,
+    finalizeMatchScore,
+    resetMatchScore,
+    resetMatchScoreForReentry,
+    generateForGroup,
+    generateAllSchedules,
+    updateMatchStatus,
+  };
 }

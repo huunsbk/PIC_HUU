@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Check, Clock, Play, RotateCcw, Save, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, Clock, Loader2, Play, RotateCcw, X } from 'lucide-react';
 import { useTournamentStore } from '../store';
 import { useEvents } from '../hooks/useEvents';
 import { useMatches } from '../hooks/useMatches';
@@ -31,7 +31,7 @@ export default function ScoreEntry() {
   const { data: teamsData = [] } = useTeams();
   const { data: groupsData = [] } = useGroups();
   const { data: matchSetsData = [] } = useMatchSets();
-  const { updateMatchSetScore, finalizeMatchScore, resetMatchScore, updateMatchStatus } = useMatchMutations();
+  const { updateMatchSetScore, resetMatchScoreForReentry, updateMatchStatus } = useMatchMutations();
 
   const events = useMemo(() => Object.fromEntries(eventsData.map((event) => [event.id, event])), [eventsData]);
   const teams = useMemo(() => Object.fromEntries(teamsData.map((team) => [team.id, team])), [teamsData]);
@@ -52,11 +52,19 @@ export default function ScoreEntry() {
 
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [localSetScores, setLocalSetScores] = useState<Record<string, SetScoreDraft>>({});
+  const [savingSetKeys, setSavingSetKeys] = useState<Set<string>>(() => new Set());
+  const [locallySavedSetKeys, setLocallySavedSetKeys] = useState<Set<string>>(() => new Set());
+  const [autoFinalizedMatchIds, setAutoFinalizedMatchIds] = useState<Set<string>>(() => new Set());
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const savingSetKeysRef = useRef<Set<string>>(new Set());
+  const suppressBlurSaveMatchIdsRef = useRef<Set<string>>(new Set());
 
   const eventMatches = useMemo(() => balanceMatchesRestTime(matches || []), [matches]);
-  const playingMatches = useMemo(() => eventMatches.filter((match) => match.status === 'playing'), [eventMatches]);
+  const playingMatches = useMemo(
+    () => eventMatches.filter((match) => match.status === 'playing' && !autoFinalizedMatchIds.has(match.id)),
+    [eventMatches, autoFinalizedMatchIds],
+  );
   const reviewMatch = useMemo(
     () => eventMatches.find((match) => match.id === activeMatchId && match.status === 'finished') || null,
     [activeMatchId, eventMatches],
@@ -71,6 +79,31 @@ export default function ScoreEntry() {
       setActiveMatchId(null);
     }
   }, [activeMatchId, eventMatches]);
+
+  useEffect(() => {
+    setAutoFinalizedMatchIds((previous) => {
+      const next = new Set(
+        [...previous].filter((matchId) => eventMatches.some((match) => match.id === matchId && match.status === 'playing')),
+      );
+      if (next.size === previous.size && [...next].every((matchId) => previous.has(matchId))) return previous;
+      return next;
+    });
+  }, [eventMatches]);
+
+  useEffect(() => {
+    setLocallySavedSetKeys((previous) => {
+      const next = new Set(
+        [...previous].filter((setKey) => {
+          const [matchId, setNumber] = setKey.split(':');
+          return matchSetsData.some(
+            (row) => row.match_id === matchId && row.set_number === Number(setNumber) && row.status === 'finished' && !row.deleted_at,
+          ) || savingSetKeysRef.current.has(setKey);
+        }),
+      );
+      if (next.size === previous.size && [...next].every((setKey) => previous.has(setKey))) return previous;
+      return next;
+    });
+  }, [matchSetsData]);
 
   const triggerError = (message: string) => {
     setErrorMsg(message);
@@ -166,52 +199,95 @@ export default function ScoreEntry() {
     });
   };
 
-  const saveSetScore = async (matchId: string, setNumber: 1 | 2 | 3) => {
+  const saveSetScore = async (matchId: string, setNumber: 1 | 2 | 3, showIncompleteError = false) => {
+    if (suppressBlurSaveMatchIdsRef.current.has(matchId)) return;
+
     const scores = getSetScoreValue(matchId, setNumber);
     if (scores.a === '' || scores.b === '') {
-      const match = eventMatches.find((item) => item.id === matchId);
-      const maxSetCount = match ? getMatchMaxSetCount(match) : 1;
-      triggerError(maxSetCount === 1 ? 'Vui lòng nhập đủ điểm.' : `Vui lòng nhập đủ điểm cho séc ${setNumber}.`);
+      if (showIncompleteError) {
+        const match = eventMatches.find((item) => item.id === matchId);
+        const maxSetCount = match ? getMatchMaxSetCount(match) : 1;
+        triggerError(maxSetCount === 1 ? 'Vui lòng nhập đủ điểm.' : `Vui lòng nhập đủ điểm cho séc ${setNumber}.`);
+      }
       return;
     }
 
+    const setKey = getSetKey(matchId, setNumber);
+    if (savingSetKeysRef.current.has(setKey)) return;
+
+    const storedSet = getStoredSet(matchId, setNumber);
+    if (
+      storedSet?.status === 'finished' &&
+      storedSet.score_a === Number(scores.a) &&
+      storedSet.score_b === Number(scores.b)
+    ) {
+      return;
+    }
+
+    savingSetKeysRef.current.add(setKey);
+    setSavingSetKeys((previous) => new Set(previous).add(setKey));
+
     try {
-      await updateMatchSetScore.mutateAsync({
+      const result = await updateMatchSetScore.mutateAsync({
         matchId,
         setNumber,
         scoreA: parseInt(scores.a, 10),
         scoreB: parseInt(scores.b, 10),
       });
+      setLocallySavedSetKeys((previous) => new Set(previous).add(setKey));
       const match = eventMatches.find((item) => item.id === matchId);
       const maxSetCount = match ? getMatchMaxSetCount(match) : 1;
-      triggerSuccess(maxSetCount === 1 ? 'Đã lưu điểm.' : `Đã lưu séc ${setNumber}.`);
+      if (result?.auto_finalized === true) {
+        setAutoFinalizedMatchIds((previous) => new Set(previous).add(matchId));
+        setActiveMatchId((current) => current === matchId ? null : current);
+        triggerSuccess('Đã lưu điểm và tự động chốt trận.');
+      } else {
+        triggerSuccess(maxSetCount === 1 ? 'Đã lưu điểm.' : `Đã lưu séc ${setNumber}.`);
+      }
     } catch (err) {
       const match = eventMatches.find((item) => item.id === matchId);
       const maxSetCount = match ? getMatchMaxSetCount(match) : 1;
       triggerError(err instanceof Error ? err.message : maxSetCount === 1 ? 'Không lưu được điểm.' : `Không lưu được điểm séc ${setNumber}.`);
+    } finally {
+      savingSetKeysRef.current.delete(setKey);
+      setSavingSetKeys((previous) => {
+        const next = new Set(previous);
+        next.delete(setKey);
+        return next;
+      });
     }
   };
 
-  const handleFinalizeMatch = async (matchId: string) => {
-    try {
-      await finalizeMatchScore.mutateAsync(matchId);
-      triggerSuccess('Đã chốt kết quả trận.');
-    } catch (err) {
-      triggerError(err instanceof Error ? err.message : 'Không chốt được kết quả trận.');
-    }
+  const handleScoreKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, matchId: string) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    if (suppressBlurSaveMatchIdsRef.current.has(matchId)) return;
+    event.currentTarget.blur();
   };
 
   const handleResetMatch = async (matchId: string) => {
     try {
-      await resetMatchScore.mutateAsync(matchId);
+      await resetMatchScoreForReentry.mutateAsync(matchId);
       setLocalSetScores((prev) => {
         const next = { ...prev };
         [1, 2, 3].forEach((setNumber) => delete next[getSetKey(matchId, setNumber)]);
         return next;
       });
+      setLocallySavedSetKeys((previous) => {
+        const next = new Set(previous);
+        [1, 2, 3].forEach((setNumber) => next.delete(getSetKey(matchId, setNumber)));
+        return next;
+      });
+      setAutoFinalizedMatchIds((previous) => {
+        const next = new Set(previous);
+        next.delete(matchId);
+        return next;
+      });
       triggerSuccess('Đã đặt lại điểm trận.');
     } catch (err) {
       triggerError(err instanceof Error ? err.message : 'Không đặt lại được điểm trận.');
+    } finally {
+      suppressBlurSaveMatchIdsRef.current.delete(matchId);
     }
   };
 
@@ -233,6 +309,7 @@ export default function ScoreEntry() {
       if (activeMatchId === match.id) {
         setActiveMatchId(null);
       }
+      suppressBlurSaveMatchIdsRef.current.delete(match.id);
       return;
     }
 
@@ -251,6 +328,8 @@ export default function ScoreEntry() {
       }
     } catch (err) {
       triggerError(err instanceof Error ? err.message : 'Không đưa được trận về chờ đấu.');
+    } finally {
+      suppressBlurSaveMatchIdsRef.current.delete(match.id);
     }
   };
 
@@ -270,7 +349,11 @@ export default function ScoreEntry() {
     return ([1, 2, 3] as const).slice(0, maxSetCount).map((setNumber) => {
       const setScore = getSetScoreValue(match.id, setNumber);
       const thirdSetNotNeeded = setNumber === 3 && (winCounts.a >= 2 || winCounts.b >= 2);
-      const disabled = !isPermitted || matchFinished || thirdSetNotNeeded;
+      const setKey = getSetKey(match.id, setNumber);
+      const storedSet = getStoredSet(match.id, setNumber);
+      const setAlreadySaved = storedSet?.status === 'finished' || locallySavedSetKeys.has(setKey);
+      const setIsSaving = savingSetKeys.has(setKey);
+      const disabled = !isPermitted || matchFinished || thirdSetNotNeeded || setAlreadySaved || setIsSaving;
 
       if (maxSetCount === 1) {
         return (
@@ -282,6 +365,8 @@ export default function ScoreEntry() {
               aria-label={`Điểm đội A, ${getTeamName(match, 'A')}`}
               value={setScore.a}
               onChange={(event) => handleSetScoreChange(match.id, setNumber, 'a', event.target.value)}
+              onBlur={() => void saveSetScore(match.id, setNumber)}
+              onKeyDown={(event) => handleScoreKeyDown(event, match.id)}
               disabled={disabled}
               className="score-input-2digits match-score-value rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
             />
@@ -293,18 +378,14 @@ export default function ScoreEntry() {
               aria-label={`Điểm đội B, ${getTeamName(match, 'B')}`}
               value={setScore.b}
               onChange={(event) => handleSetScoreChange(match.id, setNumber, 'b', event.target.value)}
+              onBlur={() => void saveSetScore(match.id, setNumber)}
+              onKeyDown={(event) => handleScoreKeyDown(event, match.id)}
               disabled={disabled}
               className="score-input-2digits match-score-value rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
             />
-            <button
-              type="button"
-              onClick={() => saveSetScore(match.id, setNumber)}
-              disabled={disabled || updateMatchSetScore.isPending}
-              className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400"
-              title="Lưu điểm"
-            >
-              <Save size={15} />
-            </button>
+            <span className="inline-flex h-[15px] w-[15px] items-center justify-center text-emerald-600" title={setIsSaving ? 'Đang lưu điểm' : setAlreadySaved ? 'Đã lưu điểm' : undefined}>
+              {setIsSaving ? <Loader2 size={13} className="animate-spin" /> : setAlreadySaved ? <Check size={13} /> : null}
+            </span>
           </div>
         );
       }
@@ -319,6 +400,8 @@ export default function ScoreEntry() {
             aria-label={`Điểm đội A, séc ${setNumber}, ${getTeamName(match, 'A')}`}
             value={setScore.a}
             onChange={(event) => handleSetScoreChange(match.id, setNumber, 'a', event.target.value)}
+            onBlur={() => void saveSetScore(match.id, setNumber)}
+            onKeyDown={(event) => handleScoreKeyDown(event, match.id)}
             disabled={disabled}
             className="score-input-2digits match-score-value rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
           />
@@ -330,18 +413,14 @@ export default function ScoreEntry() {
             aria-label={`Điểm đội B, séc ${setNumber}, ${getTeamName(match, 'B')}`}
             value={setScore.b}
             onChange={(event) => handleSetScoreChange(match.id, setNumber, 'b', event.target.value)}
+            onBlur={() => void saveSetScore(match.id, setNumber)}
+            onKeyDown={(event) => handleScoreKeyDown(event, match.id)}
             disabled={disabled}
             className="score-input-2digits match-score-value rounded-lg border border-zinc-250 bg-white text-center font-black text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900"
           />
-          <button
-            type="button"
-            onClick={() => saveSetScore(match.id, setNumber)}
-            disabled={disabled || updateMatchSetScore.isPending}
-            className="inline-flex h-[15px] w-[15px] items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400"
-            title={`Lưu séc ${setNumber}`}
-          >
-            <Save size={15} />
-          </button>
+          <span className="inline-flex h-[15px] w-[15px] items-center justify-center text-emerald-600" title={setIsSaving ? `Đang lưu séc ${setNumber}` : setAlreadySaved ? `Đã lưu séc ${setNumber}` : undefined}>
+            {setIsSaving ? <Loader2 size={13} className="animate-spin" /> : setAlreadySaved ? <Check size={13} /> : null}
+          </span>
         </div>
       );
     });
@@ -366,6 +445,7 @@ export default function ScoreEntry() {
         </div>
         <button
           type="button"
+          onPointerDown={() => suppressBlurSaveMatchIdsRef.current.add(match.id)}
           onClick={() => handleCloseMatch(match)}
           disabled={updateMatchStatus.isPending || (!isReviewingFinished && hasSavedSetScores(match.id))}
           className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
@@ -389,23 +469,14 @@ export default function ScoreEntry() {
         <div className="flex min-w-max items-center gap-1.5">{renderSetInputs(match)}</div>
         <button
           type="button"
+          onPointerDown={() => suppressBlurSaveMatchIdsRef.current.add(match.id)}
           onClick={() => handleResetMatch(match.id)}
-          disabled={resetMatchScore.isPending}
+          disabled={resetMatchScoreForReentry.isPending}
           className="inline-flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300"
           aria-label="Reset điểm"
           title="Reset điểm"
         >
           <RotateCcw size={15} />
-        </button>
-        <button
-          type="button"
-          onClick={() => handleFinalizeMatch(match.id)}
-          disabled={match.status === 'finished' || finalizeMatchScore.isPending}
-          className="inline-flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label="Chốt trận"
-          title="Chốt trận"
-        >
-          <Check size={16} />
         </button>
       </div>
     </div>
