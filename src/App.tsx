@@ -185,8 +185,8 @@ function OperationsWorkspace() {
   }, [selectedTab]);
 
   return (
-    <div className="space-y-4">
-      <div className={panelShellClass}>
+    <div className={activeSubTab === 'scoreEntry' ? 'score-entry-workspace space-y-4' : 'space-y-4'}>
+      <div className={activeSubTab === 'scoreEntry' ? `${panelShellClass} score-entry-workspace-toolbar` : panelShellClass}>
         <div className="space-y-3 p-3">
           <SectionHeader
             eyebrow="Vận hành thi đấu"
@@ -848,8 +848,8 @@ function TournamentShell() {
   }, [navItems, currentPrimaryTab, setSelectedTab]);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans transition-colors duration-250">
-      <div className="flex flex-col lg:flex-row min-h-screen">
+    <div className="enterprise-app-shell min-h-screen bg-[#f8fafc] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans transition-colors duration-250">
+      <div className="enterprise-layout flex flex-col lg:flex-row min-h-screen">
         <aside className="w-full lg:w-64 bg-[#111c30] text-slate-200 flex flex-col shrink-0 border-r border-[#1e293b] print:hidden">
           <div className="p-4 border-b border-[#1e293b] flex items-center gap-2.5">
             <div className="bg-blue-600 p-2 rounded-xl text-white shadow-md animate-pulse">
@@ -914,8 +914,8 @@ function TournamentShell() {
           </div>
         </aside>
 
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className="sticky top-0 z-30 bg-white/95 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80 px-3 sm:px-5 py-1 sm:py-1.5 flex flex-col sm:flex-row items-start sm:items-center justify-start sm:justify-between gap-1.5 sm:gap-0 shadow-xs print:hidden">
+        <div className="enterprise-main-column flex-1 flex flex-col min-w-0">
+          <header className="enterprise-top-header sticky top-0 z-30 bg-white/95 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80 px-3 sm:px-5 py-1 sm:py-1.5 flex flex-col sm:flex-row items-start sm:items-center justify-start sm:justify-between gap-1.5 sm:gap-0 shadow-xs print:hidden">
             <div className="space-y-0.5">
               <p className="text-[8px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest leading-none">Cổng Điều Hành Trực Tuyến</p>
               <h2 className="text-[13px] font-extrabold text-zinc-900 dark:text-zinc-100 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 max-w-full sm:max-w-2xl whitespace-normal break-words leading-tight">
