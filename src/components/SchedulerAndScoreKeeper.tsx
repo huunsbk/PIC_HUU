@@ -652,10 +652,10 @@ export default function SchedulerAndScoreKeeper() {
                               }}
                               id={`score-card-match-${match.id}`}
                             >
-                              <div className="flex items-center justify-between gap-4 w-full">
+                              <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 max-sm:grid-cols-2 max-sm:gap-x-2 max-sm:gap-y-1.5">
                                 
                                 {/* TEAM A (LEFT SIDE - Text aligned to the right) */}
-                                <div className="flex-1 min-w-0 pr-2 text-right sm:pr-4">
+                                <div className="min-w-0 pr-1 text-right sm:pr-4">
                                   <span 
                                     className={`match-team-name block whitespace-normal break-words font-semibold leading-tight ${
                                       isFinished && match.winnerId === match.teamAId
@@ -670,7 +670,7 @@ export default function SchedulerAndScoreKeeper() {
                                 </div>
 
                                 {/* CENTER CONTROL: real set points, aggregate result is display-only */}
-                                <div className="shrink-0 min-w-[92.5px]">
+                                <div className="min-w-[92.5px] shrink-0 max-sm:col-span-2 max-sm:col-start-1 max-sm:row-start-2 max-sm:justify-self-center">
                                   {!isBestOf3Match ? (
                                     <div className="space-y-1">
                                       <div className="text-center text-[9px] font-black uppercase tracking-widest text-zinc-400">Điểm từng séc</div>
@@ -760,7 +760,7 @@ export default function SchedulerAndScoreKeeper() {
                                 </div>
 
                                 {/* TEAM B (RIGHT SIDE - Text aligned to the left) */}
-                                <div className="flex-1 min-w-0 pl-2 text-left sm:pl-4">
+                                <div className="min-w-0 pl-1 text-left max-sm:col-start-2 max-sm:row-start-1 sm:pl-4">
                                   <span 
                                     className={`match-team-name block whitespace-normal break-words font-semibold leading-tight ${
                                       isFinished && match.winnerId === match.teamBId
