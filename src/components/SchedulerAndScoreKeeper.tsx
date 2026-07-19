@@ -787,10 +787,10 @@ export default function SchedulerAndScoreKeeper() {
           </div>
 
           {/* COLUMN 2: STANDINGS TABLE (COL-SPAN 12, LG 5) */}
-          <div className="col-span-12 lg:col-span-5" id="group-standings-card-column">
+          <div className="col-span-12 min-w-0 lg:col-span-5" id="group-standings-card-column">
             
             {/* Table Board Container */}
-            <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-805 overflow-hidden shadow-sm" id="standings-box-wrapper">
+            <div className="max-w-full overflow-x-auto overflow-y-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-805 dark:bg-zinc-900" id="standings-box-wrapper">
               
               {/* Header Bar - Solid Blue color exactly like the screenshot */}
               <div className="bg-blue-600 text-white p-4 flex items-center justify-between" id="standings-box-header">
