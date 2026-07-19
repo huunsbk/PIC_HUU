@@ -573,7 +573,7 @@ export default function SchedulerAndScoreKeeper() {
         <div className="text-center text-zinc-500 font-bold py-10">Vui lòng lựa chọn một bảng đấu để bắt đầu.</div>
       ) : (
         /* TWO COLUMNS WORKSPACE */
-        <div className="grid grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-12 items-start gap-4 sm:gap-8">
           
           {/* COLUMN 1: MATCH CARDS LIST (COL-SPAN 12, LG 7) */}
           <div className="col-span-12 lg:col-span-7 space-y-5" id="group-matches-scoring-column">
