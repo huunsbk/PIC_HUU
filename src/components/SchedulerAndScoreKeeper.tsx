@@ -655,9 +655,9 @@ export default function SchedulerAndScoreKeeper() {
                               <div className="flex items-center justify-between gap-4 w-full">
                                 
                                 {/* TEAM A (LEFT SIDE - Text aligned to the right) */}
-                                <div className="flex-1 text-right min-w-0 pr-4">
+                                <div className="flex-1 min-w-0 pr-2 text-right sm:pr-4">
                                   <span 
-                                    className={`match-team-name font-semibold block truncate ${
+                                    className={`match-team-name block whitespace-normal break-words font-semibold leading-tight ${
                                       isFinished && match.winnerId === match.teamAId
                                         ? 'text-blue-600 dark:text-blue-400 font-bold'
                                         : 'text-zinc-700 dark:text-zinc-200'
@@ -760,9 +760,9 @@ export default function SchedulerAndScoreKeeper() {
                                 </div>
 
                                 {/* TEAM B (RIGHT SIDE - Text aligned to the left) */}
-                                <div className="flex-1 text-left min-w-0 pl-4">
+                                <div className="flex-1 min-w-0 pl-2 text-left sm:pl-4">
                                   <span 
-                                    className={`match-team-name font-semibold block truncate ${
+                                    className={`match-team-name block whitespace-normal break-words font-semibold leading-tight ${
                                       isFinished && match.winnerId === match.teamBId
                                         ? 'text-blue-600 dark:text-blue-400 font-bold'
                                         : 'text-zinc-700 dark:text-zinc-200'
