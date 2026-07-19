@@ -573,7 +573,7 @@ export default function SchedulerAndScoreKeeper() {
         <div className="text-center text-zinc-500 font-bold py-10">Vui lòng lựa chọn một bảng đấu để bắt đầu.</div>
       ) : (
         /* TWO COLUMNS WORKSPACE */
-        <div className="grid grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-12 items-start gap-4 sm:gap-8">
           
           {/* COLUMN 1: MATCH CARDS LIST (COL-SPAN 12, LG 7) */}
           <div className="col-span-12 lg:col-span-7 space-y-5" id="group-matches-scoring-column">
@@ -652,12 +652,12 @@ export default function SchedulerAndScoreKeeper() {
                               }}
                               id={`score-card-match-${match.id}`}
                             >
-                              <div className="flex items-center justify-between gap-4 w-full">
+                              <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 max-sm:grid-cols-2 max-sm:gap-x-2 max-sm:gap-y-1.5">
                                 
                                 {/* TEAM A (LEFT SIDE - Text aligned to the right) */}
-                                <div className="flex-1 text-right min-w-0 pr-4">
+                                <div className="min-w-0 pr-1 text-right sm:pr-4">
                                   <span 
-                                    className={`match-team-name font-semibold block truncate ${
+                                    className={`match-team-name block whitespace-normal break-words font-semibold leading-tight ${
                                       isFinished && match.winnerId === match.teamAId
                                         ? 'text-blue-600 dark:text-blue-400 font-bold'
                                         : 'text-zinc-700 dark:text-zinc-200'
@@ -670,7 +670,7 @@ export default function SchedulerAndScoreKeeper() {
                                 </div>
 
                                 {/* CENTER CONTROL: real set points, aggregate result is display-only */}
-                                <div className="shrink-0 min-w-[92.5px]">
+                                <div className="min-w-[92.5px] shrink-0 max-sm:col-span-2 max-sm:col-start-1 max-sm:row-start-2 max-sm:justify-self-center">
                                   {!isBestOf3Match ? (
                                     <div className="space-y-1">
                                       <div className="text-center text-[9px] font-black uppercase tracking-widest text-zinc-400">Điểm từng séc</div>
@@ -760,9 +760,9 @@ export default function SchedulerAndScoreKeeper() {
                                 </div>
 
                                 {/* TEAM B (RIGHT SIDE - Text aligned to the left) */}
-                                <div className="flex-1 text-left min-w-0 pl-4">
+                                <div className="min-w-0 pl-1 text-left max-sm:col-start-2 max-sm:row-start-1 sm:pl-4">
                                   <span 
-                                    className={`match-team-name font-semibold block truncate ${
+                                    className={`match-team-name block whitespace-normal break-words font-semibold leading-tight ${
                                       isFinished && match.winnerId === match.teamBId
                                         ? 'text-blue-600 dark:text-blue-400 font-bold'
                                         : 'text-zinc-700 dark:text-zinc-200'
@@ -787,10 +787,10 @@ export default function SchedulerAndScoreKeeper() {
           </div>
 
           {/* COLUMN 2: STANDINGS TABLE (COL-SPAN 12, LG 5) */}
-          <div className="col-span-12 lg:col-span-5" id="group-standings-card-column">
+          <div className="col-span-12 min-w-0 lg:col-span-5" id="group-standings-card-column">
             
             {/* Table Board Container */}
-            <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-805 overflow-hidden shadow-sm" id="standings-box-wrapper">
+            <div className="max-w-full overflow-x-auto overflow-y-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-805 dark:bg-zinc-900" id="standings-box-wrapper">
               
               {/* Header Bar - Solid Blue color exactly like the screenshot */}
               <div className="bg-blue-600 text-white p-4 flex items-center justify-between" id="standings-box-header">

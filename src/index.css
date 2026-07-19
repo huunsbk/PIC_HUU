@@ -46,7 +46,7 @@
 }
 
 html {
-  font-size: 8px;
+  font-size: 12.5px;
 }
 
 body {
@@ -62,43 +62,61 @@ html.dark body {
 
 /* Compact fixed-size media that do not inherit the root rem scale. */
 #root svg:not([class*="w-"]):not([class*="h-"]) {
-  zoom: 0.5;
+  zoom: 0.78125;
 }
 
 #root img,
 #root video {
-  width: 50% !important;
+  width: 78.125% !important;
+  max-width: 100% !important;
   height: auto !important;
 }
 
 /* Shared match typography keeps Operations and Live presentation in sync. */
 .match-event-title {
-  font-size: 10px !important;
+  font-size: 15.625px !important;
 }
 
 .match-section-title {
-  font-size: 8px !important;
+  font-size: 12.5px !important;
 }
 
 .match-group-title {
-  font-size: 7px !important;
+  font-size: 10.9375px !important;
 }
 
 .match-team-name {
-  font-size: 6.5px !important;
+  font-size: 10.15625px !important;
 }
 
 .match-score-value {
-  font-size: 7px !important;
+  font-size: 10.9375px !important;
 }
 
 .score-input-2digits {
   box-sizing: border-box;
-  width: 21px !important;
-  min-width: 21px !important;
-  height: 15px !important;
-  padding: 1px 2px !important;
-  font-size: 7px !important;
+  width: 33px !important;
+  min-width: 33px !important;
+  height: 24px !important;
+  padding: 1.25px 3.75px !important;
+  font-size: 10.9375px !important;
+}
+
+/* Score-entry hierarchy: compact labels/statuses, prominent team names. */
+.score-entry-viewport .match-section-title {
+  font-size: 9.375px !important;
+}
+
+.score-entry-viewport .match-group-title {
+  font-size: 8.203125px !important;
+}
+
+.score-entry-viewport .score-match-status-button {
+  font-size: 8.90625px !important;
+}
+
+.score-entry-viewport .match-team-name {
+  font-size: 12.6953125px !important;
 }
 
 /* --- ADVANCED SPORT CHRONICLE GLOBAL THEME REDESIGN --- 
@@ -112,62 +130,62 @@ html, body, p, span, h1, h2, h3, h4, h5, h6, select, input, button, textarea, la
 }
 
 /* Perfecting athletic snug paddings dynamically */
-.py-1   { padding-top: 1.5px !important; padding-bottom: 1.5px !important; }
-.py-1\.5 { padding-top: 2px !important; padding-bottom: 2px !important; }
-.py-2   { padding-top: 3px !important; padding-bottom: 3px !important; }
-.py-2\.5 { padding-top: 3.5px !important; padding-bottom: 3.5px !important; }
-.py-3   { padding-top: 4px !important; padding-bottom: 4px !important; }
-.py-3\.5 { padding-top: 5px !important; padding-bottom: 5px !important; }
-.py-4   { padding-top: 6px !important; padding-bottom: 6px !important; }
-.py-5   { padding-top: 7px !important; padding-bottom: 7px !important; }
-.py-6   { padding-top: 8px !important; padding-bottom: 8px !important; }
+.py-1   { padding-top: 2.5px !important; padding-bottom: 2.5px !important; }
+.py-1\.5 { padding-top: 3.125px !important; padding-bottom: 3.125px !important; }
+.py-2   { padding-top: 4.6875px !important; padding-bottom: 4.6875px !important; }
+.py-2\.5 { padding-top: 5.625px !important; padding-bottom: 5.625px !important; }
+.py-3   { padding-top: 6.25px !important; padding-bottom: 6.25px !important; }
+.py-3\.5 { padding-top: 7.8125px !important; padding-bottom: 7.8125px !important; }
+.py-4   { padding-top: 9.375px !important; padding-bottom: 9.375px !important; }
+.py-5   { padding-top: 10.9375px !important; padding-bottom: 10.9375px !important; }
+.py-6   { padding-top: 12.5px !important; padding-bottom: 12.5px !important; }
 
-.pt-1   { padding-top: 1.5px !important; }
-.pt-1\.5 { padding-top: 2px !important; }
-.pt-2   { padding-top: 3px !important; }
-.pt-2\.5 { padding-top: 3.5px !important; }
-.pt-3   { padding-top: 4px !important; }
-.pt-4   { padding-top: 6px !important; }
-.pt-5   { padding-top: 7px !important; }
-.pt-6   { padding-top: 8px !important; }
+.pt-1   { padding-top: 2.5px !important; }
+.pt-1\.5 { padding-top: 3.125px !important; }
+.pt-2   { padding-top: 4.6875px !important; }
+.pt-2\.5 { padding-top: 5.625px !important; }
+.pt-3   { padding-top: 6.25px !important; }
+.pt-4   { padding-top: 9.375px !important; }
+.pt-5   { padding-top: 10.9375px !important; }
+.pt-6   { padding-top: 12.5px !important; }
 
-.pb-1   { padding-bottom: 1.5px !important; }
-.pb-1\.5 { padding-bottom: 2px !important; }
-.pb-2   { padding-bottom: 3px !important; }
-.pb-2\.5 { padding-bottom: 3.5px !important; }
-.pb-3   { padding-bottom: 4px !important; }
-.pb-4   { padding-bottom: 6px !important; }
-.pb-5   { padding-bottom: 7px !important; }
-.pb-6   { padding-bottom: 8px !important; }
+.pb-1   { padding-bottom: 2.5px !important; }
+.pb-1\.5 { padding-bottom: 3.125px !important; }
+.pb-2   { padding-bottom: 4.6875px !important; }
+.pb-2\.5 { padding-bottom: 5.625px !important; }
+.pb-3   { padding-bottom: 6.25px !important; }
+.pb-4   { padding-bottom: 9.375px !important; }
+.pb-5   { padding-bottom: 10.9375px !important; }
+.pb-6   { padding-bottom: 12.5px !important; }
 
 /* Tighten layout gaps between sister blocks to avoid hollow spaces */
-.space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 2px !important; }
-.space-y-1\.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 3px !important; }
-.space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top: 4px !important; }
-.space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 5px !important; }
-.space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 6px !important; }
-.space-y-5 > :not([hidden]) ~ :not([hidden]) { margin-top: 7px !important; }
-.space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 8px !important; }
+.space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 3.125px !important; }
+.space-y-1\.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 4.6875px !important; }
+.space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top: 6.25px !important; }
+.space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 7.8125px !important; }
+.space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 9.375px !important; }
+.space-y-5 > :not([hidden]) ~ :not([hidden]) { margin-top: 10.9375px !important; }
+.space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 12.5px !important; }
 
 /* Dynamic athletic grids with cohesive layout borders */
-.gap-6 { gap: 9px !important; }
-.gap-4 { gap: 6px !important; }
+.gap-6 { gap: 14.0625px !important; }
+.gap-4 { gap: 9.375px !important; }
 
 /* Professional high-contrast typographic scales: increased by 2-4px everywhere for readability */
-.text-\[8px\]  { font-size: 5.5px !important; font-weight: 800 !important; tracking: uppercase; }
-.text-\[9px\]  { font-size: 6.5px !important; font-weight: 800 !important; tracking: uppercase; }
-.text-\[10px\] { font-size: 7px !important; font-weight: 800 !important; }
-.text-\[10\.5px\] { font-size: 5.25px !important; }
-.text-\[11px\] { font-size: 7.5px !important; font-weight: 850 !important; }
-.text-\[13px\] { font-size: 6.5px !important; }
-.text-\[14px\] { font-size: 7px !important; }
-.text-xs       { font-size: 8px !important; font-weight: 850 !important; }
-.text-sm       { font-size: 9px !important; font-weight: 850 !important; }
-.text-base     { font-size: 10px !important; font-weight: 900 !important; }
-.text-lg       { font-size: 11px !important; font-weight: 900 !important; }
-.text-xl       { font-size: 13px !important; font-weight: 900 !important; }
-.text-2xl      { font-size: 16px !important; font-weight: 950 !important; }
-.text-3xl      { font-size: 19px !important; font-weight: 950 !important; letter-spacing: -0.02em; }
+.text-\[8px\]  { font-size: 8.75px !important; font-weight: 800 !important; tracking: uppercase; }
+.text-\[9px\]  { font-size: 10px !important; font-weight: 800 !important; tracking: uppercase; }
+.text-\[10px\] { font-size: 10.9375px !important; font-weight: 800 !important; }
+.text-\[10\.5px\] { font-size: 8.125px !important; }
+.text-\[11px\] { font-size: 11.875px !important; font-weight: 850 !important; }
+.text-\[13px\] { font-size: 10px !important; }
+.text-\[14px\] { font-size: 10.9375px !important; }
+.text-xs       { font-size: 12.5px !important; font-weight: 850 !important; }
+.text-sm       { font-size: 14.0625px !important; font-weight: 850 !important; }
+.text-base     { font-size: 15.625px !important; font-weight: 900 !important; }
+.text-lg       { font-size: 17.1875px !important; font-weight: 900 !important; }
+.text-xl       { font-size: 20.3125px !important; font-weight: 900 !important; }
+.text-2xl      { font-size: 25px !important; font-weight: 950 !important; }
+.text-3xl      { font-size: 29.6875px !important; font-weight: 950 !important; letter-spacing: -0.02em; }
 
 /* Bold headers, tables headers, and tags */
 strong, b, th, h1, h2, h3, h4, h5, h6 {
@@ -258,7 +276,7 @@ table th {
   background-color: #f1f5f9 !important;
   color: #1e293b !important;
   font-weight: 900 !important;
-  font-size: 7.5px !important;
+  font-size: 11.875px !important;
 }
 html.dark table th {
   background-color: #1e293b !important;
@@ -274,8 +292,113 @@ html.dark tr {
 
 /* Layout wrapping container: expands perfectly */
 #main-content-panel {
-  padding-top: 7px !important;
-  padding-bottom: 7px !important;
+  padding-top: 10.9375px !important;
+  padding-bottom: 10.9375px !important;
+}
+
+/* The workspace identity header always follows normal document flow. */
+.enterprise-top-header {
+  position: static !important;
+  inset-block-start: auto !important;
+}
+
+/* The score-entry screen owns the remaining viewport in landscape mode. */
+@media (orientation: landscape) and (min-width: 900px) {
+  #root:has(.score-entry-viewport) .enterprise-app-shell,
+  #root:has(.score-entry-viewport) .enterprise-layout,
+  #root:has(.score-entry-viewport) .enterprise-main-column {
+    height: 100dvh;
+    min-height: 0;
+  }
+
+  #root:has(.score-entry-viewport) .enterprise-layout {
+    flex-direction: row;
+  }
+
+  #root:has(.score-entry-viewport) .enterprise-sidebar {
+    width: 16rem;
+    height: 100%;
+  }
+
+  #root:has(.score-entry-viewport) .enterprise-app-shell,
+  #root:has(.score-entry-viewport) .enterprise-main-column,
+  #root:has(.score-entry-viewport) #main-content-panel {
+    overflow: hidden;
+  }
+
+  #root:has(.score-entry-viewport) #main-content-panel {
+    min-height: 0;
+  }
+
+  #root:has(.score-entry-viewport) #main-content-panel > .animate-fade-in,
+  .score-entry-workspace {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .score-entry-workspace {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .score-entry-workspace > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 10px !important;
+  }
+
+  .score-entry-workspace-toolbar,
+  .score-entry-event-bar {
+    flex: none;
+  }
+
+  .score-entry-viewport {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  .score-entry-viewport > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 10px !important;
+  }
+
+  .score-entry-panels {
+    display: grid;
+    min-height: 0;
+    flex: 1;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) !important;
+    gap: 12.5px !important;
+  }
+
+  .score-schedule-section,
+  .score-live-section,
+  .score-live-content {
+    min-height: 0;
+    height: 100%;
+  }
+
+  .score-schedule-section,
+  .score-live-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .score-schedule-scroll,
+  .score-live-scroll {
+    min-height: 0;
+    max-height: none !important;
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .score-live-section {
+    overflow: hidden;
+  }
+
+  .score-live-empty {
+    min-height: 0 !important;
+    height: 100%;
+  }
 }
 
 @media print {

@@ -484,7 +484,7 @@ export default function ScoreEntry() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="score-entry-viewport space-y-6">
       {(errorMsg || successMsg) && (
         <div className={`rounded-xl border px-4 py-3 text-xs font-bold ${
           errorMsg
@@ -495,7 +495,7 @@ export default function ScoreEntry() {
         </div>
       )}
 
-      <div className="flex items-center gap-3 overflow-x-auto rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="score-entry-event-bar flex items-center gap-3 overflow-x-auto rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900">
         {eventsData.map((event) => (
           <button
             key={event.id}
@@ -514,8 +514,8 @@ export default function ScoreEntry() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_210px]">
-        <section className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="score-entry-panels grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
+        <section className="score-schedule-section overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
             <div className="flex items-center gap-2">
               <Clock size={16} className="text-blue-600" />
@@ -529,7 +529,7 @@ export default function ScoreEntry() {
               Chưa có lịch thi đấu. Hãy chia bảng và sinh lịch trước.
             </div>
           ) : (
-            <div className="grid max-h-[calc(100vh-230px)] grid-cols-1 gap-2 overflow-y-auto p-2.5">
+            <div className="score-schedule-scroll grid max-h-[calc(100vh-230px)] grid-cols-1 gap-2 overflow-y-auto p-2.5">
               {eventMatches.map((match, index) => {
                 const teamA = getTeamName(match, 'A');
                 const teamB = getTeamName(match, 'B');
@@ -562,7 +562,7 @@ export default function ScoreEntry() {
                         type="button"
                         onClick={() => handleOpenMatch(match)}
                         disabled={!isPermitted || updateMatchStatus.isPending}
-                        className={`inline-flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-[11px] font-black disabled:cursor-not-allowed disabled:opacity-50 ${
+                        className={`score-match-status-button inline-flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-[11px] font-black disabled:cursor-not-allowed disabled:opacity-50 ${
                           match.status === 'playing'
                             ? 'bg-blue-600 text-white hover:bg-blue-500'
                             : match.status === 'finished'
@@ -613,21 +613,21 @@ export default function ScoreEntry() {
           )}
         </section>
 
-        <aside className="rounded-xl border border-zinc-200 bg-zinc-50 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40">
+        <aside className="score-live-section rounded-xl border border-zinc-200 bg-zinc-50 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40">
           {!isPermitted ? (
-            <div className="flex min-h-[420px] flex-col items-center justify-center p-8 text-center text-zinc-500">
+            <div className="score-live-empty flex min-h-[420px] flex-col items-center justify-center p-8 text-center text-zinc-500">
               <Play size={40} className="mb-4 opacity-30" />
               <p className="text-sm font-black uppercase text-zinc-700 dark:text-zinc-300">Không có quyền nhập điểm</p>
               <p className="mt-2 text-xs font-medium">Tài khoản hiện tại chưa được phân công nhập điểm cho nội dung này.</p>
             </div>
           ) : panelMatches.length === 0 ? (
-            <div className="flex min-h-[420px] flex-col items-center justify-center p-8 text-center text-zinc-500">
+            <div className="score-live-empty flex min-h-[420px] flex-col items-center justify-center p-8 text-center text-zinc-500">
               <Play size={40} className="mb-4 opacity-30" />
               <p className="text-sm font-black uppercase text-zinc-700 dark:text-zinc-300">Chưa có trận đang đấu</p>
               <p className="mt-2 text-xs font-medium">Bấm Chờ để đưa trận lên panel và chuyển trạng thái đang đấu.</p>
             </div>
           ) : (
-            <div className="space-y-3 p-3">
+            <div className="score-live-content space-y-3 p-3">
               <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
                 <div>
                   <p className="match-section-title font-black uppercase text-zinc-900 dark:text-zinc-100">
@@ -636,7 +636,7 @@ export default function ScoreEntry() {
                 </div>
                 <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-blue-600 px-2 text-[13px] font-black text-white">{panelMatches.length}</span>
               </div>
-              <div className="max-h-[calc(100vh-230px)] space-y-2 overflow-y-auto pr-1">
+              <div className="score-live-scroll max-h-[calc(100vh-230px)] space-y-2 overflow-y-auto pr-1">
                 {panelMatches.map(renderPlayingMatchPanel)}
               </div>
             </div>
