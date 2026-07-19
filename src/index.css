@@ -296,6 +296,12 @@ html.dark tr {
   padding-bottom: 10.9375px !important;
 }
 
+/* The workspace identity header always follows normal document flow. */
+.enterprise-top-header {
+  position: static !important;
+  inset-block-start: auto !important;
+}
+
 /* The score-entry screen owns the remaining viewport in landscape mode. */
 @media (orientation: landscape) and (min-width: 900px) {
   #root:has(.score-entry-viewport) .enterprise-app-shell,
