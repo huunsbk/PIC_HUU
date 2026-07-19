@@ -386,7 +386,14 @@ export const tournamentRpc = {
   },
 
   updateMatchSetScore(matchId: string, setNumber: 1 | 2 | 3, scoreA: number, scoreB: number) {
-    return callRpc<TournamentRpcResult & { match_id?: string; match_status?: string; winner_id?: string | null }>('update_match_set_score_v1', {
+    return callRpc<TournamentRpcResult & {
+      match_id?: string;
+      match_status?: string;
+      winner_id?: string | null;
+      auto_finalized?: boolean;
+      score_a?: number;
+      score_b?: number;
+    }>('save_and_maybe_finalize_match_set_v1', {
       p_match_id: matchId,
       p_set_number: setNumber,
       p_score_a: scoreA,
@@ -402,6 +409,12 @@ export const tournamentRpc = {
 
   resetMatchScore(matchId: string) {
     return callRpc<TournamentRpcResult & { match_id?: string; status?: string }>('reset_match_score_v1', {
+      p_match_id: matchId,
+    });
+  },
+
+  resetMatchScoreForReentry(matchId: string) {
+    return callRpc<TournamentRpcResult & { match_id?: string; status?: string }>('reset_match_score_for_reentry_v1', {
       p_match_id: matchId,
     });
   },
