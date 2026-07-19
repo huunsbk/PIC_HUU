@@ -514,7 +514,7 @@ export default function ScoreEntry() {
         ))}
       </div>
 
-      <div className="score-entry-panels grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(210px,1fr)]">
+      <div className="score-entry-panels grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
         <section className="score-schedule-section overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
             <div className="flex items-center gap-2">

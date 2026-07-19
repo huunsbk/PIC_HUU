@@ -342,7 +342,7 @@ html.dark tr {
     display: grid;
     min-height: 0;
     flex: 1;
-    grid-template-columns: minmax(0, 3fr) minmax(210px, 1fr) !important;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) !important;
     gap: 12.5px !important;
   }
 
