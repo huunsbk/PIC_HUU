@@ -562,7 +562,7 @@ export default function ScoreEntry() {
                         type="button"
                         onClick={() => handleOpenMatch(match)}
                         disabled={!isPermitted || updateMatchStatus.isPending}
-                        className={`inline-flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-[11px] font-black disabled:cursor-not-allowed disabled:opacity-50 ${
+                        className={`score-match-status-button inline-flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-[11px] font-black disabled:cursor-not-allowed disabled:opacity-50 ${
                           match.status === 'playing'
                             ? 'bg-blue-600 text-white hover:bg-blue-500'
                             : match.status === 'finished'

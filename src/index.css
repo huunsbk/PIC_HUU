@@ -102,6 +102,23 @@ html.dark body {
   font-size: 10.9375px !important;
 }
 
+/* Score-entry hierarchy: compact labels/statuses, prominent team names. */
+.score-entry-viewport .match-section-title {
+  font-size: 9.375px !important;
+}
+
+.score-entry-viewport .match-group-title {
+  font-size: 8.203125px !important;
+}
+
+.score-entry-viewport .score-match-status-button {
+  font-size: 8.90625px !important;
+}
+
+.score-entry-viewport .match-team-name {
+  font-size: 12.6953125px !important;
+}
+
 /* --- ADVANCED SPORT CHRONICLE GLOBAL THEME REDESIGN --- 
    Designed by a 10-year experienced sports media & graphics UI designer.
    Balanced spacing, highly coordinated high-contrast labels, and 2-4px larger typography. */
