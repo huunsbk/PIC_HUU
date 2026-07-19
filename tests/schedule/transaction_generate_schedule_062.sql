@@ -17,6 +17,8 @@ DECLARE
   v_round_conflicts integer;
   v_duplicate_pairs integer;
   v_adjacent_conflicts integer;
+  v_group_order text[];
+  v_actual_cycle text[];
   v_index integer;
 BEGIN
   SELECT a.user_id
@@ -145,32 +147,53 @@ BEGIN
       RAISE EXCEPTION 'GROUP_DUPLICATE_PAIR:%', v_group.id;
     END IF;
 
-    IF v_group.team_count = 5 THEN
-      WITH ordered AS (
-        SELECT
-          row_number() OVER (ORDER BY display_order) AS sequence_no,
-          team_a_id,
-          team_b_id
-        FROM public.matches
-        WHERE event_id = v_event_id
-          AND group_id = v_group.id
-          AND deleted_at IS NULL
-      )
-      SELECT count(*)::integer
-        INTO v_adjacent_conflicts
-      FROM ordered current_match
-      JOIN ordered next_match ON next_match.sequence_no = current_match.sequence_no + 1
-      WHERE current_match.team_a_id IN (next_match.team_a_id, next_match.team_b_id)
-         OR current_match.team_b_id IN (next_match.team_a_id, next_match.team_b_id);
-
-      IF v_adjacent_conflicts > 0 THEN
-        RAISE EXCEPTION 'FIVE_TEAM_REST_ORDER_CONFLICTS:%', v_adjacent_conflicts;
-      END IF;
-    END IF;
   END LOOP;
 
   IF v_group_count <> 2 THEN
     RAISE EXCEPTION 'GROUP_COUNT_MISMATCH:%', v_group_count;
+  END IF;
+
+  SELECT array_agg(g.id ORDER BY g.name, g.id)
+    INTO v_group_order
+  FROM public.groups g
+  WHERE g.event_id = v_event_id
+    AND g.deleted_at IS NULL;
+
+  SELECT array_agg(m.group_id ORDER BY m.display_order)
+    INTO v_actual_cycle
+  FROM public.matches m
+  WHERE m.event_id = v_event_id
+    AND m.deleted_at IS NULL
+    AND m.round = 1;
+
+  IF v_actual_cycle <> ARRAY[
+    v_group_order[1], v_group_order[2],
+    v_group_order[1], v_group_order[2]
+  ] THEN
+    RAISE EXCEPTION 'GROUP_CYCLE_ORDER_MISMATCH:%', v_actual_cycle;
+  END IF;
+
+  WITH ordered AS (
+    SELECT
+      row_number() OVER (ORDER BY display_order) AS sequence_no,
+      team_a_id,
+      team_b_id
+    FROM public.matches
+    WHERE event_id = v_event_id
+      AND deleted_at IS NULL
+      AND COALESCE(group_id, '') <> 'knockout'
+  )
+  SELECT count(*)::integer
+    INTO v_adjacent_conflicts
+  FROM ordered current_match
+  JOIN ordered next_match ON next_match.sequence_no = current_match.sequence_no + 1
+  WHERE current_match.team_a_id IN (next_match.team_a_id, next_match.team_b_id)
+     OR current_match.team_b_id IN (next_match.team_a_id, next_match.team_b_id);
+
+  -- With a fixed 1-2/3-4 opening and 5-1/2-4 second round, one boundary
+  -- conflict is mathematically unavoidable after the shorter group ends.
+  IF v_adjacent_conflicts > 1 THEN
+    RAISE EXCEPTION 'EXCESSIVE_GLOBAL_REST_ORDER_CONFLICTS:%', v_adjacent_conflicts;
   END IF;
 END;
 $$;

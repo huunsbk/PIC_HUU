@@ -1357,6 +1357,15 @@ export function balanceMatchesRestTime(matches: Match[]): Match[] {
 
   if (groupMatches.length <= 1) return matches;
 
+  // The backend already returns matches in the configured group order. Keep
+  // the first appearance of each group instead of sorting opaque group IDs.
+  const groupOrder = new Map<string, number>();
+  groupMatches.forEach((match) => {
+    if (!groupOrder.has(match.groupId)) {
+      groupOrder.set(match.groupId, groupOrder.size);
+    }
+  });
+
   // 1. Nhóm các trận đấu theo vòng đấu (round)
   const roundsMap: Record<number, Match[]> = {};
   groupMatches.forEach((m) => {
@@ -1388,9 +1397,11 @@ export function balanceMatchesRestTime(matches: Match[]): Match[] {
       groupsInRoundMap[gId].push(m);
     });
 
-    // Lấy danh sách các groupId và sắp xếp theo tự nhiên (Bảng A -> group-1, Bảng B -> group-2, Bảng C -> group-3...)
+    // Preserve the backend order (Bảng A -> Bảng B -> Bảng C) rather than
+    // sorting random IDs such as group-e... and group-5....
     const sortedGroupIds = Object.keys(groupsInRoundMap).sort((a, b) => {
-      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+      return (groupOrder.get(a) ?? Number.MAX_SAFE_INTEGER)
+        - (groupOrder.get(b) ?? Number.MAX_SAFE_INTEGER);
     });
 
     // Tạo các mảng xếp hàng đợi (queue) trận đấu tương ứng của mỗi bảng trong vòng này
