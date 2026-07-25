@@ -8,7 +8,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { Tournament, Team, Group, Match, AuditLog, TournamentSettings, SeedType, GroupStanding, ThirdPlaceStanding, EventData, Account } from './types';
 import { generateRoundRobinMatches, calculateGroupStandings, calculateBestThirdPlaces, generateKnockoutMatchesSchema, balanceMatchesRestTime, normalizeSlotKey } from './utils/tournamentEngine';
 import { supabase, checkSupabaseConnection } from './supabaseClient';
-import { AuthAccessState } from './lib/auth/accessState';
+import { AuthAccessState, WorkspaceDirectoryState } from './lib/auth/accessState';
 import { loadCurrentProfile } from './lib/auth/profile';
 
 const getBasePath = () => {
@@ -37,20 +37,6 @@ const navigateToTenantHash = (tenantId: string, reload = false) => {
   if (reload) {
     setTimeout(() => window.location.reload(), 100);
   }
-};
-
-const navigateToWorkspaceList = () => {
-  const targetUrl = `${window.location.origin}${getBasePath()}admin/workspaces`;
-  if (window.location.href === targetUrl) return;
-  window.history.replaceState(null, '', targetUrl);
-  window.dispatchEvent(new PopStateEvent('popstate'));
-};
-
-const navigateToCommercialUnlock = () => {
-  const targetUrl = `${window.location.origin}${getBasePath()}unlock`;
-  if (window.location.href === targetUrl) return;
-  window.history.replaceState(null, '', targetUrl);
-  window.dispatchEvent(new PopStateEvent('popstate'));
 };
 
 const EVENT_SCOPED_PERMISSIONS = new Set([
@@ -133,14 +119,19 @@ interface AppState {
   isLoadingSupabase?: boolean;
 
   // Multi-tier accounts configuration
-  currentUser: string | null;
+  currentUser: any | null;
   currentEnterpriseUser: any | null; // Will store full EnterpriseAccount details
   userRole: 'guest' | string;
   activeTenantId: string; // 'default' or UUID of tenant
   activeTenantName: string | null;
   activeTournamentId: string | null;
   authAccessState: AuthAccessState;
+  authBootstrapComplete: boolean;
+  postLoginResolutionRequest: number;
+  workspaceDirectoryState: WorkspaceDirectoryState | null;
   setAuthAccessState: (state: AuthAccessState) => void;
+  setAuthBootstrapComplete: (complete: boolean) => void;
+  setWorkspaceDirectoryState: (state: WorkspaceDirectoryState | null) => void;
   setCommercialAccessState: (
     active: boolean,
     onboardingStatus?: string,
@@ -435,7 +426,27 @@ export const useTournamentStore = create<AppState>()(
         activeTenantName: null,
         activeTournamentId: null,
         authAccessState: 'UNAUTHENTICATED',
+        authBootstrapComplete: false,
+        postLoginResolutionRequest: 0,
+        workspaceDirectoryState: null,
         setAuthAccessState: (authAccessState) => originalSet({ authAccessState }),
+        setAuthBootstrapComplete: (authBootstrapComplete) => originalSet({ authBootstrapComplete }),
+        setWorkspaceDirectoryState: (workspaceDirectoryState) => originalSet((state) => ({
+          workspaceDirectoryState,
+          activeTenantId: state.currentEnterpriseUser?.tenant_id || 'default',
+          activeTenantName: state.currentEnterpriseUser?.tenant?.name || null,
+          activeTournamentId: null,
+          currentEventId: '',
+          events: {},
+          teams: {},
+          groups: {},
+          matches: [],
+          tournament: { ...DEFAULT_TOURNAMENT, id: '', name: 'Chưa chọn giải' },
+          selectedTab: 'workspaces',
+          isLoadingSupabase: false,
+          supabaseConnected: true,
+          authAccessState: workspaceDirectoryState ? 'WORKSPACE_SELECT_REQUIRED' : state.authAccessState,
+        })),
         setCommercialAccessState: (active, onboardingStatus, tenant) => originalSet((state) => ({
           currentEnterpriseUser: state.currentEnterpriseUser ? {
             ...state.currentEnterpriseUser,
@@ -449,12 +460,8 @@ export const useTournamentStore = create<AppState>()(
           authAccessState: active ? state.authAccessState : 'WORKSPACE_SELECT_REQUIRED',
         })),
         isLoadingSupabase: false,
-        setAuthStatus: async (role, username, tenantId, enterpriseUser) => {
-          console.log('[Auth Setup] Bắt đầu thiết lập Auth.');
+        setAuthStatus: async (role, username, _tenantId, enterpriseUser) => {
           originalSet({ authAccessState: 'PROFILE_LOADING' });
-          const isWorkspaceRoute = isRouteWorkspacePath();
-          const currentState = get();
-          const selectedTabAfterAuth = isWorkspaceRoute ? currentState.selectedTab : 'workspaces';
           const normalizedEnterpriseUser = enterpriseUser ? {
             ...enterpriseUser,
             role: enterpriseUser.role || role || enterpriseUser.role_name || 'guest',
@@ -467,45 +474,30 @@ export const useTournamentStore = create<AppState>()(
           } : null;
           const commercialLocked = normalizedEnterpriseUser?.tenant_type === 'self_service_customer'
             && normalizedEnterpriseUser?.business_access_active === false;
-          
+
           originalSet({
             userRole: role || 'guest',
             currentUser: username,
             currentEnterpriseUser: normalizedEnterpriseUser,
-            activeTenantId: isWorkspaceRoute ? currentState.activeTenantId : tenantId,
-            activeTenantName: isWorkspaceRoute ? currentState.activeTenantName : normalizedEnterpriseUser?.tenant?.name || currentState.activeTenantName || null,
+            activeTenantId: 'default',
+            activeTenantName: null,
+            activeTournamentId: null,
+            currentEventId: '',
+            events: {},
+            teams: {},
+            groups: {},
+            matches: [],
+            tournament: { ...DEFAULT_TOURNAMENT, id: '', name: 'Chưa chọn giải' },
             permissions: normalizedEnterpriseUser?.permissions || [],
             isAdmin: false /* deprecated */,
-            selectedTab: commercialLocked ? 'unlock' : selectedTabAfterAuth,
-            isLoadingSupabase: true,
-            authAccessState: isWorkspaceRoute ? 'ACCESS_LOADING' : 'WORKSPACE_SELECT_REQUIRED',
+            selectedTab: commercialLocked ? 'unlock' : 'workspaces',
+            isLoadingSupabase: false,
+            supabaseConnected: true,
+            authAccessState: 'ACCESS_LOADING',
+            authBootstrapComplete: true,
+            postLoginResolutionRequest: get().postLoginResolutionRequest + 1,
+            workspaceDirectoryState: null,
           });
-
-          if (commercialLocked) {
-            originalSet({
-              activeTournamentId: null,
-              isLoadingSupabase: false,
-              supabaseConnected: true,
-              authAccessState: 'WORKSPACE_SELECT_REQUIRED',
-            });
-            navigateToCommercialUnlock();
-            return;
-          }
-
-          if (normalizedEnterpriseUser && normalizedEnterpriseUser.id && tenantId !== 'default') {
-            requestAnimationFrame(() => {
-              if (isRouteWorkspacePath()) return;
-              navigateToWorkspaceList();
-            });
-          }
-          
-          if (isRouteWorkspacePath()) {
-            originalSet({ isLoadingSupabase: false, supabaseConnected: true });
-            return;
-          }
-
-          console.log('[Auth Setup] Đã đồng bộ cấu hình tài khoản. Đang khởi chạy tải lại cơ sở dữ liệu initSupabase()...');
-          await get().initSupabase();
         },
         logout: async () => {
           // Guard to avoid recursive logout calls if already guest
@@ -524,9 +516,18 @@ export const useTournamentStore = create<AppState>()(
             activeTenantId: 'default',
             activeTenantName: null,
             activeTournamentId: null,
+            currentEventId: '',
+            events: {},
+            teams: {},
+            groups: {},
+            matches: [],
+            tournament: { ...DEFAULT_TOURNAMENT, id: '', name: 'Chưa chọn giải' },
             permissions: [],
             isAdmin: false,
             authAccessState: 'UNAUTHENTICATED',
+            authBootstrapComplete: true,
+            postLoginResolutionRequest: 0,
+            workspaceDirectoryState: null,
           });
           
           // Reset URL hash so client isn't stuck on the active admin tenant path as guest on reload
@@ -591,7 +592,12 @@ export const useTournamentStore = create<AppState>()(
             currentTournament.name === nextTournament.name;
 
           if (isSameContext) {
-            originalSet({ isLoadingSupabase: false, supabaseConnected: true, authAccessState: 'WORKSPACE_CONTEXT_READY' });
+            originalSet({
+              isLoadingSupabase: false,
+              supabaseConnected: true,
+              authAccessState: 'WORKSPACE_CONTEXT_READY',
+              workspaceDirectoryState: null,
+            });
             return;
           }
 
@@ -602,7 +608,13 @@ export const useTournamentStore = create<AppState>()(
             isLoadingSupabase: false,
             supabaseConnected: true,
             tournament: nextTournament,
+            currentEventId: '',
+            events: {},
+            teams: {},
+            groups: {},
+            matches: [],
             authAccessState: 'WORKSPACE_CONTEXT_READY',
+            workspaceDirectoryState: null,
           });
         },
         clearWorkspaceContext: () => {
@@ -611,12 +623,14 @@ export const useTournamentStore = create<AppState>()(
             activeTenantName: null,
             activeTournamentId: null,
             currentEventId: '',
+            events: {},
             teams: {},
             groups: {},
             matches: [],
             tournament: { ...DEFAULT_TOURNAMENT, id: '', name: 'Chưa chọn giải' },
             isLoadingSupabase: false,
             supabaseConnected: true,
+            workspaceDirectoryState: null,
           });
         },
         isAdmin: false,
@@ -2042,9 +2056,6 @@ export const useTournamentStore = create<AppState>()(
                   console.log('[AuthState] Phiên Supabase đã hết hạn. Đang xóa trạng thái đăng nhập cục bộ...');
                   cur.logout();
                 }
-              } else if (event === 'SIGNED_IN') {
-                 // Trigger background refresh 
-                 get().initSupabase();
               }
             });
           }
@@ -2102,9 +2113,10 @@ export const useTournamentStore = create<AppState>()(
                         },
                         currentEnterpriseUser: restoredEnterpriseUser,
                         userRole: mappedRole,
-                        activeTenantId: routedWorkspace ? routeState.activeTenantId : tenantIdStr,
+                        activeTenantId: routeState.activeTournamentId ? routeState.activeTenantId : 'default',
                         permissions: fetchedPermissions,
-                        isAdmin: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'].includes(mappedRole)
+                        isAdmin: ['SUPER_ADMIN', 'TENANT_ADMIN', 'EVENT_ADMIN'].includes(mappedRole),
+                        authAccessState: 'ACCESS_LOADING',
                       });
                    }
                 }
@@ -2118,27 +2130,21 @@ export const useTournamentStore = create<AppState>()(
                   activeTournamentId: null,
                   permissions: [],
                   isAdmin: false,
+                  currentEventId: '',
+                  events: {},
+                  teams: {},
+                  groups: {},
+                  matches: [],
+                  tournament: { ...DEFAULT_TOURNAMENT, id: '', name: 'Chưa chọn giải' },
+                  authAccessState: 'UNAUTHENTICATED',
+                  workspaceDirectoryState: null,
                 });
              }
           } catch (err: any) {
              console.warn('Lỗi khi phục hồi session trước tiên.');
           }
 
-          const restoredCommercialUser = get().currentEnterpriseUser;
-          if (restoredCommercialUser?.tenant_type === 'self_service_customer'
-              && restoredCommercialUser?.business_access_active === false) {
-            originalSet({
-              selectedTab: 'unlock',
-              activeTournamentId: null,
-              supabaseConnected: true,
-              isLoadingSupabase: false,
-              authAccessState: 'WORKSPACE_SELECT_REQUIRED',
-            });
-            navigateToCommercialUnlock();
-            return;
-          }
-
-          if (routedWorkspace) {
+          if (routedWorkspace || get().currentEnterpriseUser) {
             originalSet({ supabaseConnected: true, isLoadingSupabase: false });
             return;
           }
@@ -2242,9 +2248,13 @@ export const useTournamentStore = create<AppState>()(
     {
       name: 'pickleball-tournament-cache', // Khóa lưu trữ LocalStorage để đồng bộ giữa các tab
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => Object.fromEntries(
-        Object.entries(state).filter(([key]) => !['isAdmin', 'authAccessState'].includes(key))
-      ),
+      version: 2,
+      partialize: (state) => ({
+        darkMode: state.darkMode,
+      }),
+      migrate: (persistedState: any) => ({
+        darkMode: persistedState?.darkMode === true,
+      }),
     }
   )
 );

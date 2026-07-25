@@ -25,6 +25,7 @@ import DeletedItemsManager from './components/DeletedItemsManager';
 import CommercialUnlockPage from './components/CommercialUnlockPage';
 import CommercialSubscriptionPage from './components/CommercialSubscriptionPage';
 import PaymentReviewManager from './components/PaymentReviewManager';
+import AuthWorkspaceCoordinator from './components/AuthWorkspaceCoordinator';
 import EventSwitcher from './components/event-switcher';
 import { useEventsQuery } from './components/use-events-query';
 import { getAuthHashErrorMessage, isSupabaseAuthCallbackHash } from './lib/authRedirect';
@@ -304,18 +305,22 @@ function AdminWorkspace() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const setWorkspaceContext = useTournamentStore((state) => state.setWorkspaceContext);
-  const activeTenantId = useTournamentStore(state => state.activeTenantId);
-  const activeTournamentId = useTournamentStore(state => state.activeTournamentId);
   const userRole = useTournamentStore(state => state.userRole);
   const setSelectedTab = useTournamentStore(state => state.setSelectedTab);
   const currentEnterpriseUser = useTournamentStore(state => state.currentEnterpriseUser);
+  const authBootstrapComplete = useTournamentStore(state => state.authBootstrapComplete);
   const setAuthAccessState = useTournamentStore(state => state.setAuthAccessState);
-  const clearWorkspaceContext = useTournamentStore(state => state.clearWorkspaceContext);
+  const setWorkspaceDirectoryState = useTournamentStore(state => state.setWorkspaceDirectoryState);
 
   useEffect(() => {
     let isCancelled = false;
     const loadWorkspace = async () => {
-      if (!slug) return;
+      if (!slug || !authBootstrapComplete) return;
+      if (!currentEnterpriseUser?.id || userRole === 'guest') {
+        setAuthAccessState('UNAUTHENTICATED');
+        navigate('/', { replace: true });
+        return;
+      }
       if (currentEnterpriseUser?.tenant_type === 'self_service_customer'
           && currentEnterpriseUser?.business_access_active === false) {
         setSelectedTab('unlock');
@@ -325,99 +330,99 @@ function AdminWorkspace() {
       const routeSlug = decodeURIComponent(slug);
       setAuthAccessState('ACCESS_LOADING');
 
-      const access = await resolveWorkspaceAccess({
-        routeSlug,
-        role: userRole,
-        tenantId: currentEnterpriseUser?.tenant_id || activeTenantId,
-      });
-
-      if (isCancelled) return;
-
-      if (!access.allowed || !access.pendingContext) {
-        setAuthAccessState(access.reason === 'guest' ? 'UNAUTHENTICATED' : 'WORKSPACE_SELECT_REQUIRED');
-        clearWorkspaceContext();
-        setSelectedTab('workspaces');
-        navigate('/admin/workspaces', { replace: true });
-        return;
-      }
-
-      setAuthAccessState('WORKSPACE_ACCESS_CONFIRMED');
-      const context = access.pendingContext;
-
-      if (activeTenantId !== context.tenantId || activeTournamentId !== context.tournamentId) {
-        setAuthAccessState('WORKSPACE_CONTEXT_LOADING');
-        await setWorkspaceContext({
-          tenantId: context.tenantId,
-          tenantName: context.tenantName,
-          tournamentId: context.tournamentId,
-          tournamentName: context.tournamentName,
-          tournamentSlug: context.tournamentSlug,
+      try {
+        const access = await resolveWorkspaceAccess({
+          routeSlug,
+          role: userRole,
+          tenantId: currentEnterpriseUser?.tenant_id,
         });
-      } else {
-        setAuthAccessState('WORKSPACE_CONTEXT_READY');
-      }
 
-      const currentTab = useTournamentStore.getState().selectedTab;
-      if (['workspaces', 'unlock', 'subscription'].includes(currentTab)) {
-        setSelectedTab(
-          currentEnterpriseUser?.tenant_type === 'self_service_customer'
-            ? 'content'
-            : 'dashboard',
-        );
+        if (isCancelled) return;
+
+        if (!access.allowed || !access.pendingContext) {
+          setWorkspaceDirectoryState({
+            kind: 'EMPTY',
+            reason: access.reason === 'guest' ? 'NO_ACCESSIBLE_WORKSPACE' : 'ACCESS_DENIED',
+            canCreateTournament: false,
+          });
+          navigate('/admin/workspaces', { replace: true });
+          return;
+        }
+
+        setAuthAccessState('WORKSPACE_ACCESS_CONFIRMED');
+        const context = access.pendingContext;
+        const currentState = useTournamentStore.getState();
+
+        if (currentState.activeTenantId !== context.tenantId || currentState.activeTournamentId !== context.tournamentId) {
+          setAuthAccessState('WORKSPACE_CONTEXT_LOADING');
+          await setWorkspaceContext({
+            tenantId: context.tenantId,
+            tenantName: context.tenantName,
+            tournamentId: context.tournamentId,
+            tournamentName: context.tournamentName,
+            tournamentSlug: context.tournamentSlug,
+          });
+        } else {
+          setAuthAccessState('WORKSPACE_CONTEXT_READY');
+        }
+
+        if (context.tournamentSlug && context.tournamentSlug !== routeSlug) {
+          navigate(`/admin/workspace/${encodeURIComponent(context.tournamentSlug)}`, { replace: true });
+        }
+
+        const currentTab = useTournamentStore.getState().selectedTab;
+        if (['workspaces', 'unlock', 'subscription'].includes(currentTab)) {
+          setSelectedTab(
+            currentEnterpriseUser?.tenant_type === 'self_service_customer'
+              ? 'content'
+              : 'dashboard',
+          );
+        }
+      } catch {
+        if (isCancelled) return;
+        setWorkspaceDirectoryState({
+          kind: 'EMPTY',
+          reason: 'RESOLUTION_ERROR',
+          canCreateTournament: false,
+        });
+        navigate('/admin/workspaces', { replace: true });
       }
     };
 
-    loadWorkspace();
+    void loadWorkspace();
     return () => {
       isCancelled = true;
     };
-  }, [slug, activeTenantId, activeTournamentId, userRole, currentEnterpriseUser?.tenant_id, currentEnterpriseUser?.tenant_type, currentEnterpriseUser?.business_access_active, setWorkspaceContext, setSelectedTab, setAuthAccessState, clearWorkspaceContext, navigate]);
+  }, [
+    slug,
+    userRole,
+    authBootstrapComplete,
+    currentEnterpriseUser?.id,
+    currentEnterpriseUser?.tenant_id,
+    currentEnterpriseUser?.tenant_type,
+    currentEnterpriseUser?.business_access_active,
+    setWorkspaceContext,
+    setSelectedTab,
+    setAuthAccessState,
+    setWorkspaceDirectoryState,
+    navigate,
+  ]);
 
   return <TournamentShell />;
 }
 
 function WorkspaceDirectory() {
-  const navigate = useNavigate();
   const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
-  const setWorkspaceContext = useTournamentStore((state) => state.setWorkspaceContext);
-  const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
+  const setWorkspaceDirectoryState = useTournamentStore((state) => state.setWorkspaceDirectoryState);
 
   useEffect(() => {
-    let cancelled = false;
     setSelectedTab('workspaces');
-    if (!currentEnterpriseUser?.tenant_id) return;
-
-    void setWorkspaceContext({
-      tenantId: currentEnterpriseUser.tenant_id,
-      tenantName: currentEnterpriseUser.tenant?.name || null,
-      tournamentId: null,
+    const state = useTournamentStore.getState();
+    setWorkspaceDirectoryState(state.workspaceDirectoryState || {
+      kind: 'DIRECTORY',
+      initialFilter: state.userRole === 'SUPER_ADMIN' ? 'all' : 'operational',
     });
-
-    if (currentEnterpriseUser.tenant_type === 'self_service_customer'
-        && currentEnterpriseUser.business_access_active !== false) {
-      void ensureMySelfServiceWorkspace()
-        .then((result) => {
-          if (!cancelled) {
-            navigate(`/admin/workspace/${encodeURIComponent(result.workspace.slug)}`, { replace: true });
-          }
-        })
-        .catch((error) => {
-          console.error('Không thể mở giải self-service đã được cấp.', error);
-        });
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    currentEnterpriseUser?.tenant_id,
-    currentEnterpriseUser?.tenant?.name,
-    currentEnterpriseUser?.tenant_type,
-    currentEnterpriseUser?.business_access_active,
-    navigate,
-    setSelectedTab,
-    setWorkspaceContext,
-  ]);
+  }, [setSelectedTab, setWorkspaceDirectoryState]);
 
   return <TournamentShell />;
 }
@@ -510,10 +515,7 @@ function PublicTournament() {
 
 // Basic Wrapper for Enterprise / Login Page
 function RootEntry() {
-  const initSupabase = useTournamentStore(state => state.initSupabase);
-  const currentEnterpriseUser = useTournamentStore(state => state.currentEnterpriseUser);
   const navigate = useNavigate();
-  const [authInitialized, setAuthInitialized] = React.useState(false);
   
   useEffect(() => {
       const legacyHash = window.location.hash.replace(/^#\/?/, '').trim();
@@ -546,52 +548,7 @@ function RootEntry() {
           });
         return;
       }
-
-      let cancelled = false;
-      initSupabase().finally(() => {
-        if (!cancelled) setAuthInitialized(true);
-      });
-      return () => {
-        cancelled = true;
-      };
-  }, [initSupabase, navigate]);
-
-  useEffect(() => {
-    if (!authInitialized || !currentEnterpriseUser) return;
-    let cancelled = false;
-
-    const routeAuthenticatedUser = async () => {
-      if (currentEnterpriseUser.tenant_type !== 'self_service_customer') {
-        navigate('/admin/workspaces', { replace: true });
-        return;
-      }
-      if (currentEnterpriseUser.business_access_active === false) {
-        navigate('/unlock', { replace: true });
-        return;
-      }
-
-      try {
-        const result = await ensureMySelfServiceWorkspace();
-        if (!cancelled) {
-          navigate(`/admin/workspace/${encodeURIComponent(result.workspace.slug)}`, { replace: true });
-        }
-      } catch (error) {
-        console.error('Không thể chuẩn bị giải self-service sau đăng nhập.', error);
-        if (!cancelled) navigate('/admin/workspaces', { replace: true });
-      }
-    };
-
-    void routeAuthenticatedUser();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    authInitialized,
-    currentEnterpriseUser?.id,
-    currentEnterpriseUser?.tenant_type,
-    currentEnterpriseUser?.business_access_active,
-    navigate,
-  ]);
+  }, [navigate]);
 
   return <TournamentShell />;
 }
@@ -609,6 +566,7 @@ export default function App() {
 
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <AuthWorkspaceCoordinator />
       {authHashError && (
         <div className="fixed left-4 right-4 top-4 z-[90] mx-auto max-w-2xl rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800 shadow-lg dark:border-red-900/40 dark:bg-red-950 dark:text-red-200">
           <div className="flex items-start justify-between gap-3">
@@ -652,6 +610,7 @@ function TournamentShell() {
   const permissions = useTournamentStore((state) => state.permissions);
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const activeTenantName = useTournamentStore((state) => state.activeTenantName);
+  const activeTournamentId = useTournamentStore((state) => state.activeTournamentId);
   const currentEventId = useTournamentStore((state) => state.currentEventId);
   const authAccessState = useTournamentStore((state) => state.authAccessState);
   const setCommercialAccessState = useTournamentStore((state) => state.setCommercialAccessState);
@@ -676,6 +635,9 @@ function TournamentShell() {
     'Chưa đăng nhập';
   const profileRole = roleLabels[currentEnterpriseUser?.role_name || currentEnterpriseUser?.role || userRole] || currentEnterpriseUser?.role_name || currentEnterpriseUser?.role || userRole;
   const profileTournamentName = tournament.name || 'Chưa chọn giải';
+  const profileTenantName = activeTenantName
+    || currentEnterpriseUser?.tenant?.name
+    || (activeTournamentId && activeTenantId !== 'default' ? activeTenantId : 'Chưa chọn đơn vị');
 
   const [isLoginOpen, setIsLoginOpen] = React.useState(false);
 
@@ -922,7 +884,7 @@ function TournamentShell() {
                 {tournament.name || 'HỆ THỐNG QUẢN LÝ GIẢI ĐẤU PICKLEBALL'}
               </h2>
               <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-bold text-zinc-500 dark:text-zinc-400 leading-tight">
-                <span>Đơn vị: {activeTenantName || currentEnterpriseUser?.tenant?.name || activeTenantId || 'Chưa chọn'}</span>
+                <span>Đơn vị: {profileTenantName}</span>
                 <span>Giải: {tournament.name || 'Chưa chọn'}</span>
                 <span>Nội dung thi đấu: {currentHeaderEvent?.name || 'Chưa chọn'}</span>
               </div>
