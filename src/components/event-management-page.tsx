@@ -103,11 +103,15 @@ export default function EventManagementPage() {
   const tournament = useTournamentStore((state) => state.tournament);
   const activeTournamentId = useTournamentStore((state) => state.activeTournamentId);
   const hasPermission = useTournamentStore((state) => state.hasPermission);
+  const hasEventPermission = useTournamentStore((state) => state.hasEventPermission);
   const canCreateEvents = hasPermission('create_events');
   const { data: sports = [] } = useSportsCatalog();
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ event, status }: { event: any; status: string }) => {
+      if (!hasEventPermission('manage_events', event.id)) {
+        throw new Error('Bạn không có quyền thay đổi trạng thái nội dung thi đấu này.');
+      }
       if (status === 'archived') return tournamentRpc.archiveEvent(event.id);
       if (status === 'active') return tournamentRpc.restoreEvent(event.id);
       return tournamentRpc.updateEventStatus(event, status);
@@ -253,14 +257,16 @@ export default function EventManagementPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setConfigEvent(event)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-indigo-50 hover:text-indigo-600"
-                          title="Chỉnh cấu hình nội dung"
-                        >
-                          <Settings size={15} />
-                        </button>
+                        {hasEventPermission('manage_event_config', event.id) && (
+                          <button
+                            type="button"
+                            onClick={() => setConfigEvent(event)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-indigo-50 hover:text-indigo-600"
+                            title="Chỉnh cấu hình nội dung"
+                          >
+                            <Settings size={15} />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => copyPublicLink(event)}
@@ -277,22 +283,26 @@ export default function EventManagementPage() {
                         >
                           <ExternalLink size={15} />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setMembersEventId(event.id)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-emerald-50 hover:text-emerald-600"
-                          title="Cấp quyền trọng tài"
-                        >
-                          <Users size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setArchiveEvent(event)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-red-50 hover:text-red-600"
-                          title="Lưu trữ nội dung"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        {hasEventPermission('manage_referees', event.id) && (
+                          <button
+                            type="button"
+                            onClick={() => setMembersEventId(event.id)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-emerald-50 hover:text-emerald-600"
+                            title="Cấp quyền trọng tài"
+                          >
+                            <Users size={15} />
+                          </button>
+                        )}
+                        {hasEventPermission('manage_events', event.id) && (
+                          <button
+                            type="button"
+                            onClick={() => setArchiveEvent(event)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-red-50 hover:text-red-600"
+                            title="Lưu trữ nội dung"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
