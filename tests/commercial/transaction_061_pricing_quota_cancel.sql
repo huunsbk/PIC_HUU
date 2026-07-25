@@ -94,25 +94,54 @@ BEGIN
   END IF;
   PERFORM public.cancel_payment_order_v1(v_auth_user_id, v_order_id);
 
-  SELECT e.id, e.tenant_id
-  INTO v_event_id, v_tenant_id
+  SELECT
+    e.id,
+    e.tenant_id,
+    a.user_id,
+    a.id,
+    latest_subscription.id
+  INTO
+    v_event_id,
+    v_tenant_id,
+    v_active_auth_user_id,
+    v_active_account_id,
+    v_active_subscription_id
   FROM public.events e
   JOIN public.tenants t ON t.id = e.tenant_id
+  JOIN public.accounts a ON a.tenant_id = t.id
+  JOIN LATERAL (
+    SELECT ts.id
+    FROM public.tenant_subscriptions ts
+    WHERE ts.tenant_id = t.id
+    ORDER BY ts.created_at DESC
+    LIMIT 1
+  ) latest_subscription ON true
   WHERE t.tenant_type = 'self_service_customer'
     AND e.deleted_at IS NULL
     AND COALESCE(e.status, 'active') <> 'archived'
-    AND EXISTS (
-      SELECT 1 FROM public.tenant_subscriptions ts
-      WHERE ts.tenant_id = e.tenant_id
-        AND ts.status IN ('active', 'trial')
-        AND ts.start_date <= now()
-        AND (ts.end_date IS NULL OR ts.end_date > now())
-    )
+    AND a.user_id IS NOT NULL
+    AND a.status = 'active'
+    AND a.deleted_at IS NULL
   LIMIT 1;
 
   IF v_event_id IS NULL THEN
-    RAISE EXCEPTION 'TEST_FIXTURE_MISSING:active_self_service_event';
+    RAISE EXCEPTION 'TEST_FIXTURE_MISSING:self_service_event_with_subscription_history';
   END IF;
+
+  UPDATE public.tenant_subscriptions
+  SET status = 'expired'
+  WHERE tenant_id = v_tenant_id
+    AND status IN ('active', 'trial', 'scheduled');
+
+  UPDATE public.tenant_subscriptions
+  SET status = 'active',
+      start_date = now() - interval '1 hour',
+      end_date = now() + interval '1 day'
+  WHERE id = v_active_subscription_id;
+
+  UPDATE public.self_service_customer_profiles
+  SET onboarding_status = 'ready'
+  WHERE account_id = v_active_account_id;
 
   v_quota_blocked := false;
   BEGIN
@@ -153,25 +182,6 @@ BEGIN
   END;
   IF NOT v_quota_blocked THEN
     RAISE EXCEPTION 'MANAGED_TEAM_HARD_CAP_NOT_ENFORCED';
-  END IF;
-
-  SELECT a.user_id, a.id, ts.id
-  INTO v_active_auth_user_id, v_active_account_id, v_active_subscription_id
-  FROM public.accounts a
-  JOIN public.tenants t ON t.id = a.tenant_id
-  JOIN public.tenant_subscriptions ts ON ts.tenant_id = a.tenant_id
-  WHERE t.tenant_type = 'self_service_customer'
-    AND a.user_id IS NOT NULL
-    AND a.status = 'active' AND a.deleted_at IS NULL
-    AND t.status = 'active' AND t.deleted_at IS NULL
-    AND ts.status IN ('active', 'trial')
-    AND ts.start_date <= now()
-    AND (ts.end_date IS NULL OR ts.end_date > now())
-  ORDER BY ts.created_at DESC
-  LIMIT 1;
-
-  IF v_active_auth_user_id IS NULL THEN
-    RAISE EXCEPTION 'TEST_FIXTURE_MISSING:active_self_service_subscription';
   END IF;
 
   UPDATE public.payment_orders
