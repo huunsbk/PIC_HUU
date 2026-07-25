@@ -60,4 +60,44 @@ SELECT
         AND e.deleted_at IS NULL
         AND COALESCE(e.status, 'active') <> 'archived'
     )
-  ) AS every_workspace_has_active_event_assignment;
+  ) AS every_workspace_has_active_event_assignment,
+  NOT EXISTS (
+    SELECT 1
+    FROM workspace_rows row_data
+    WHERE (row_data.workspace ->> 'events_count')::integer <> (
+      SELECT count(DISTINCT e.id)::integer
+      FROM public.account_event_permissions aep
+      JOIN public.events e ON e.id = aep.event_id
+      WHERE aep.account_id = row_data.account_id
+        AND aep.deleted_at IS NULL
+        AND e.tournament_id = row_data.workspace ->> 'tournament_id'
+        AND e.deleted_at IS NULL
+        AND COALESCE(e.status, 'active') <> 'archived'
+    )
+  ) AS event_stats_follow_assignment_scope,
+  NOT EXISTS (
+    SELECT 1
+    FROM workspace_rows row_data
+    WHERE (row_data.workspace ->> 'teams_count')::integer <> (
+      SELECT count(DISTINCT tm.id)::integer
+      FROM public.account_event_permissions aep
+      JOIN public.teams tm ON tm.event_id = aep.event_id
+      WHERE aep.account_id = row_data.account_id
+        AND aep.deleted_at IS NULL
+        AND tm.tournament_id = row_data.workspace ->> 'tournament_id'
+        AND tm.deleted_at IS NULL
+    )
+  ) AS team_stats_follow_assignment_scope,
+  NOT EXISTS (
+    SELECT 1
+    FROM workspace_rows row_data
+    WHERE (row_data.workspace ->> 'matches_count')::integer <> (
+      SELECT count(DISTINCT m.id)::integer
+      FROM public.account_event_permissions aep
+      JOIN public.matches m ON m.event_id = aep.event_id
+      WHERE aep.account_id = row_data.account_id
+        AND aep.deleted_at IS NULL
+        AND m.tournament_id = row_data.workspace ->> 'tournament_id'
+        AND m.deleted_at IS NULL
+    )
+  ) AS match_stats_follow_assignment_scope;

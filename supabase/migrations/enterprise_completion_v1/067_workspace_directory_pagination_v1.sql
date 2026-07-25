@@ -34,6 +34,7 @@ DECLARE
   v_role text := public.current_role_name();
   v_tenant_type text;
   v_is_self_service_owner boolean := false;
+  v_has_workspace_scope boolean := false;
   v_phase text := lower(COALESCE(NULLIF(btrim(p_phase), ''), 'operational'));
   v_search text := NULLIF(btrim(p_search), '');
   v_limit integer := LEAST(GREATEST(COALESCE(p_limit, 50), 1), 100);
@@ -79,6 +80,12 @@ BEGIN
   )
   INTO v_is_self_service_owner;
 
+  v_has_workspace_scope :=
+    v_role = 'SUPER_ADMIN'
+    OR v_role = 'TENANT_ADMIN'
+    OR public.has_permission('manage_tournaments')
+    OR v_is_self_service_owner;
+
   WITH accessible AS (
     SELECT
       t.id AS tournament_id,
@@ -96,18 +103,51 @@ BEGIN
         WHERE e.tournament_id = t.id
           AND e.deleted_at IS NULL
           AND COALESCE(e.status, 'active') <> 'archived'
+          AND (
+            v_has_workspace_scope
+            OR EXISTS (
+              SELECT 1
+              FROM public.account_event_permissions aep
+              WHERE aep.account_id = v_account_id
+                AND aep.event_id = e.id
+                AND aep.deleted_at IS NULL
+                AND COALESCE(aep.tenant_id, t.tenant_id) = t.tenant_id
+            )
+          )
       )::integer AS events_count,
       (
         SELECT count(*)
         FROM public.teams tm
         WHERE tm.tournament_id = t.id
           AND tm.deleted_at IS NULL
+          AND (
+            v_has_workspace_scope
+            OR EXISTS (
+              SELECT 1
+              FROM public.account_event_permissions aep
+              WHERE aep.account_id = v_account_id
+                AND aep.event_id = tm.event_id
+                AND aep.deleted_at IS NULL
+                AND COALESCE(aep.tenant_id, t.tenant_id) = t.tenant_id
+            )
+          )
       )::integer AS teams_count,
       (
         SELECT count(*)
         FROM public.matches m
         WHERE m.tournament_id = t.id
           AND m.deleted_at IS NULL
+          AND (
+            v_has_workspace_scope
+            OR EXISTS (
+              SELECT 1
+              FROM public.account_event_permissions aep
+              WHERE aep.account_id = v_account_id
+                AND aep.event_id = m.event_id
+                AND aep.deleted_at IS NULL
+                AND COALESCE(aep.tenant_id, t.tenant_id) = t.tenant_id
+            )
+          )
       )::integer AS matches_count,
       CASE
         WHEN v_role = 'SUPER_ADMIN' THEN 'system'
