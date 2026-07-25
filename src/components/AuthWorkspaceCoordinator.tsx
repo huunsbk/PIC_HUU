@@ -71,7 +71,7 @@ export default function AuthWorkspaceCoordinator() {
 
     if (!accountId) {
       resetRoutingState();
-      if (location.pathname.startsWith('/admin/')) {
+      if (location.pathname.startsWith('/admin/') || isCommercialFlowPath(location.pathname)) {
         setAuthAccessState('UNAUTHENTICATED');
         navigate('/', { replace: true });
       }

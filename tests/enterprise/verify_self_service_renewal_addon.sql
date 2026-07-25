@@ -4,7 +4,7 @@ DO $$
 DECLARE
   v_service_role oid := (SELECT oid FROM pg_roles WHERE rolname = 'service_role');
   v_authenticated oid := (SELECT oid FROM pg_roles WHERE rolname = 'authenticated');
-  v_settle_definition text := pg_get_functiondef('public.settle_payment_order_v1(bigint,text,numeric,text,uuid)'::regprocedure);
+  v_settle_definition text := pg_get_functiondef('public.settle_payment_order_v2(bigint,text,numeric,text,uuid)'::regprocedure);
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
@@ -24,6 +24,20 @@ BEGIN
      OR has_function_privilege(v_authenticated,
       'public.create_payment_order_v2(uuid,text,text,integer,integer,text)', 'EXECUTE') THEN
     RAISE EXCEPTION 'payment order v2 grants are invalid';
+  END IF;
+
+  IF NOT has_function_privilege(v_service_role,
+      'public.create_payment_order_v3(uuid,text,text,integer,integer,integer,text)', 'EXECUTE')
+     OR has_function_privilege(v_authenticated,
+      'public.create_payment_order_v3(uuid,text,text,integer,integer,integer,text)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'payment order v3 grants are invalid';
+  END IF;
+
+  IF NOT has_function_privilege(v_service_role,
+      'public.settle_payment_order_v2(bigint,text,numeric,text,uuid)', 'EXECUTE')
+     OR has_function_privilege(v_authenticated,
+      'public.settle_payment_order_v2(bigint,text,numeric,text,uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'payment settlement v2 grants are invalid';
   END IF;
 
   IF v_settle_definition NOT LIKE '%v_order.order_type = ''renewal''%'

@@ -25,7 +25,10 @@ BEGIN
 
   IF has_function_privilege(v_authenticated, 'public.create_payment_order_v1(uuid,text,integer,integer,text)', 'EXECUTE')
      OR has_function_privilege(v_authenticated, 'public.create_payment_order_v2(uuid,text,text,integer,integer,text)', 'EXECUTE')
+     OR has_function_privilege(v_authenticated, 'public.create_payment_order_v3(uuid,text,text,integer,integer,integer,text)', 'EXECUTE')
      OR has_function_privilege(v_authenticated, 'public.settle_payment_order_v1(bigint,text,numeric,text,uuid)', 'EXECUTE')
+     OR has_function_privilege(v_authenticated, 'public.settle_payment_order_v2(bigint,text,numeric,text,uuid)', 'EXECUTE')
+     OR has_function_privilege(v_authenticated, 'public.cancel_payment_order_v1(uuid,uuid)', 'EXECUTE')
      OR has_function_privilege(v_authenticated, 'public.process_payos_webhook_v1(text,text,bigint,text,numeric,boolean,jsonb)', 'EXECUTE')
      OR has_function_privilege(v_anon, 'public.process_payos_webhook_v1(text,text,bigint,text,numeric,boolean,jsonb)', 'EXECUTE') THEN
     RAISE EXCEPTION 'client role can execute payment mutation functions';
@@ -33,7 +36,10 @@ BEGIN
 
   IF NOT has_function_privilege(v_service_role, 'public.create_payment_order_v1(uuid,text,integer,integer,text)', 'EXECUTE')
      OR NOT has_function_privilege(v_service_role, 'public.create_payment_order_v2(uuid,text,text,integer,integer,text)', 'EXECUTE')
+     OR NOT has_function_privilege(v_service_role, 'public.create_payment_order_v3(uuid,text,text,integer,integer,integer,text)', 'EXECUTE')
      OR NOT has_function_privilege(v_service_role, 'public.settle_payment_order_v1(bigint,text,numeric,text,uuid)', 'EXECUTE')
+     OR NOT has_function_privilege(v_service_role, 'public.settle_payment_order_v2(bigint,text,numeric,text,uuid)', 'EXECUTE')
+     OR NOT has_function_privilege(v_service_role, 'public.cancel_payment_order_v1(uuid,uuid)', 'EXECUTE')
      OR NOT has_function_privilege(v_service_role, 'public.process_payos_webhook_v1(text,text,bigint,text,numeric,boolean,jsonb)', 'EXECUTE') THEN
     RAISE EXCEPTION 'service_role payment execution grants are missing';
   END IF;
