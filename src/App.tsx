@@ -788,10 +788,27 @@ function TournamentShell() {
 
     return allNavItems.filter(item => {
       if (!item.roles.includes(userRole)) return false;
+      if (item.id === 'workspaces') return true;
       if (hasPermission('*')) return true;
-      return hasPermission(item.permission) || (item.id === 'admin' && hasPermission('manage_referees')) || hasPermission('*');
+      const permissionGroups: Record<string, string[]> = {
+        workspaces: ['view_public'],
+        dashboard: ['view_event'],
+        content: [
+          'create_events',
+          'manage_event_config',
+          'manage_events',
+          'manage_teams',
+          'manage_groups',
+          'manage_schedule',
+        ],
+        operations: ['view_event', 'manage_schedule', 'manage_matches', 'enter_scores'],
+        rankings: ['view_event', 'manage_standings', 'manage_knockout'],
+        live: ['view_event', 'view_public'],
+        admin: ['manage_accounts', 'manage_referees'],
+      };
+      return (permissionGroups[item.id] || [item.permission]).some((permission) => hasPermission(permission));
     });
-  }, [permissions, userRole, hasPermission, commercialLocked, currentEnterpriseUser?.tenant_type]);
+  }, [permissions, userRole, hasPermission, commercialLocked, currentEnterpriseUser?.tenant_type, currentEventId]);
 
   const currentPrimaryTab = TAB_GROUP_ALIASES[selectedTab] || selectedTab;
   const isWorkspaceContextReady =

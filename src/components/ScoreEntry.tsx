@@ -20,8 +20,6 @@ export default function ScoreEntry() {
   const {
     currentEventId,
     setCurrentEvent,
-    currentEnterpriseUser,
-    permissions,
     tournament,
     hasPermission,
   } = useTournamentStore();
@@ -45,10 +43,8 @@ export default function ScoreEntry() {
   };
 
   const isPermitted = useMemo(() => {
-    if (hasPermission('*') || hasPermission('enter_scores') || hasPermission('manage_matches')) return true;
-    if (!currentEvent) return false;
-    return currentEnterpriseUser?.permittedEventIds?.includes(currentEvent.id) || false;
-  }, [permissions, currentEnterpriseUser, currentEvent?.id, hasPermission]);
+    return hasPermission('*') || hasPermission('enter_scores');
+  }, [currentEvent?.id, hasPermission]);
 
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [localSetScores, setLocalSetScores] = useState<Record<string, SetScoreDraft>>({});

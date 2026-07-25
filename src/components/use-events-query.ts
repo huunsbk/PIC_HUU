@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useTournamentStore } from '../store';
 import { isPublicViewerRoute, isTournamentDataRoute, isUsableEventId } from '../hooks/useEvents';
 import { tournamentRpc } from '../lib/api/tournamentRpc';
+import { filterEventsForProfile } from '../lib/auth/eventAccessPolicy';
 
 export function useEventsQuery() {
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
@@ -16,29 +17,16 @@ export function useEventsQuery() {
   const shouldLoadTournamentData = isTournamentDataRoute();
   const commercialAccessActive = currentEnterpriseUser?.tenant_type !== 'self_service_customer'
     || currentEnterpriseUser?.business_access_active !== false;
-  const isSelfServiceOwner = userRole === 'EVENT_ADMIN'
-    && currentEnterpriseUser?.tenant_type === 'self_service_customer'
-    && currentEnterpriseUser?.onboarding_status === 'ready'
-    && currentEnterpriseUser?.business_access_active === true;
-
   const query = useQuery({
-    queryKey: ['events', activeTournamentId || tournamentId],
+    queryKey: ['events', activeTournamentId || tournamentId, currentEnterpriseUser?.id || userRole],
     queryFn: async () => {
       const scopedTournamentId = activeTournamentId || tournamentId;
       if (!scopedTournamentId || scopedTournamentId === 't-1') {
         return [];
       }
 
-      let events = await tournamentRpc.listEventsByTournament(scopedTournamentId);
-      
-      // Client-side visual filter fallback. RLS already enforced this at DB level
-      if (!isSelfServiceOwner
-          && (currentEnterpriseUser?.role === 'EVENT_ADMIN' || currentEnterpriseUser?.role === 'REFEREE')) {
-        const allowedEventIds = currentEnterpriseUser.event_ids || [];
-        events = events.filter((evt: any) => allowedEventIds.includes(evt.id));
-      }
-
-      return events;
+      const events = await tournamentRpc.listEventsByTournament(scopedTournamentId);
+      return filterEventsForProfile(events, userRole, currentEnterpriseUser);
     },
     enabled: commercialAccessActive && shouldLoadTournamentData && !shouldUsePublicSnapshot && !!activeTenantId
       && activeTenantId !== 'default' && !!(activeTournamentId || tournamentId),
@@ -47,13 +35,16 @@ export function useEventsQuery() {
   useEffect(() => {
     if (shouldUsePublicSnapshot) return;
     const events = query.data || [];
-    if (events.length === 0) return;
+    if (events.length === 0) {
+      if (query.isFetched && currentEventId) setCurrentEvent('');
+      return;
+    }
 
     const hasSelectedEvent = isUsableEventId(currentEventId) && events.some((event: any) => event.id === currentEventId);
     if (!hasSelectedEvent) {
       setCurrentEvent(events[0].id);
     }
-  }, [query.data, currentEventId, setCurrentEvent, shouldUsePublicSnapshot]);
+  }, [query.data, query.isFetched, currentEventId, setCurrentEvent, shouldUsePublicSnapshot]);
 
   return query;
 }

@@ -10,6 +10,11 @@ import { generateRoundRobinMatches, calculateGroupStandings, calculateBestThirdP
 import { supabase, checkSupabaseConnection } from './supabaseClient';
 import { AuthAccessState, WorkspaceDirectoryState } from './lib/auth/accessState';
 import { loadCurrentProfile } from './lib/auth/profile';
+import {
+  canExecuteEventPermission,
+  isEventAccessibleToProfile,
+  isActiveSelfServiceOwner,
+} from './lib/auth/eventAccessPolicy';
 
 const getBasePath = () => {
   const basePath = import.meta.env.BASE_URL || '/';
@@ -37,43 +42,6 @@ const navigateToTenantHash = (tenantId: string, reload = false) => {
   if (reload) {
     setTimeout(() => window.location.reload(), 100);
   }
-};
-
-const EVENT_SCOPED_PERMISSIONS = new Set([
-  'view_event',
-  'create_events',
-  'manage_event_config',
-  'manage_events',
-  'manage_teams',
-  'manage_groups',
-  'manage_schedule',
-  'manage_matches',
-  'enter_scores',
-  'manage_standings',
-  'manage_knockout',
-  'manage_referees',
-]);
-
-const SELF_SERVICE_OWNER_PERMISSIONS = new Set([
-  'view_public',
-  'view_event',
-  'create_events',
-  'manage_event_config',
-  'manage_events',
-  'manage_teams',
-  'manage_groups',
-  'manage_schedule',
-  'manage_matches',
-  'enter_scores',
-  'manage_standings',
-  'manage_knockout',
-  'manage_referees',
-]);
-
-const EVENT_PERMISSION_ALIASES: Record<string, string[]> = {
-  manage_events: ['manage_event_config'],
-  manage_event_config: ['manage_events'],
-  manage_matches: ['manage_schedule'],
 };
 
 const normalizeEventPermissionMap = (eventPermissions: any[] | undefined, eventIds: string[] | undefined) => {
@@ -145,6 +113,7 @@ interface AppState {
 
   permissions: string[];
   hasPermission: (permissionName: string) => boolean;
+  hasEventPermission: (permissionName: string, eventId: string | null | undefined) => boolean;
 
   // Actions
   checkConnection: () => Promise<boolean>;
@@ -391,32 +360,23 @@ export const useTournamentStore = create<AppState>()(
         permissions: [],
         hasPermission: (permissionName) => {
           const state = get();
-          if (state.userRole === 'SUPER_ADMIN' || state.userRole === 'TENANT_ADMIN') return true;
-          const isActiveSelfServiceOwner = state.userRole === 'EVENT_ADMIN'
-            && state.currentEnterpriseUser?.tenant_type === 'self_service_customer'
-            && state.currentEnterpriseUser?.onboarding_status === 'ready'
-            && state.currentEnterpriseUser?.business_access_active === true;
-          if (isActiveSelfServiceOwner && SELF_SERVICE_OWNER_PERMISSIONS.has(permissionName)) {
-            return true;
-          }
-          if (state.userRole === 'EVENT_ADMIN' || state.userRole === 'REFEREE') {
-            if (permissionName === '*') return false;
-            if (EVENT_SCOPED_PERMISSIONS.has(permissionName)) {
-              const eventId = state.currentEventId;
-              const eventPermissionMap = state.currentEnterpriseUser?.eventPermissionMap || {};
-              const effectivePermissions = new Set(eventId ? eventPermissionMap[eventId] || [] : []);
-              const aliases = EVENT_PERMISSION_ALIASES[permissionName] || [];
-              const hasCurrentEventPermission =
-                effectivePermissions.has(permissionName) || aliases.some((alias) => effectivePermissions.has(alias));
-              if (hasCurrentEventPermission) return true;
-              if (eventId && eventPermissionMap[eventId]) return false;
-              return Object.values(eventPermissionMap).some((permissions: any) => {
-                const permissionSet = new Set(Array.isArray(permissions) ? permissions : []);
-                return permissionSet.has(permissionName) || aliases.some((alias) => permissionSet.has(alias));
-              });
-            }
-          }
-          return state.permissions.includes(permissionName) || state.permissions.includes('*');
+          return canExecuteEventPermission({
+            role: state.userRole,
+            profile: state.currentEnterpriseUser,
+            globalPermissions: state.permissions,
+            permission: permissionName,
+            eventId: state.currentEventId,
+          });
+        },
+        hasEventPermission: (permissionName, eventId) => {
+          const state = get();
+          return canExecuteEventPermission({
+            role: state.userRole,
+            profile: state.currentEnterpriseUser,
+            globalPermissions: state.permissions,
+            permission: permissionName,
+            eventId,
+          });
         },
         currentEventId: 'event-default',
         currentUser: null,
@@ -811,7 +771,25 @@ export const useTournamentStore = create<AppState>()(
         },
 
         setCurrentEvent: (id) => {
-          if (!id) return;
+          if (!id) {
+            set({
+              currentEventId: '',
+              teams: {},
+              groups: {},
+              matches: [],
+              activeGroupId: null,
+              advanceSelectionMode: 'auto',
+              manualQualifiedTeamIds: [],
+            });
+            return;
+          }
+          const state = get();
+          if (!isActiveSelfServiceOwner(state.userRole, state.currentEnterpriseUser)
+              && ['EVENT_ADMIN', 'REFEREE', 'VIEWER'].includes(state.userRole)
+              && !isEventAccessibleToProfile(state.userRole, state.currentEnterpriseUser, id)) {
+            console.warn('Không thể chọn nội dung thi đấu ngoài phạm vi được phân quyền.');
+            return;
+          }
           if (!get().events[id]) {
             set({
               currentEventId: id,
