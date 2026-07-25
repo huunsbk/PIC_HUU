@@ -11,3 +11,10 @@ export type AuthAccessState =
   | 'ACCESS_DENIED'
   | 'SESSION_REVOKED';
 
+export interface WorkspaceDirectoryState {
+  kind: 'DIRECTORY' | 'EMPTY';
+  initialFilter?: 'all' | 'operational' | 'history';
+  reason?: 'PROVISIONING_REQUIRED' | 'TENANT_HAS_NO_WORKSPACE' | 'NO_ACTIVE_ASSIGNMENT' | 'NO_ACCESSIBLE_WORKSPACE' | 'ACCESS_DENIED' | 'RESOLUTION_ERROR';
+  canCreateTournament?: boolean;
+}
+
