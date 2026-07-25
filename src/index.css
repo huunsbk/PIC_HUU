@@ -302,13 +302,19 @@ html.dark tr {
   inset-block-start: auto !important;
 }
 
-/* The score-entry screen owns the remaining viewport in landscape mode. */
+/* Let the score header leave the viewport while the score panel keeps a full-screen canvas. */
 @media (orientation: landscape) and (min-width: 900px) {
   #root:has(.score-entry-viewport) .enterprise-app-shell,
-  #root:has(.score-entry-viewport) .enterprise-layout,
+  #root:has(.score-entry-viewport) .enterprise-layout {
+    height: 100dvh;
+    min-height: 0;
+  }
+
   #root:has(.score-entry-viewport) .enterprise-main-column {
     height: 100dvh;
     min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   #root:has(.score-entry-viewport) .enterprise-layout {
@@ -321,12 +327,13 @@ html.dark tr {
   }
 
   #root:has(.score-entry-viewport) .enterprise-app-shell,
-  #root:has(.score-entry-viewport) .enterprise-main-column,
   #root:has(.score-entry-viewport) #main-content-panel {
     overflow: hidden;
   }
 
   #root:has(.score-entry-viewport) #main-content-panel {
+    flex: 0 0 100dvh;
+    height: 100dvh;
     min-height: 0;
   }
 
