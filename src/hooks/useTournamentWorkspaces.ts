@@ -23,52 +23,76 @@ export interface TournamentWorkspaceStat {
 
 export interface InfiniteWorkspaceResponse {
   data: TournamentWorkspaceStat[];
-  next_cursor: string | null;
+  next_cursor: WorkspaceCursor | null;
   has_more: boolean;
 }
 
-export function useTournamentWorkspaces(limit: number = 50) {
+export type WorkspaceDirectoryPhase = 'operational' | 'history' | 'all';
+
+export interface WorkspaceCursor {
+  created_at: string;
+  id: string;
+}
+
+export interface WorkspaceDirectoryQuery {
+  limit?: number;
+  phase?: WorkspaceDirectoryPhase;
+  search?: string;
+  tenantId?: string | null;
+}
+
+export function useTournamentWorkspaces(options: WorkspaceDirectoryQuery = {}) {
+  const limit = Math.min(Math.max(options.limit || 50, 1), 100);
+  const phase = options.phase || 'operational';
+  const search = options.search?.trim() || null;
   const activeTenantId = useTournamentStore((state) => state.activeTenantId);
   const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
   const scopedTenantId = normalizeTenantIdForRpc(currentEnterpriseUser?.tenant_id || activeTenantId);
+  const tenantFilter = currentEnterpriseUser?.role === 'SUPER_ADMIN'
+    ? normalizeTenantIdForRpc(options.tenantId)
+    : scopedTenantId;
 
   return useInfiniteQuery({
-    queryKey: ['tournaments_v1', scopedTenantId, currentEnterpriseUser?.role, limit],
-    queryFn: async (): Promise<InfiniteWorkspaceResponse> => {
+    queryKey: [
+      'workspace_directory_page_v1',
+      currentEnterpriseUser?.id,
+      currentEnterpriseUser?.role,
+      tenantFilter,
+      phase,
+      search,
+      limit,
+    ],
+    queryFn: async ({ pageParam }): Promise<InfiniteWorkspaceResponse> => {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         await useTournamentStore.getState().logout();
         throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
       }
 
-      const tenantParam = currentEnterpriseUser?.role === 'SUPER_ADMIN' ? null : scopedTenantId;
-      const { data, error } = await supabase.rpc('list_accessible_workspaces_v1', {
-        p_tenant_id: tenantParam
+      const cursor = pageParam as WorkspaceCursor | null;
+      const { data, error } = await supabase.rpc('list_accessible_workspaces_page_v1', {
+        p_tenant_id: tenantFilter,
+        p_phase: phase,
+        p_search: search,
+        p_cursor_created_at: cursor?.created_at || null,
+        p_cursor_id: cursor?.id || null,
+        p_limit: limit,
       });
 
-      if (error) {
-        if (currentEnterpriseUser?.role === 'SUPER_ADMIN' || currentEnterpriseUser?.role === 'TENANT_ADMIN') {
-          const fallback = await supabase.rpc('list_tournaments_v1', {
-            p_tenant_id: tenantParam
-          });
-          if (fallback.error) throw fallback.error;
-          return mapWorkspaceRows(fallback.data, limit);
-        }
-        throw error;
-      }
-
-      return mapWorkspaceRows(data, limit);
+      if (error) throw error;
+      return mapWorkspacePage(data);
     },
     getNextPageParam: (lastPage) => lastPage.has_more ? lastPage.next_cursor : undefined,
-    initialPageParam: null as string | null,
+    initialPageParam: null as WorkspaceCursor | null,
     enabled: !!currentEnterpriseUser,
   });
 }
 
-function mapWorkspaceRows(data: any, limit: number): InfiniteWorkspaceResponse {
-  const rows = Array.isArray(data) ? data : [];
+function mapWorkspacePage(payload: any): InfiniteWorkspaceResponse {
+  const rows = Array.isArray(payload?.data) ? payload.data : [];
+  const nextCursor = payload?.next_cursor;
   return {
-    data: rows.slice(0, limit).map((row: any) => ({
+    data: rows.map((row: any) => ({
       tournament_id: row.tournament_id,
       tenant_id: row.tenant_id,
       tenant_name: row.tenant_name || null,
@@ -85,8 +109,10 @@ function mapWorkspaceRows(data: any, limit: number): InfiniteWorkspaceResponse {
       teams_count: Number(row.teams_count || 0),
       matches_count: Number(row.matches_count || 0),
     })),
-    next_cursor: null,
-    has_more: false,
+    next_cursor: nextCursor?.created_at && nextCursor?.id
+      ? { created_at: nextCursor.created_at, id: nextCursor.id }
+      : null,
+    has_more: payload?.has_more === true,
   };
 }
 
