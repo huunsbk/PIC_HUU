@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArchiveRestore,
   ArrowRight,
@@ -13,10 +14,15 @@ import {
   Trophy,
   Wrench,
 } from 'lucide-react';
-import { useTournamentWorkspaces } from '../hooks/useTournamentWorkspaces';
+import {
+  useTournamentWorkspaces,
+  WorkspaceDirectoryPhase,
+} from '../hooks/useTournamentWorkspaces';
 import { useTenantTournamentSummary, TenantTournamentSummary } from '../hooks/useTenantTournamentSummary';
 import { useEnsureSelfServiceWorkspace } from '../hooks/useTournamentMutations';
 import { useTournamentStore } from '../store';
+import { ensureMySelfServiceWorkspace } from '../lib/api/commercial';
+import type { WorkspaceDirectoryState } from '../lib/auth/accessState';
 import TournamentWorkspaceCard from './TournamentWorkspaceCard';
 import CreateTournamentWorkspaceDialog, { TournamentTenantChoice } from './CreateTournamentWorkspaceDialog';
 
@@ -84,13 +90,59 @@ function formatCustomerCode(slug: string) {
   return slug ? slug.toUpperCase() : 'Chưa có mã';
 }
 
+function getDirectoryEmptyCopy(reason: WorkspaceDirectoryState['reason']) {
+  switch (reason) {
+    case 'PROVISIONING_REQUIRED':
+      return {
+        title: 'Giải của bạn chưa được khởi tạo',
+        detail: 'Gói dịch vụ đã sẵn sàng. Khởi tạo giải mặc định để bắt đầu tạo nội dung thi đấu.',
+      };
+    case 'TENANT_HAS_NO_WORKSPACE':
+      return {
+        title: 'Đơn vị chưa có giải đấu',
+        detail: 'Tạo giải đầu tiên cho đơn vị nếu tài khoản của bạn có quyền quản lý giải.',
+      };
+    case 'NO_ACTIVE_ASSIGNMENT':
+      return {
+        title: 'Chưa có giải đang hoạt động được phân công',
+        detail: 'Liên hệ quản trị viên để được gán nội dung hoặc giải đấu phù hợp.',
+      };
+    case 'ACCESS_DENIED':
+      return {
+        title: 'Đường dẫn vừa mở nằm ngoài phạm vi quyền',
+        detail: 'Hãy chọn một giải trong danh sách được cấp cho tài khoản này.',
+      };
+    case 'RESOLUTION_ERROR':
+      return {
+        title: 'Chưa xác định được phạm vi giải đấu',
+        detail: 'Tải lại trang để đồng bộ phiên đăng nhập và quyền truy cập.',
+      };
+    default:
+      return {
+        title: 'Chưa có giải đấu được quyền truy cập',
+        detail: 'Danh sách sẽ xuất hiện khi tài khoản được cấp quyền vào một giải hoặc nội dung thi đấu.',
+      };
+  }
+}
+
 export default function TournamentWorkspaceListPage() {
+  const navigate = useNavigate();
+  const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
+  const workspaceDirectoryState = useTournamentStore((state) => state.workspaceDirectoryState);
+  const setWorkspaceDirectoryState = useTournamentStore((state) => state.setWorkspaceDirectoryState);
+  const hasPermission = useTournamentStore((state) => state.hasPermission);
+  const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
+  const isSuperAdmin = currentEnterpriseUser?.role === 'SUPER_ADMIN';
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createTargetTenant, setCreateTargetTenant] = useState<TournamentTenantChoice | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('active');
+  const [statusFilter, setStatusFilter] = useState<WorkspaceDirectoryPhase>(
+    workspaceDirectoryState?.initialFilter || (isSuperAdmin ? 'all' : 'operational'),
+  );
   const [tenantFilter, setTenantFilter] = useState('all');
   const [actionNotice, setActionNotice] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
+  const [isProvisioningOwnWorkspace, setIsProvisioningOwnWorkspace] = useState(false);
+  const deferredSearchQuery = React.useDeferredValue(searchQuery.trim());
 
   const limit = 50;
   const {
@@ -100,11 +152,12 @@ export default function TournamentWorkspaceListPage() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useTournamentWorkspaces(limit);
-  const currentEnterpriseUser = useTournamentStore((state) => state.currentEnterpriseUser);
-  const hasPermission = useTournamentStore((state) => state.hasPermission);
-  const setSelectedTab = useTournamentStore((state) => state.setSelectedTab);
-  const isSuperAdmin = currentEnterpriseUser?.role === 'SUPER_ADMIN';
+  } = useTournamentWorkspaces({
+    limit,
+    phase: statusFilter,
+    search: deferredSearchQuery,
+    tenantId: tenantFilter === 'all' ? null : tenantFilter,
+  });
   const tenantSummaryQuery = useTenantTournamentSummary(isSuperAdmin);
   const ensureSelfServiceWorkspace = useEnsureSelfServiceWorkspace();
   const isSelfServiceCustomer = currentEnterpriseUser?.tenant_type === 'self_service_customer';
@@ -113,6 +166,14 @@ export default function TournamentWorkspaceListPage() {
 
   const tournaments = workspacesResponse?.pages.flatMap((page) => page.data) || [];
   const tenantSummaries = tenantSummaryQuery.data || [];
+
+  React.useEffect(() => {
+    const requestedFilter = workspaceDirectoryState?.initialFilter;
+    if (requestedFilter && requestedFilter !== statusFilter) {
+      setStatusFilter(requestedFilter);
+    }
+  }, [statusFilter, workspaceDirectoryState?.initialFilter]);
+
   const managedTenantOptions = React.useMemo(
     () => tenantSummaries
       .filter((tenant) => (
@@ -126,25 +187,20 @@ export default function TournamentWorkspaceListPage() {
   );
 
   const tenantOptions = React.useMemo(() => {
-    const names = new Set<string>();
-    tournaments.forEach((tournament) => names.add(tournament.tenant_name || tournament.tenant_id || 'Chưa rõ đơn vị'));
-    tenantSummaries.forEach((tenant) => names.add(tenant.tenant_name));
-    return Array.from(names).sort((a, b) => a.localeCompare(b, 'vi'));
+    const options = new Map<string, string>();
+    tournaments.forEach((tournament) => {
+      if (tournament.tenant_id) {
+        options.set(tournament.tenant_id, tournament.tenant_name || tournament.tenant_id);
+      }
+    });
+    tenantSummaries.forEach((tenant) => options.set(tenant.tenant_id, tenant.tenant_name));
+    return Array.from(options.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
   }, [tournaments, tenantSummaries]);
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
-  const filteredTournaments = React.useMemo(() => tournaments.filter((tournament) => {
-    const tenantName = tournament.tenant_name || tournament.tenant_id || 'Chưa rõ đơn vị';
-    const matchesTenant = tenantFilter === 'all' || tenantName === tenantFilter;
-    const status = tournament.status || 'active';
-    if (status === 'archived') return false;
-    const matchesStatus = statusFilter === 'all' || status === statusFilter;
-    const matchesSearch = !normalizedQuery
-      || tournament.name?.toLowerCase().includes(normalizedQuery)
-      || tournament.slug?.toLowerCase().includes(normalizedQuery)
-      || tenantName.toLowerCase().includes(normalizedQuery);
-    return matchesTenant && matchesStatus && matchesSearch;
-  }), [tournaments, normalizedQuery, statusFilter, tenantFilter]);
+  const filteredTournaments = tournaments;
 
   const groupedTournaments = React.useMemo(() => {
     const groups = new Map<string, typeof filteredTournaments>();
@@ -165,7 +221,7 @@ export default function TournamentWorkspaceListPage() {
   );
   const filteredZeroTournamentTenants = React.useMemo(
     () => zeroTournamentTenants.filter((tenant) => {
-      const matchesTenant = tenantFilter === 'all' || tenant.tenant_name === tenantFilter;
+      const matchesTenant = tenantFilter === 'all' || tenant.tenant_id === tenantFilter;
       const matchesSearch = !normalizedQuery
         || tenant.tenant_name.toLowerCase().includes(normalizedQuery)
         || tenant.tenant_slug.toLowerCase().includes(normalizedQuery)
@@ -218,6 +274,34 @@ export default function TournamentWorkspaceListPage() {
       },
     });
   };
+
+  const handleProvisionOwnWorkspace = async () => {
+    setActionNotice(null);
+    setIsProvisioningOwnWorkspace(true);
+    try {
+      const result = await ensureMySelfServiceWorkspace();
+      setWorkspaceDirectoryState(null);
+      navigate(`/admin/workspace/${encodeURIComponent(result.workspace.slug)}`, { replace: true });
+    } catch (provisionError) {
+      setActionNotice({
+        tone: 'error',
+        message: provisionError instanceof Error
+          ? provisionError.message
+          : 'Không thể khởi tạo giải mặc định.',
+      });
+    } finally {
+      setIsProvisioningOwnWorkspace(false);
+    }
+  };
+
+  const directoryEmptyCopy = getDirectoryEmptyCopy(workspaceDirectoryState?.reason);
+  const showDirectoryReasonNotice = workspaceDirectoryState?.reason === 'ACCESS_DENIED'
+    && tournaments.length > 0;
+  const directorySectionTitle = statusFilter === 'history'
+    ? 'Lịch sử giải đấu đã hoàn thành'
+    : statusFilter === 'all'
+      ? 'Tất cả giải đấu có thể truy cập'
+      : 'Giải đấu đang vận hành';
 
   if (!currentEnterpriseUser) {
     return (
@@ -273,22 +357,33 @@ export default function TournamentWorkspaceListPage() {
             className="w-full rounded-lg border border-zinc-200 bg-white py-2 pl-9 pr-3 text-sm font-semibold dark:border-zinc-700 dark:bg-zinc-950"
           >
             <option value="all">Tất cả đơn vị</option>
-            {tenantOptions.map((tenantName) => (
-              <option key={tenantName} value={tenantName}>{tenantName}</option>
+            {tenantOptions.map((tenant) => (
+              <option key={tenant.id} value={tenant.id}>{tenant.name}</option>
             ))}
           </select>
         </label>
         <label className="block">
           <select
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
+            onChange={(event) => setStatusFilter(event.target.value as WorkspaceDirectoryPhase)}
             className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold dark:border-zinc-700 dark:bg-zinc-950"
           >
-            <option value="active">Đang hoạt động</option>
-            <option value="all">Tất cả trạng thái</option>
+            <option value="operational">Đang vận hành</option>
+            <option value="history">Lịch sử hoàn thành</option>
+            <option value="all">Tất cả</option>
           </select>
         </label>
       </div>
+
+      {showDirectoryReasonNotice ? (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+          <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
+            <p className="font-black">{directoryEmptyCopy.title}</p>
+            <p className="mt-0.5 font-medium">{directoryEmptyCopy.detail}</p>
+          </div>
+        </div>
+      ) : null}
 
       {actionNotice ? (
         <div className={`rounded-lg border px-4 py-3 text-sm font-bold ${actionNotice.tone === 'success'
@@ -432,9 +527,9 @@ export default function TournamentWorkspaceListPage() {
         <div className="flex items-end justify-between gap-4 border-b border-zinc-200 pb-3 dark:border-zinc-800">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Danh sách vận hành</p>
-            <h2 className="text-xl font-black text-zinc-950 dark:text-white">Giải đấu đang hoạt động</h2>
+            <h2 className="text-xl font-black text-zinc-950 dark:text-white">{directorySectionTitle}</h2>
           </div>
-          <span className="text-sm font-bold text-zinc-500">{filteredTournaments.length} giải</span>
+          <span className="text-sm font-bold text-zinc-500">{filteredTournaments.length} giải đã tải</span>
         </div>
 
         {isLoading ? (
@@ -451,11 +546,37 @@ export default function TournamentWorkspaceListPage() {
             <div className="mb-5 rounded-full bg-zinc-100 p-5 dark:bg-zinc-800">
               <Trophy className="h-12 w-12 text-zinc-400" />
             </div>
-            <h3 className="mb-2 text-xl font-bold text-zinc-900 dark:text-zinc-100">Chưa có giải đấu phù hợp</h3>
+            <h3 className="mb-2 text-xl font-bold text-zinc-900 dark:text-zinc-100">
+              {workspaceDirectoryState?.kind === 'EMPTY'
+                ? directoryEmptyCopy.title
+                : 'Chưa có giải đấu phù hợp'}
+            </h3>
             <p className="max-w-md text-zinc-500 dark:text-zinc-400">
-              Kiểm tra bộ lọc hoặc dùng hành động đúng tại khu đơn vị chưa có giải.
+              {workspaceDirectoryState?.kind === 'EMPTY'
+                ? directoryEmptyCopy.detail
+                : 'Kiểm tra từ khóa, đơn vị hoặc chế độ danh sách đang chọn.'}
             </p>
-            {!isSuperAdmin && canManageTournaments ? (
+            {workspaceDirectoryState?.reason === 'PROVISIONING_REQUIRED' && isSelfServiceCustomer ? (
+              <button
+                type="button"
+                onClick={() => void handleProvisionOwnWorkspace()}
+                disabled={isProvisioningOwnWorkspace}
+                className="mt-5 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {isProvisioningOwnWorkspace
+                  ? <Loader2 size={16} className="animate-spin" />
+                  : <Wrench size={16} />}
+                Khởi tạo giải của tôi
+              </button>
+            ) : workspaceDirectoryState?.reason === 'RESOLUTION_ERROR' ? (
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="mt-5 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-black text-white hover:bg-blue-700"
+              >
+                Tải lại danh sách
+              </button>
+            ) : !isSuperAdmin && canManageTournaments ? (
               <button type="button" onClick={() => openCreateDialog(null)} className="mt-5 flex items-center gap-2 font-bold text-blue-600 hover:text-blue-700">
                 Khởi tạo ngay <ArrowRight size={16} />
               </button>

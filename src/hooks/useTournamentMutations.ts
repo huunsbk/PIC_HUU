@@ -43,6 +43,7 @@ export function useCreateTournamentWorkspace() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant_tournament_summary_v1'] });
       queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
+      queryClient.invalidateQueries({ queryKey: ['workspace_directory_page_v1'] });
       queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
       queryClient.invalidateQueries({ queryKey: ['commercial_access_state'] });
     }
@@ -72,6 +73,7 @@ export function useEnsureSelfServiceWorkspace() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant_tournament_summary_v1'] });
       queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
+      queryClient.invalidateQueries({ queryKey: ['workspace_directory_page_v1'] });
       queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
       queryClient.invalidateQueries({ queryKey: ['commercial_access_state'] });
     },
@@ -95,6 +97,7 @@ export function useArchiveTournamentWorkspace() {
      },
      onSuccess: () => {
        queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
+       queryClient.invalidateQueries({ queryKey: ['workspace_directory_page_v1'] });
        queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
        queryClient.invalidateQueries({ queryKey: ['commercial_access_state'] });
      }
@@ -130,6 +133,7 @@ export function useUpdateTournamentWorkspace() {
      },
      onSuccess: () => {
        queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
+       queryClient.invalidateQueries({ queryKey: ['workspace_directory_page_v1'] });
        queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
        queryClient.invalidateQueries({ queryKey: ['commercial_access_state'] });
      }
@@ -153,6 +157,7 @@ export function useRestoreTournamentWorkspace() {
      },
      onSuccess: () => {
        queryClient.invalidateQueries({ queryKey: ['tournaments_v1'] });
+       queryClient.invalidateQueries({ queryKey: ['workspace_directory_page_v1'] });
        queryClient.invalidateQueries({ queryKey: ['tournament_workspaces_v6'] });
        queryClient.invalidateQueries({ queryKey: ['commercial_access_state'] });
      }
