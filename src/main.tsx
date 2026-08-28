@@ -26,7 +26,7 @@ function TournamentMetadataGate() {
     void (async () => {
       const { data, error } = await supabase
         .from('tournament')
-        .select('id, name, organization, location, date, settings')
+        .select('id, name, location, date')
         .eq('id', activeTournamentId)
         .is('deleted_at', null)
         .maybeSingle();
@@ -47,10 +47,8 @@ function TournamentMetadataGate() {
               ...currentState.tournament,
               id: data.id,
               name: data.name ?? currentState.tournament.name,
-              organization: data.organization ?? currentState.tournament.organization,
               location: data.location ?? '',
               date: data.date ?? '',
-              settings: data.settings || currentState.tournament.settings,
             },
           });
         }
