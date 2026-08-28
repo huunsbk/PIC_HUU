@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npx eslint src/main.tsx && npm run build",
   "outputDirectory": "dist",
   "rewrites": [
     {
