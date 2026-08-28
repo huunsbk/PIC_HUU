@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx eslint src/main.tsx && npm run build",
+  "buildCommand": "npx tsc --noEmit && npm run build",
   "outputDirectory": "dist",
   "rewrites": [
     {
