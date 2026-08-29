@@ -80,6 +80,78 @@ function installTournamentSettingsRpcAdapter() {
 
 installTournamentSettingsRpcAdapter();
 
+function installWorkspaceContextHydrationAdapter() {
+  const originalSetWorkspaceContext = useTournamentStore.getState().setWorkspaceContext;
+  let requestSequence = 0;
+
+  useTournamentStore.setState({
+    setWorkspaceContext: async (context: any) => {
+      const stateBeforeContext = useTournamentStore.getState();
+      if (stateBeforeContext.userRole === 'guest') {
+        await originalSetWorkspaceContext(context);
+        return;
+      }
+
+      const requestId = ++requestSequence;
+      const hasTournamentContext = Object.prototype.hasOwnProperty.call(context, 'tournamentId');
+      const targetTournamentId = hasTournamentContext
+        ? context.tournamentId || null
+        : stateBeforeContext.activeTournamentId || null;
+
+      // The original action updates tenant/tournament identity synchronously. Immediately
+      // move the workspace back to LOADING so Dashboard cannot mount with DEFAULT_TOURNAMENT
+      // while the real metadata is still being fetched.
+      const contextPromise = originalSetWorkspaceContext(context);
+      useTournamentStore.setState({ authAccessState: 'WORKSPACE_CONTEXT_LOADING' } as any);
+      await contextPromise;
+
+      if (requestId !== requestSequence) return;
+
+      if (!targetTournamentId) {
+        useTournamentStore.setState({ authAccessState: 'WORKSPACE_CONTEXT_READY' } as any);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('tournament')
+        .select('id, name, location, date, settings')
+        .eq('id', targetTournamentId)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (requestId !== requestSequence) return;
+
+      const latestState = useTournamentStore.getState();
+      if (latestState.activeTournamentId !== targetTournamentId) return;
+
+      if (error) {
+        console.warn('[WorkspaceContextHydration] Không thể tải metadata giải đấu:', error.message);
+        useTournamentStore.setState({ authAccessState: 'WORKSPACE_CONTEXT_READY' } as any);
+        return;
+      }
+
+      if (data) {
+        useTournamentStore.setState({
+          tournament: {
+            ...latestState.tournament,
+            id: data.id,
+            name: data.name ?? latestState.tournament.name,
+            location: data.location ?? '',
+            date: data.date ?? '',
+            settings: data.settings || latestState.tournament.settings,
+          },
+          authAccessState: 'WORKSPACE_CONTEXT_READY',
+        } as any);
+        return;
+      }
+
+      useTournamentStore.setState({ authAccessState: 'WORKSPACE_CONTEXT_READY' } as any);
+    },
+  } as any);
+}
+
+installWorkspaceContextHydrationAdapter();
+
 function TournamentMetadataHydrator() {
   const activeTournamentId = useTournamentStore((state) => state.activeTournamentId);
   const authBootstrapComplete = useTournamentStore((state) => state.authBootstrapComplete);
