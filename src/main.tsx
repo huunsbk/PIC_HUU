@@ -93,22 +93,53 @@ function installWorkspaceContextHydrationAdapter() {
       }
 
       const requestId = ++requestSequence;
+      const currentTournament = stateBeforeContext.tournament;
       const hasTournamentContext = Object.prototype.hasOwnProperty.call(context, 'tournamentId');
       const targetTournamentId = hasTournamentContext
         ? context.tournamentId || null
         : stateBeforeContext.activeTournamentId || null;
+      const targetTournamentName = targetTournamentId
+        ? context.tournamentName || (targetTournamentId === currentTournament.id ? currentTournament.name : 'Chưa chọn giải')
+        : 'Chưa có giải';
+      const targetTenantName = context.tenantName || null;
+      const sameContext =
+        stateBeforeContext.activeTenantId === context.tenantId &&
+        stateBeforeContext.activeTenantName === targetTenantName &&
+        stateBeforeContext.activeTournamentId === targetTournamentId &&
+        currentTournament.id === (targetTournamentId || '') &&
+        currentTournament.name === targetTournamentName;
 
-      // The original action updates tenant/tournament identity synchronously. Immediately
-      // move the workspace back to LOADING so Dashboard cannot mount with DEFAULT_TOURNAMENT
-      // while the real metadata is still being fetched.
-      const contextPromise = originalSetWorkspaceContext(context);
-      useTournamentStore.setState({ authAccessState: 'WORKSPACE_CONTEXT_LOADING' } as any);
-      await contextPromise;
-
-      if (requestId !== requestSequence) return;
+      // Keep the workspace non-renderable until authoritative tournament metadata has
+      // been loaded. This prevents Dashboard local form state from snapshotting the
+      // DEFAULT_TOURNAMENT location/date on its first mount.
+      useTournamentStore.setState({
+        activeTenantId: context.tenantId,
+        activeTenantName: targetTenantName,
+        activeTournamentId: targetTournamentId,
+        isLoadingSupabase: true,
+        supabaseConnected: true,
+        authAccessState: 'WORKSPACE_CONTEXT_LOADING',
+        workspaceDirectoryState: null,
+        ...(!sameContext ? {
+          tournament: {
+            ...currentTournament,
+            id: targetTournamentId || '',
+            name: targetTournamentName,
+          },
+          currentEventId: '',
+          events: {},
+          teams: {},
+          groups: {},
+          matches: [],
+        } : {}),
+      } as any);
 
       if (!targetTournamentId) {
-        useTournamentStore.setState({ authAccessState: 'WORKSPACE_CONTEXT_READY' } as any);
+        if (requestId !== requestSequence) return;
+        useTournamentStore.setState({
+          isLoadingSupabase: false,
+          authAccessState: 'WORKSPACE_CONTEXT_READY',
+        } as any);
         return;
       }
 
@@ -126,26 +157,27 @@ function installWorkspaceContextHydrationAdapter() {
 
       if (error) {
         console.warn('[WorkspaceContextHydration] Không thể tải metadata giải đấu:', error.message);
-        useTournamentStore.setState({ authAccessState: 'WORKSPACE_CONTEXT_READY' } as any);
-        return;
-      }
-
-      if (data) {
         useTournamentStore.setState({
-          tournament: {
-            ...latestState.tournament,
-            id: data.id,
-            name: data.name ?? latestState.tournament.name,
-            location: data.location ?? '',
-            date: data.date ?? '',
-            settings: data.settings || latestState.tournament.settings,
-          },
+          isLoadingSupabase: false,
           authAccessState: 'WORKSPACE_CONTEXT_READY',
         } as any);
         return;
       }
 
-      useTournamentStore.setState({ authAccessState: 'WORKSPACE_CONTEXT_READY' } as any);
+      useTournamentStore.setState({
+        tournament: data
+          ? {
+              ...latestState.tournament,
+              id: data.id,
+              name: data.name ?? targetTournamentName,
+              location: data.location ?? '',
+              date: data.date ?? '',
+              settings: data.settings || latestState.tournament.settings,
+            }
+          : latestState.tournament,
+        isLoadingSupabase: false,
+        authAccessState: 'WORKSPACE_CONTEXT_READY',
+      } as any);
     },
   } as any);
 }
