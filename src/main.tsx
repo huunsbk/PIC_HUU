@@ -80,6 +80,110 @@ function installTournamentSettingsRpcAdapter() {
 
 installTournamentSettingsRpcAdapter();
 
+function installWorkspaceContextHydrationAdapter() {
+  const originalSetWorkspaceContext = useTournamentStore.getState().setWorkspaceContext;
+  let requestSequence = 0;
+
+  useTournamentStore.setState({
+    setWorkspaceContext: async (context: any) => {
+      const stateBeforeContext = useTournamentStore.getState();
+      if (stateBeforeContext.userRole === 'guest') {
+        await originalSetWorkspaceContext(context);
+        return;
+      }
+
+      const requestId = ++requestSequence;
+      const currentTournament = stateBeforeContext.tournament;
+      const hasTournamentContext = Object.prototype.hasOwnProperty.call(context, 'tournamentId');
+      const targetTournamentId = hasTournamentContext
+        ? context.tournamentId || null
+        : stateBeforeContext.activeTournamentId || null;
+      const targetTournamentName = targetTournamentId
+        ? context.tournamentName || (targetTournamentId === currentTournament.id ? currentTournament.name : 'Chưa chọn giải')
+        : 'Chưa có giải';
+      const targetTenantName = context.tenantName || null;
+      const sameContext =
+        stateBeforeContext.activeTenantId === context.tenantId &&
+        stateBeforeContext.activeTenantName === targetTenantName &&
+        stateBeforeContext.activeTournamentId === targetTournamentId &&
+        currentTournament.id === (targetTournamentId || '') &&
+        currentTournament.name === targetTournamentName;
+
+      // Keep the workspace non-renderable until authoritative tournament metadata has
+      // been loaded. This prevents Dashboard local form state from snapshotting the
+      // DEFAULT_TOURNAMENT location/date on its first mount.
+      useTournamentStore.setState({
+        activeTenantId: context.tenantId,
+        activeTenantName: targetTenantName,
+        activeTournamentId: targetTournamentId,
+        isLoadingSupabase: true,
+        supabaseConnected: true,
+        authAccessState: 'WORKSPACE_CONTEXT_LOADING',
+        workspaceDirectoryState: null,
+        ...(!sameContext ? {
+          tournament: {
+            ...currentTournament,
+            id: targetTournamentId || '',
+            name: targetTournamentName,
+          },
+          currentEventId: '',
+          events: {},
+          teams: {},
+          groups: {},
+          matches: [],
+        } : {}),
+      } as any);
+
+      if (!targetTournamentId) {
+        if (requestId !== requestSequence) return;
+        useTournamentStore.setState({
+          isLoadingSupabase: false,
+          authAccessState: 'WORKSPACE_CONTEXT_READY',
+        } as any);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('tournament')
+        .select('id, name, location, date, settings')
+        .eq('id', targetTournamentId)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (requestId !== requestSequence) return;
+
+      const latestState = useTournamentStore.getState();
+      if (latestState.activeTournamentId !== targetTournamentId) return;
+
+      if (error) {
+        console.warn('[WorkspaceContextHydration] Không thể tải metadata giải đấu:', error.message);
+        useTournamentStore.setState({
+          isLoadingSupabase: false,
+          authAccessState: 'WORKSPACE_CONTEXT_READY',
+        } as any);
+        return;
+      }
+
+      useTournamentStore.setState({
+        tournament: data
+          ? {
+              ...latestState.tournament,
+              id: data.id,
+              name: data.name ?? targetTournamentName,
+              location: data.location ?? '',
+              date: data.date ?? '',
+              settings: data.settings || latestState.tournament.settings,
+            }
+          : latestState.tournament,
+        isLoadingSupabase: false,
+        authAccessState: 'WORKSPACE_CONTEXT_READY',
+      } as any);
+    },
+  } as any);
+}
+
+installWorkspaceContextHydrationAdapter();
+
 function TournamentMetadataHydrator() {
   const activeTournamentId = useTournamentStore((state) => state.activeTournamentId);
   const authBootstrapComplete = useTournamentStore((state) => state.authBootstrapComplete);
