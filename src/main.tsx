@@ -96,7 +96,7 @@ function TournamentMetadataHydrator() {
     void (async () => {
       const { data, error } = await supabase
         .from('tournament')
-        .select('id, name, location, date')
+        .select('id, name, location, date, settings')
         .eq('id', activeTournamentId)
         .is('deleted_at', null)
         .maybeSingle();
@@ -118,6 +118,7 @@ function TournamentMetadataHydrator() {
         currentTournament.name === baseline.name &&
         currentTournament.location === baseline.location &&
         currentTournament.date === baseline.date;
+      const userHasNotEditedSettings = currentTournament.settings === baseline.settings;
 
       if (!contextStillMatches || !userHasNotEditedMetadata) return;
 
@@ -128,6 +129,9 @@ function TournamentMetadataHydrator() {
           name: data.name ?? currentTournament.name,
           location: data.location ?? '',
           date: data.date ?? '',
+          settings: userHasNotEditedSettings
+            ? (data.settings || currentTournament.settings)
+            : currentTournament.settings,
         },
       });
     })();
