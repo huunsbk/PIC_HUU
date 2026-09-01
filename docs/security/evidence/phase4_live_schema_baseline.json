@@ -1,0 +1,2889 @@
+{
+  "security_definer_functions": [
+    {
+      "signature": "archive_event_v1(text)",
+      "proname": "archive_event_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "archive_team_v1(text)",
+      "proname": "archive_team_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "archive_tenant_v1(uuid)",
+      "proname": "archive_tenant_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "archive_tournament_v1(text)",
+      "proname": "archive_tournament_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "archive_tournament_workspace_v6(text)",
+      "proname": "archive_tournament_workspace_v6",
+      "security_definer": true,
+      "config": [
+        "search_path=public"
+      ]
+    },
+    {
+      "signature": "assert_round_set_modes_change_allowed_v1(text,jsonb,jsonb)",
+      "proname": "assert_round_set_modes_change_allowed_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "assign_team_to_group_v1(text,text,text)",
+      "proname": "assign_team_to_group_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "assign_team_to_group_v2(text,text,text,boolean)",
+      "proname": "assign_team_to_group_v2",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "audit_matches_changes_safe_v4()",
+      "proname": "audit_matches_changes_safe_v4",
+      "security_definer": true,
+      "config": [
+        "search_path=public"
+      ]
+    },
+    {
+      "signature": "clear_knockout_bracket_v1(text)",
+      "proname": "clear_knockout_bracket_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "confirm_knockout_teams_v1(text,jsonb,integer,text)",
+      "proname": "confirm_knockout_teams_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "create_event_admin(uuid,text,text,text,text,text)",
+      "proname": "create_event_admin",
+      "security_definer": true,
+      "config": [
+        "search_path=public, auth"
+      ]
+    },
+    {
+      "signature": "create_event_v1(text,text,text,text,text,jsonb,jsonb)",
+      "proname": "create_event_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "create_team_v1(text,text,text)",
+      "proname": "create_team_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "create_tenant_v1(text,text)",
+      "proname": "create_tenant_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "create_tournament_v1(uuid,text,text,text,date)",
+      "proname": "create_tournament_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "create_tournament_workspace_v6(text,text,text,uuid)",
+      "proname": "create_tournament_workspace_v6",
+      "security_definer": true,
+      "config": [
+        "search_path=public"
+      ]
+    },
+    {
+      "signature": "current_account_id()",
+      "proname": "current_account_id",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "\"current_role\"()",
+      "proname": "current_role",
+      "security_definer": true,
+      "config": [
+        "search_path=public"
+      ]
+    },
+    {
+      "signature": "current_role_name()",
+      "proname": "current_role_name",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "current_tenant_id()",
+      "proname": "current_tenant_id",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "dissolve_groups_v2(text)",
+      "proname": "dissolve_groups_v2",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "dissolve_groups_v4(text)",
+      "proname": "dissolve_groups_v4",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "ensure_manage_event_access_v1(text)",
+      "proname": "ensure_manage_event_access_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "ensure_manage_event_for_tournament_v1(text)",
+      "proname": "ensure_manage_event_for_tournament_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "ensure_manage_tenants_v1()",
+      "proname": "ensure_manage_tenants_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "ensure_manage_tournaments_v1(uuid)",
+      "proname": "ensure_manage_tournaments_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "finalize_match_score_v1(text)",
+      "proname": "finalize_match_score_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "generate_knockout_bracket_v1(text)",
+      "proname": "generate_knockout_bracket_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "generate_schedule_v1(text)",
+      "proname": "generate_schedule_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "get_current_profile()",
+      "proname": "get_current_profile",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "get_match_scoring_rule_v1(text)",
+      "proname": "get_match_scoring_rule_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "get_match_set_mode_v1(text)",
+      "proname": "get_match_set_mode_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "get_public_tournament_snapshot_v1(text)",
+      "proname": "get_public_tournament_snapshot_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "get_tournament_owner(text)",
+      "proname": "get_tournament_owner",
+      "security_definer": true,
+      "config": [
+        "search_path=public"
+      ]
+    },
+    {
+      "signature": "get_tournament_workspace_dashboard_v6(timestamp with time zone,integer)",
+      "proname": "get_tournament_workspace_dashboard_v6",
+      "security_definer": true,
+      "config": [
+        "search_path=public"
+      ]
+    },
+    {
+      "signature": "get_workspace_context_v1(text)",
+      "proname": "get_workspace_context_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "grant_event_access_v1(text,text,text)",
+      "proname": "grant_event_access_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "grant_event_access_v1(uuid,text,text)",
+      "proname": "grant_event_access_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "hard_delete_event_teams_v1(text)",
+      "proname": "hard_delete_event_teams_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "hard_delete_event_v1(text)",
+      "proname": "hard_delete_event_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "hard_delete_tenant_v1(uuid)",
+      "proname": "hard_delete_tenant_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "hard_delete_tournament_v1(text)",
+      "proname": "hard_delete_tournament_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "has_event_access(text)",
+      "proname": "has_event_access",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "has_event_permission(text,text)",
+      "proname": "has_event_permission",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "has_permission(text)",
+      "proname": "has_permission",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "import_teams_v1(text,jsonb)",
+      "proname": "import_teams_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "invalidate_account_sessions_v1(uuid)",
+      "proname": "invalidate_account_sessions_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "list_accessible_workspaces_v1(uuid)",
+      "proname": "list_accessible_workspaces_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "list_account_access_summary_v1(uuid)",
+      "proname": "list_account_access_summary_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "list_archived_events_v1(uuid)",
+      "proname": "list_archived_events_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "list_archived_tenants_v1()",
+      "proname": "list_archived_tenants_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "list_archived_tournaments_v1(uuid)",
+      "proname": "list_archived_tournaments_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "list_event_access_v1(text)",
+      "proname": "list_event_access_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "list_events_by_tournament_v1(text)",
+      "proname": "list_events_by_tournament_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "list_permission_tree_v1(uuid)",
+      "proname": "list_permission_tree_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "list_tenants_v1()",
+      "proname": "list_tenants_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "list_tournaments_v1(uuid)",
+      "proname": "list_tournaments_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "log_audit_event_v1(text,text,text,jsonb)",
+      "proname": "log_audit_event_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "p06_require_event_admin_v1(text,text,text)",
+      "proname": "p06_require_event_admin_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "p10_core_reset_match_score_v1(text)",
+      "proname": "p10_core_reset_match_score_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "p10_core_update_match_score_v1(text,integer,integer)",
+      "proname": "p10_core_update_match_score_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "p10_core_update_match_set_score_v1(text,integer,integer,integer)",
+      "proname": "p10_core_update_match_set_score_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "p10_has_event_permission_v1(text,text)",
+      "proname": "p10_has_event_permission_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "p10_require_event_admin_v1(text,text,text)",
+      "proname": "p10_require_event_admin_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "p10_require_match_score_context_v1(text,text)",
+      "proname": "p10_require_match_score_context_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "p10_validate_event_context_v1(text)",
+      "proname": "p10_validate_event_context_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "p12_propagate_knockout_winner_v1(text)",
+      "proname": "p12_propagate_knockout_winner_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "p12_reset_knockout_downstream_v1(text)",
+      "proname": "p12_reset_knockout_downstream_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "p22_assert_group_stage_change_allowed_v1(text)",
+      "proname": "p22_assert_group_stage_change_allowed_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "p22_sync_knockout_after_group_stage_change_v1(text)",
+      "proname": "p22_sync_knockout_after_group_stage_change_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "prepare_knockout_candidates_v1(text,integer,integer,boolean)",
+      "proname": "prepare_knockout_candidates_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "record_login_session_v1()",
+      "proname": "record_login_session_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "reset_match_score_v1(text)",
+      "proname": "reset_match_score_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "resolve_knockout_slots_v1(text)",
+      "proname": "resolve_knockout_slots_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "restore_event_v1(text)",
+      "proname": "restore_event_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "restore_tenant_v1(uuid)",
+      "proname": "restore_tenant_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "restore_tournament_v1(text)",
+      "proname": "restore_tournament_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "revoke_event_access_v1(text,text,text)",
+      "proname": "revoke_event_access_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "revoke_event_access_v1(uuid,text)",
+      "proname": "revoke_event_access_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "save_manual_knockout_bracket_v1(text,integer,jsonb)",
+      "proname": "save_manual_knockout_bracket_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "setup_groups_v2(text,integer)",
+      "proname": "setup_groups_v2",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "setup_groups_v3(text,integer,text)",
+      "proname": "setup_groups_v3",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "setup_groups_v4(text,integer,text)",
+      "proname": "setup_groups_v4",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "transfer_tournament_owner_v6(text,uuid)",
+      "proname": "transfer_tournament_owner_v6",
+      "security_definer": true,
+      "config": [
+        "search_path=public"
+      ]
+    },
+    {
+      "signature": "trigger_auto_assign_event()",
+      "proname": "trigger_auto_assign_event",
+      "security_definer": true,
+      "config": [
+        "search_path=public"
+      ]
+    },
+    {
+      "signature": "update_event_config_v1(text,text,text,text,jsonb,jsonb)",
+      "proname": "update_event_config_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "update_event_v1(text,text,text,text,text,jsonb,jsonb,text)",
+      "proname": "update_event_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "update_match_score_v1(text,integer,integer)",
+      "proname": "update_match_score_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "update_match_set_score_v1(text,integer,integer,integer)",
+      "proname": "update_match_set_score_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "update_match_status_v1(text,text)",
+      "proname": "update_match_status_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "update_team_v1(text,text,text)",
+      "proname": "update_team_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "update_tenant_v1(uuid,text,text,text)",
+      "proname": "update_tenant_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "update_tournament_v1(text,text,text,text,date,text)",
+      "proname": "update_tournament_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "validate_event_config_v1(text,text,text,jsonb,jsonb)",
+      "proname": "validate_event_config_v1",
+      "security_definer": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    }
+  ],
+  "public_function_grants": [
+    {
+      "signature": "archive_tournament_workspace_v6(text)",
+      "proname": "archive_tournament_workspace_v6",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "assign_team_to_group_v1(text,text,text)",
+      "proname": "assign_team_to_group_v1",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "audit_matches_changes_safe_v4()",
+      "proname": "audit_matches_changes_safe_v4",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "create_event_admin(uuid,text,text,text,text,text)",
+      "proname": "create_event_admin",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "create_tournament_workspace_v6(text,text,text,uuid)",
+      "proname": "create_tournament_workspace_v6",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "current_account_id()",
+      "proname": "current_account_id",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "\"current_role\"()",
+      "proname": "current_role",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "current_role_name()",
+      "proname": "current_role_name",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "current_tenant_id()",
+      "proname": "current_tenant_id",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "dissolve_groups_v2(text)",
+      "proname": "dissolve_groups_v2",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "get_public_tournament_snapshot_v1(text)",
+      "proname": "get_public_tournament_snapshot_v1",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "get_tournament_owner(text)",
+      "proname": "get_tournament_owner",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "get_tournament_workspace_dashboard_v6(timestamp with time zone,integer)",
+      "proname": "get_tournament_workspace_dashboard_v6",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "get_workspace_context_v1(text)",
+      "proname": "get_workspace_context_v1",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "has_event_access(text)",
+      "proname": "has_event_access",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "has_permission(text)",
+      "proname": "has_permission",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "p12_propagate_knockout_winner_v1(text)",
+      "proname": "p12_propagate_knockout_winner_v1",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "p12_reset_knockout_downstream_v1(text)",
+      "proname": "p12_reset_knockout_downstream_v1",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "record_login_session_v1()",
+      "proname": "record_login_session_v1",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "setup_groups_v2(text,integer)",
+      "proname": "setup_groups_v2",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "setup_groups_v3(text,integer,text)",
+      "proname": "setup_groups_v3",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "transfer_tournament_owner_v6(text,uuid)",
+      "proname": "transfer_tournament_owner_v6",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "trigger_auto_assign_event()",
+      "proname": "trigger_auto_assign_event",
+      "anon_execute": true,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "archive_event_v1(text)",
+      "proname": "archive_event_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "archive_team_v1(text)",
+      "proname": "archive_team_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "archive_tenant_v1(uuid)",
+      "proname": "archive_tenant_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "archive_tournament_v1(text)",
+      "proname": "archive_tournament_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "assert_round_set_modes_change_allowed_v1(text,jsonb,jsonb)",
+      "proname": "assert_round_set_modes_change_allowed_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "assign_team_to_group_v2(text,text,text,boolean)",
+      "proname": "assign_team_to_group_v2",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "clear_knockout_bracket_v1(text)",
+      "proname": "clear_knockout_bracket_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "confirm_knockout_teams_v1(text,jsonb,integer,text)",
+      "proname": "confirm_knockout_teams_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "create_event_v1(text,text,text,text,text,jsonb,jsonb)",
+      "proname": "create_event_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "create_team_v1(text,text,text)",
+      "proname": "create_team_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "create_tenant_v1(text,text)",
+      "proname": "create_tenant_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "create_tournament_v1(uuid,text,text,text,date)",
+      "proname": "create_tournament_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "dissolve_groups_v4(text)",
+      "proname": "dissolve_groups_v4",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "ensure_manage_event_access_v1(text)",
+      "proname": "ensure_manage_event_access_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "ensure_manage_event_for_tournament_v1(text)",
+      "proname": "ensure_manage_event_for_tournament_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "ensure_manage_tenants_v1()",
+      "proname": "ensure_manage_tenants_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "ensure_manage_tournaments_v1(uuid)",
+      "proname": "ensure_manage_tournaments_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "finalize_match_score_v1(text)",
+      "proname": "finalize_match_score_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "generate_knockout_bracket_v1(text)",
+      "proname": "generate_knockout_bracket_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "generate_schedule_v1(text)",
+      "proname": "generate_schedule_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "get_current_profile()",
+      "proname": "get_current_profile",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "get_match_scoring_rule_v1(text)",
+      "proname": "get_match_scoring_rule_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "get_match_set_mode_v1(text)",
+      "proname": "get_match_set_mode_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "grant_event_access_v1(text,text,text)",
+      "proname": "grant_event_access_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "grant_event_access_v1(uuid,text,text)",
+      "proname": "grant_event_access_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "hard_delete_event_teams_v1(text)",
+      "proname": "hard_delete_event_teams_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "hard_delete_event_v1(text)",
+      "proname": "hard_delete_event_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "hard_delete_tenant_v1(uuid)",
+      "proname": "hard_delete_tenant_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "hard_delete_tournament_v1(text)",
+      "proname": "hard_delete_tournament_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "has_event_permission(text,text)",
+      "proname": "has_event_permission",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "import_teams_v1(text,jsonb)",
+      "proname": "import_teams_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "invalidate_account_sessions_v1(uuid)",
+      "proname": "invalidate_account_sessions_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "list_accessible_workspaces_v1(uuid)",
+      "proname": "list_accessible_workspaces_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "list_account_access_summary_v1(uuid)",
+      "proname": "list_account_access_summary_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "list_archived_events_v1(uuid)",
+      "proname": "list_archived_events_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "list_archived_tenants_v1()",
+      "proname": "list_archived_tenants_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "list_archived_tournaments_v1(uuid)",
+      "proname": "list_archived_tournaments_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "list_event_access_v1(text)",
+      "proname": "list_event_access_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "list_events_by_tournament_v1(text)",
+      "proname": "list_events_by_tournament_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "list_permission_tree_v1(uuid)",
+      "proname": "list_permission_tree_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "list_tenants_v1()",
+      "proname": "list_tenants_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "list_tournaments_v1(uuid)",
+      "proname": "list_tournaments_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "log_audit_event_v1(text,text,text,jsonb)",
+      "proname": "log_audit_event_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "p06_require_event_admin_v1(text,text,text)",
+      "proname": "p06_require_event_admin_v1",
+      "anon_execute": false,
+      "authenticated_execute": false
+    },
+    {
+      "signature": "p10_core_reset_match_score_v1(text)",
+      "proname": "p10_core_reset_match_score_v1",
+      "anon_execute": false,
+      "authenticated_execute": false
+    },
+    {
+      "signature": "p10_core_update_match_score_v1(text,integer,integer)",
+      "proname": "p10_core_update_match_score_v1",
+      "anon_execute": false,
+      "authenticated_execute": false
+    },
+    {
+      "signature": "p10_core_update_match_set_score_v1(text,integer,integer,integer)",
+      "proname": "p10_core_update_match_set_score_v1",
+      "anon_execute": false,
+      "authenticated_execute": false
+    },
+    {
+      "signature": "p10_has_event_permission_v1(text,text)",
+      "proname": "p10_has_event_permission_v1",
+      "anon_execute": false,
+      "authenticated_execute": false
+    },
+    {
+      "signature": "p10_require_event_admin_v1(text,text,text)",
+      "proname": "p10_require_event_admin_v1",
+      "anon_execute": false,
+      "authenticated_execute": false
+    },
+    {
+      "signature": "p10_require_match_score_context_v1(text,text)",
+      "proname": "p10_require_match_score_context_v1",
+      "anon_execute": false,
+      "authenticated_execute": false
+    },
+    {
+      "signature": "p10_validate_event_context_v1(text)",
+      "proname": "p10_validate_event_context_v1",
+      "anon_execute": false,
+      "authenticated_execute": false
+    },
+    {
+      "signature": "p22_assert_group_stage_change_allowed_v1(text)",
+      "proname": "p22_assert_group_stage_change_allowed_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "p22_sync_knockout_after_group_stage_change_v1(text)",
+      "proname": "p22_sync_knockout_after_group_stage_change_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "prepare_knockout_candidates_v1(text,integer,integer,boolean)",
+      "proname": "prepare_knockout_candidates_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "reset_match_score_v1(text)",
+      "proname": "reset_match_score_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "resolve_knockout_slots_v1(text)",
+      "proname": "resolve_knockout_slots_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "restore_event_v1(text)",
+      "proname": "restore_event_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "restore_tenant_v1(uuid)",
+      "proname": "restore_tenant_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "restore_tournament_v1(text)",
+      "proname": "restore_tournament_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "revoke_event_access_v1(text,text,text)",
+      "proname": "revoke_event_access_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "revoke_event_access_v1(uuid,text)",
+      "proname": "revoke_event_access_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "save_manual_knockout_bracket_v1(text,integer,jsonb)",
+      "proname": "save_manual_knockout_bracket_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "setup_groups_v4(text,integer,text)",
+      "proname": "setup_groups_v4",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "update_event_config_v1(text,text,text,text,jsonb,jsonb)",
+      "proname": "update_event_config_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "update_event_v1(text,text,text,text,text,jsonb,jsonb,text)",
+      "proname": "update_event_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "update_match_score_v1(text,integer,integer)",
+      "proname": "update_match_score_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "update_match_set_score_v1(text,integer,integer,integer)",
+      "proname": "update_match_set_score_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "update_match_status_v1(text,text)",
+      "proname": "update_match_status_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "update_team_v1(text,text,text)",
+      "proname": "update_team_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "update_tenant_v1(uuid,text,text,text)",
+      "proname": "update_tenant_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "update_tournament_v1(text,text,text,text,date,text)",
+      "proname": "update_tournament_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    },
+    {
+      "signature": "validate_event_config_v1(text,text,text,jsonb,jsonb)",
+      "proname": "validate_event_config_v1",
+      "anon_execute": false,
+      "authenticated_execute": true
+    }
+  ],
+  "table_rls_state": [
+    {
+      "schemaname": "public",
+      "tablename": "account_event_permissions",
+      "rowsecurity": true,
+      "forcerowsecurity": false
+    },
+    {
+      "schemaname": "public",
+      "tablename": "accounts",
+      "rowsecurity": true,
+      "forcerowsecurity": false
+    },
+    {
+      "schemaname": "public",
+      "tablename": "active_sessions",
+      "rowsecurity": true,
+      "forcerowsecurity": false
+    },
+    {
+      "schemaname": "public",
+      "tablename": "audit_logs",
+      "rowsecurity": true,
+      "forcerowsecurity": false
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "rowsecurity": true,
+      "forcerowsecurity": false
+    },
+    {
+      "schemaname": "public",
+      "tablename": "groups",
+      "rowsecurity": true,
+      "forcerowsecurity": false
+    },
+    {
+      "schemaname": "public",
+      "tablename": "knockout_slots",
+      "rowsecurity": true,
+      "forcerowsecurity": false
+    },
+    {
+      "schemaname": "public",
+      "tablename": "match_sets",
+      "rowsecurity": true,
+      "forcerowsecurity": false
+    },
+    {
+      "schemaname": "public",
+      "tablename": "matches",
+      "rowsecurity": true,
+      "forcerowsecurity": false
+    },
+    {
+      "schemaname": "public",
+      "tablename": "teams",
+      "rowsecurity": true,
+      "forcerowsecurity": false
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tenants",
+      "rowsecurity": true,
+      "forcerowsecurity": false
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tournament",
+      "rowsecurity": true,
+      "forcerowsecurity": false
+    }
+  ],
+  "policies_summary": [
+    {
+      "schemaname": "public",
+      "tablename": "account_event_permissions",
+      "policyname": "account_event_permissions_rls",
+      "cmd": "ALL",
+      "roles": "{authenticated}",
+      "qual": "(current_role_name() = 'SUPER_ADMIN'::text)",
+      "with_check": "(current_role_name() = 'SUPER_ADMIN'::text)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "accounts",
+      "policyname": "accounts_delete",
+      "cmd": "DELETE",
+      "roles": "{authenticated}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((current_role_name() = 'TENANT_ADMIN'::text) AND (tenant_id = current_tenant_id())))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "accounts",
+      "policyname": "accounts_insert",
+      "cmd": "INSERT",
+      "roles": "{authenticated}",
+      "qual": null,
+      "with_check": "(current_role_name() = ANY (ARRAY['SUPER_ADMIN'::text, 'TENANT_ADMIN'::text]))"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "accounts",
+      "policyname": "accounts_select",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((current_role_name() = 'TENANT_ADMIN'::text) AND (tenant_id = current_tenant_id())) OR (user_id = auth.uid()))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "accounts",
+      "policyname": "accounts_update",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((current_role_name() = 'TENANT_ADMIN'::text) AND (tenant_id = current_tenant_id())))",
+      "with_check": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((current_role_name() = 'TENANT_ADMIN'::text) AND (tenant_id = current_tenant_id())))"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "active_sessions",
+      "policyname": "active_sessions_rls",
+      "cmd": "ALL",
+      "roles": "{authenticated}",
+      "qual": "((account_id IN ( SELECT accounts.id\n   FROM accounts\n  WHERE (accounts.user_id = auth.uid()))) OR (current_role_name() = 'SUPER_ADMIN'::text))",
+      "with_check": "((account_id IN ( SELECT accounts.id\n   FROM accounts\n  WHERE (accounts.user_id = auth.uid()))) OR (current_role_name() = 'SUPER_ADMIN'::text))"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "audit_logs",
+      "policyname": "audit_logs_rls",
+      "cmd": "ALL",
+      "roles": "{authenticated}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR (tenant_id = current_tenant_id()))",
+      "with_check": "((current_role_name() = 'SUPER_ADMIN'::text) OR (tenant_id = current_tenant_id()))"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "policyname": "events_delete",
+      "cmd": "DELETE",
+      "roles": "{public}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((tenant_id = current_tenant_id()) AND ((current_role_name() = 'TENANT_ADMIN'::text) OR (has_permission('manage_events'::text) AND has_event_access(id)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "policyname": "events_insert",
+      "cmd": "INSERT",
+      "roles": "{public}",
+      "qual": null,
+      "with_check": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((tenant_id = current_tenant_id()) AND ((current_role_name() = 'TENANT_ADMIN'::text) OR has_permission('manage_events'::text))))"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "policyname": "events_select",
+      "cmd": "SELECT",
+      "roles": "{public}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR (tenant_id = current_tenant_id()))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "events",
+      "policyname": "events_update",
+      "cmd": "UPDATE",
+      "roles": "{public}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((tenant_id = current_tenant_id()) AND ((current_role_name() = 'TENANT_ADMIN'::text) OR (has_permission('manage_events'::text) AND has_event_access(id)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "groups",
+      "policyname": "groups_delete",
+      "cmd": "DELETE",
+      "roles": "{public}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((tenant_id = current_tenant_id()) AND ((current_role_name() = 'TENANT_ADMIN'::text) OR (has_permission('manage_groups'::text) AND has_event_access(event_id)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "groups",
+      "policyname": "groups_insert",
+      "cmd": "INSERT",
+      "roles": "{public}",
+      "qual": null,
+      "with_check": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((tenant_id = current_tenant_id()) AND ((current_role_name() = 'TENANT_ADMIN'::text) OR (has_permission('manage_groups'::text) AND has_event_access(event_id)))))"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "groups",
+      "policyname": "groups_select",
+      "cmd": "SELECT",
+      "roles": "{public}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR (tenant_id = current_tenant_id()))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "groups",
+      "policyname": "groups_update",
+      "cmd": "UPDATE",
+      "roles": "{public}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((tenant_id = current_tenant_id()) AND ((current_role_name() = 'TENANT_ADMIN'::text) OR (has_permission('manage_groups'::text) AND has_event_access(event_id)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "knockout_slots",
+      "policyname": "knockout_slots_select_tenant_or_super",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "((deleted_at IS NULL) AND ((current_role_name() = 'SUPER_ADMIN'::text) OR (tenant_id = current_tenant_id())))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "match_sets",
+      "policyname": "match_sets_select_scoped",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR (tenant_id = current_tenant_id()) OR has_event_access(event_id))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "matches",
+      "policyname": "matches_delete",
+      "cmd": "DELETE",
+      "roles": "{public}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((tenant_id = current_tenant_id()) AND ((current_role_name() = 'TENANT_ADMIN'::text) OR (has_permission('manage_matches'::text) AND has_event_access(event_id)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "matches",
+      "policyname": "matches_insert",
+      "cmd": "INSERT",
+      "roles": "{public}",
+      "qual": null,
+      "with_check": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((tenant_id = current_tenant_id()) AND ((current_role_name() = 'TENANT_ADMIN'::text) OR (has_permission('manage_matches'::text) AND has_event_access(event_id)))))"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "matches",
+      "policyname": "matches_select",
+      "cmd": "SELECT",
+      "roles": "{public}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR (tenant_id = current_tenant_id()))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "matches",
+      "policyname": "matches_update",
+      "cmd": "UPDATE",
+      "roles": "{public}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((tenant_id = current_tenant_id()) AND ((current_role_name() = 'TENANT_ADMIN'::text) OR ((has_permission('manage_matches'::text) OR has_permission('enter_score'::text)) AND has_event_access(event_id)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "teams",
+      "policyname": "teams_delete",
+      "cmd": "DELETE",
+      "roles": "{public}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((tenant_id = current_tenant_id()) AND ((current_role_name() = 'TENANT_ADMIN'::text) OR (has_permission('manage_teams'::text) AND has_event_access(event_id)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "teams",
+      "policyname": "teams_insert",
+      "cmd": "INSERT",
+      "roles": "{public}",
+      "qual": null,
+      "with_check": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((tenant_id = current_tenant_id()) AND ((current_role_name() = 'TENANT_ADMIN'::text) OR (has_permission('manage_teams'::text) AND has_event_access(event_id)))))"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "teams",
+      "policyname": "teams_select",
+      "cmd": "SELECT",
+      "roles": "{public}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR (tenant_id = current_tenant_id()))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "teams",
+      "policyname": "teams_update",
+      "cmd": "UPDATE",
+      "roles": "{public}",
+      "qual": "((current_role_name() = 'SUPER_ADMIN'::text) OR ((tenant_id = current_tenant_id()) AND ((current_role_name() = 'TENANT_ADMIN'::text) OR (has_permission('manage_teams'::text) AND has_event_access(event_id)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tenants",
+      "policyname": "tenants_read",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "((id = current_tenant_id()) OR (current_role_name() = 'SUPER_ADMIN'::text))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "tournament",
+      "policyname": "tournament_rls",
+      "cmd": "ALL",
+      "roles": "{authenticated}",
+      "qual": "true",
+      "with_check": "true"
+    }
+  ],
+  "anon_table_privileges": [
+    {
+      "table_schema": "public",
+      "table_name": "account_event_permissions",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_event_permissions",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_event_permissions",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_event_permissions",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_event_permissions",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_event_permissions",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_event_permissions",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_permissions",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_permissions",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_permissions",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_permissions",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_permissions",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_permissions",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_permissions",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "accounts",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "accounts",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "accounts",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "accounts",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "accounts",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "accounts",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "accounts",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "active_sessions",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "active_sessions",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "active_sessions",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "active_sessions",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "active_sessions",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "active_sessions",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "active_sessions",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "groups",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "groups",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "groups",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "groups",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "groups",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "groups",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "groups",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "invoices",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "invoices",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "invoices",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "invoices",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "invoices",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "invoices",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "invoices",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "login_logs",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "login_logs",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "login_logs",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "login_logs",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "login_logs",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "login_logs",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "login_logs",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matches",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matches",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matches",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matches",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matches",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matches",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matches",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "permissions",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "permissions",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "permissions",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "permissions",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "permissions",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "permissions",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "permissions",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "plan_features",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "plan_features",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "plan_features",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "plan_features",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "plan_features",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "plan_features",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "plan_features",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "role_permissions",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "role_permissions",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "role_permissions",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "role_permissions",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "role_permissions",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "role_permissions",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "role_permissions",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "roles",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "roles",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "roles",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "roles",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "roles",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "roles",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "roles",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "saas_metrics",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "saas_metrics",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "saas_metrics",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "saas_metrics",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "saas_metrics",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "saas_metrics",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "saas_metrics",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "subscription_plans",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "subscription_plans",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "subscription_plans",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "subscription_plans",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "subscription_plans",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "subscription_plans",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "subscription_plans",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "teams",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "teams",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "teams",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "teams",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "teams",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "teams",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "teams",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenant_subscriptions",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenant_subscriptions",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenant_subscriptions",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenant_subscriptions",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenant_subscriptions",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenant_subscriptions",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenant_subscriptions",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenant_usage",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenant_usage",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenant_usage",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenant_usage",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenant_usage",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenant_usage",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenant_usage",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenants",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenants",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenants",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenants",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenants",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenants",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenants",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament_admins",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament_admins",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament_admins",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament_admins",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament_admins",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament_admins",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament_admins",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament_owners",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament_owners",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament_owners",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament_owners",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament_owners",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament_owners",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament_owners",
+      "privilege_type": "UPDATE"
+    }
+  ],
+  "authenticated_table_privileges": [
+    {
+      "table_schema": "public",
+      "table_name": "account_event_permissions",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_event_permissions",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_event_permissions",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_event_permissions",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_event_permissions",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_event_permissions",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "account_event_permissions",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "accounts",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "accounts",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "accounts",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "accounts",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "accounts",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "accounts",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "accounts",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "active_sessions",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "active_sessions",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "active_sessions",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "active_sessions",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "active_sessions",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "active_sessions",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "active_sessions",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "events",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "groups",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "groups",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "groups",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "groups",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "groups",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "groups",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "groups",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "knockout_slots",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "knockout_slots",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "knockout_slots",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "knockout_slots",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "knockout_slots",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "knockout_slots",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "knockout_slots",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "match_sets",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matches",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matches",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matches",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matches",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matches",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matches",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matches",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "teams",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "teams",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "teams",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "teams",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "teams",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "teams",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "teams",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenants",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenants",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenants",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenants",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenants",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenants",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tenants",
+      "privilege_type": "UPDATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament",
+      "privilege_type": "DELETE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament",
+      "privilege_type": "INSERT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament",
+      "privilege_type": "SELECT"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tournament",
+      "privilege_type": "UPDATE"
+    }
+  ]
+}
